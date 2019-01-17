@@ -1,0 +1,648 @@
+##Identify overlap in time and location between cases
+
+source("\\\\cdc.gov\\private\\m135\\nrf1\\transmission prediction\\MEA algorithm\\sharedFunctions.R") ##need convertToDate
+library(xlsx)
+
+afterIPstring = "after IP end" #string used to indicate that an overlap occurs after an IP end
+noIPstring = "no IP available" #string used to indicate when no IP is available for a case
+defaultCut = 2 #default time cutoff
+defaultLogName = "LATTE_log.txt" #default name of log file
+
+##function that takes the given data frame and corrects the case column capitalization to be uniform across the program
+fixCaseName <- function(df) {
+  if(any(!is.na(df))) {
+    names(df)[grep("case", names(df), ignore.case = T)] = "Case"
+  }
+  return(df)
+}
+
+##function that takes the given data frame and corrects the column location name capitalization
+fixLocNames <- function(df) {
+  names(df)[grep("location", names(df), ignore.case = T)] = "Location"
+  names(df)[grep("start", names(df), ignore.case = T)] = "Start"
+  names(df)[grepl("end", names(df), ignore.case = T) | grepl("stop", names(df), ignore.case = T)] = "End"
+  names(df)[grepl("confidence", names(df), ignore.case = T) | 
+              grepl("probability", names(df), ignore.case = T) | 
+              grepl("strength", names(df), ignore.case = T)] = "Confidence"
+  if(!all(c("Case", "Location", "Start", "End", "Confidence") %in% names(df))) {
+    stop("Location table is missing columns. Columns must include: Case, Location, Start, End, Confidence")
+  }
+  return(df)
+}
+
+##check infectious period column names
+##check for duplicates; if same isolate has two different IP dates, give warning and take the earlier
+fixIPnames <- function(df, log) {
+  if(any(!is.na(df))) {
+    ##start
+    col = grepl("ip[ ]*start", names(df), ignore.case = T) | grepl("infectious[ ]*period[ ]*start", names(df), ignore.case = T)
+    names(df)[col] = "IPStart"
+    ##end
+    col = grepl("ip[ ]*end", names(df), ignore.case = T) | grepl("infectious[ ]*period[ ]*end", names(df), ignore.case = T) |
+      grepl("ip[ ]*stop", names(df), ignore.case = T) | grepl("infectious[ ]*period[ ]*stop", names(df), ignore.case = T)
+    names(df)[col] = "IPEnd"
+    if(sum(names(df) == "IPStart") != 1 | sum(names(df) == "IPEnd") != 1) {
+      cat("Invalid number of IP start or end columns, so IP will not be included\n", file = log, append = T)
+      return(NA)
+    }
+    
+    ##check for duplicates and clean up if present
+    df$Case = as.character(df$Case)
+    dup = duplicated(df$Case)
+    if(any(dup)) {
+      ids = df$Case[dup]
+      for(i in ids) {
+        rows = which(df$Case==i)
+        df$IPStart[rows[1]] = getMin(df$IPStart[df$Case==i], i, "IP start")
+        df$IPEnd[rows[1]] = getMin(df$IPEnd[df$Case==i], i, "IP end", min=F, message=F)
+        df = df[-rows[-1],]
+      }
+    }
+  }
+  if(!all(c("Case", "IPStart", "IPEnd") %in% names(df))) {
+    cat("Infectious period inputs need column for case, IP start and IP end; this data is missing so IP will not be included\n", file = log, append = T)
+    df=NA
+  }
+  return(df)
+}
+
+##look for overlap between the date ranges start1-end, start2-end
+##if no overlap, return NA, else return c(overlap start, overlap end)
+getOverlap <- function(start1, end1, start2, end2) {
+  if((start1 >= start2 & start1 <= end2) |
+     (start2 >= start1 & start2 <= end1)) { #overlap
+    ##calculate actual overlap
+    if(start1 >= start2) {
+      olstart = start1
+    } else {
+      olstart = start2
+    }
+    if(end1 <= end2) {
+      olend = end1
+    } else {
+      olend = end2
+    }
+    return(c(olstart, olend))
+  } else {
+    return(NA)
+  }
+}
+
+##function that returns the number of days the infectious period from ip for case overlaps the time range represented by start and end
+overlapIP <- function(start, end, ip, case) {
+  val = noIPstring
+  if(!all(is.na(ip))) {
+    if(case %in% ip$Case) {
+      if(!is.na(ip$IPStart[ip$Case==case]) & !is.na(ip$IPEnd[ip$Case==case])) {
+        ol = getOverlap(start, end, ip$IPStart[ip$Case==case], ip$IPEnd[ip$Case==case])
+        if(all(is.na(ol))) {
+          if(ip$IPEnd[ip$Case==case] < start) {
+            val = afterIPstring
+          } else {
+            val = 0
+          }
+        } else {
+          val = as.numeric(ol[2]-ol[1])+1
+        }
+      }
+    }
+  }
+  return(val)
+}
+
+##cleans up the column names of the given data frame df for output
+namesForOutput <- function(df) {
+  #case1, case2, location, strength, location fine
+  names(df)[names(df)=="NumDaysOverlap"] = "Number of overlapping days"
+  names(df)[names(df)=="OverlapStart"] = "Overlap start date"
+  names(df)[names(df)=="OverlapEnd"] = "Overlap end date"
+  names(df)[names(df)=="OverlapCase1IP"] = "Number of days overlap in case1 IP"
+  names(df)[names(df)=="OverlapCase2IP"] = "Number of days overlap in case2 IP"
+  
+  ##format dates
+  for(c in 1:ncol(df)) {
+    if(class(df[,c])=="Date") {
+      df[,c] = format(df[,c], format="%m/%d/%Y")
+    }
+  }
+  return(df)
+}
+
+##writes the data frame df to the Excel file or workbook and sheet
+##df = data to write
+##if fileName is not NA, generate the workbook first
+##workbook should be provided if no fileName is given, otherwise the value will be ignored
+##returns the workbook in case additional sheets need to be written
+##if wrapHeader is true, set column widths to the longest length and wrap the header (rather than using auto, which will not wrap the header)
+##save = if true, save the workbook
+writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHeader=F, save = T) {
+  df = namesForOutput(df)
+  if(class(workbook)!="jobjRef") {
+    workbook = createWorkbook()
+  }
+  sheet = createSheet(workbook, sheetName = sheetName)
+  rows = createRow(sheet, rowIndex = 1:(nrow(df)+1))
+  cells = createCell(rows, colIndex = 1:ncol(df))
+  
+  ##header
+  headstyle = CellStyle(workbook) + Fill(foregroundColor = rgb(red = 192, green = 192, blue = 192, maxColorValue = 255))
+  if(wrapHeader) {
+    headstyle = headstyle + Alignment(wrapText = T)
+  }
+  for(c in 1:ncol(df)) {
+    setCellValue(cells[[1,c]], names(df)[c])
+    setCellStyle(cells[[1,c]], headstyle)
+  }
+  ##write data
+  for(r in 1:nrow(df)) {
+    for(c in 1:ncol(df)) {
+      if(!is.na(df[r,c])) {
+        if(as.character(df[r,c])!="") {
+          if(all(grepl("[0-9.]", strsplit(as.character(df[r,c]), "")[[1]]))) {
+            setCellValue(cells[[r+1,c]], as.numeric(df[r,c]))
+          } else {
+            setCellValue(cells[[r+1,c]], df[r,c])
+          }
+        }
+      }
+    }
+  }
+  ##set column widths
+  if(wrapHeader) {
+    cwidth = (sapply(1:ncol(df), function(c){max(nchar(as.character(df[,c]), keepNA=F))})+5)#*256 #width is 1/256 of char
+    minWidth = 10# 10*256 #minimum width for column
+    cwidth[cwidth < minWidth] = minWidth
+    for(c in 1:length(cwidth)) {
+      setColumnWidth(sheet = sheet, colIndex = c, colWidth = cwidth[c])
+    }
+  } else {
+    autoSizeColumn(sheet, 1:ncol(df))
+  }
+  ##add filter
+  r1 = sheet$getRow(1L)
+  lastcol = r1$getCell(as.integer(ncol(df)-1))
+  addAutoFilter(sheet = sheet, cellRange =paste("A1:", lastcol$getReference(), sep=""))
+  if(save) {
+    saveWorkbook(workbook, fileName)
+  }
+  return(workbook)
+}
+
+###returns a table of epi links, using:
+##res = results table containing all overlaps
+##cutoff = time cutoff; cases must overlap for at least this many days to be a definite or probable epi link
+getEpiLinks <-function(res, cutoff) {
+  epi = NA
+  allCombo = strsplit(unique(paste(res$Case1, res$Case2, sep=",.")), ",.")
+  for(c in allCombo) {
+    sub = res[res$Case1==c[1] & res$Case2==c[2],]
+    if(nrow(sub) > 0) {
+      temp = data.frame(Case1 = c[1],
+                        Case2 = c[2],
+                        Strength = NA,
+                        Location = paste(sort(unique(sub$Location)), collapse = ","))
+      numCert = sum(sub$NumDaysOverlap[sub$Strength=="certain"])
+      numTot = sum(sub$NumDaysOverlap)
+      if(numCert >= cutoff) {
+        temp$Strength = "definite"
+      } else if(numTot >= cutoff) {
+        temp$Strength = "probable"
+      } else {
+        temp$Strength = "possible"
+      } 
+      
+      if(all(is.na(epi))) {
+        epi = temp
+      } else {
+        epi = rbind(epi, temp, stringsAsFactors=F)
+      }
+    } 
+  }
+  return(epi)
+}
+
+###returns a table of IP epi links, using:
+##res = results table containing all overlaps
+##cutoff = time cutoff; cases must overlap for at least this many days to be a definite or probable epi link
+##removeAfter = if true, remove overlaps that occur after the IP of either case
+getIPEpiLinks <- function(res, cutoff, removeAfter) {
+  epi = NA
+  allCombo = strsplit(unique(paste(res$Case1, res$Case2, sep=",.")), ",.")
+  for(c in allCombo) {
+    sub = res[res$Case1==c[1] & res$Case2==c[2],]
+    if(nrow(sub) > 0 & removeAfter) { #remove overlaps that occur after the IP of either case
+      sub = sub[sub$OverlapCase1IP != afterIPstring & sub$OverlapCase2IP != afterIPstring,]
+    } else {
+      sub$OverlapCase1IP[sub$OverlapCase1IP == afterIPstring] = NA
+      sub$OverlapCase2IP[sub$OverlapCase2IP == afterIPstring] = NA
+    }
+    if(nrow(sub) > 0) {
+      sub$OverlapCase1IP[sub$OverlapCase1IP==noIPstring] = NA
+      sub$OverlapCase2IP[sub$OverlapCase2IP==noIPstring] = NA
+      sub$OverlapCase1IP = as.numeric(as.character(sub$OverlapCase1IP))
+      sub$OverlapCase2IP = as.numeric(as.character(sub$OverlapCase2IP))
+      temp = data.frame(Case1 = c[1],
+                        Case2 = c[2],
+                        Strength = NA,
+                        Location = paste(sort(unique(sub$Location)), collapse = ","))
+      numCert1 = sum(sub$OverlapCase1IP[sub$Strength=="certain"], na.rm = T)
+      numCert2 = sum(sub$OverlapCase2IP[sub$Strength=="certain"], na.rm = T)
+      numTot1 = sum(sub$OverlapCase1IP, na.rm = T)
+      numTot2 = sum(sub$OverlapCase2IP, na.rm = T)
+      if(numCert1 >= cutoff | numCert2 >= cutoff) {
+        temp$Strength = "definite"
+      } else if(numTot1 >= cutoff | numTot2 >= cutoff) {
+        temp$Strength = "probable"
+      } else {
+        temp = NA
+      }
+      
+      if(!all(is.na(temp))) {
+        if(all(is.na(epi))) {
+          epi = temp
+        } else {
+          epi = rbind(epi, temp, stringsAsFactors=F)
+        }
+      }
+    } 
+  }
+  return(epi)
+}
+
+##run the LATTE algorithm
+##loc = table of locations, expected columns = case, location, start, end, confidence
+##ip = optional table of infectious periods, expected columns = case, IPStart, IPEnd
+##cutoff = overlap must be more than cutoff number of days to be considered for an epi or IP epi link
+##ipEpiLink = if true, calculate an IP epi link, otherwise calculate an epi link
+##removeAfter = if true, remove overlaps that occur after the IP of either case (for IP epi links)
+##log = log file name (where messages will be written)
+latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter = F, progress = NA, log = defaultLogName) {
+  ##set up log
+  cat("LATTE analysis\n", file = log)
+  
+  ###clean up headers
+  loc = fixCaseName(loc)
+  loc = fixLocNames(loc)
+  
+  ###if location end is empty, assume it is one day and assign location start
+  loc[] = lapply(loc, as.character)
+  loc$End[is.na(loc$End) | loc$End==""] = loc$Start[is.na(loc$End) | loc$End==""] 
+  
+  ###convert dates
+  loc$Start = convertToDate(loc$Start)
+  loc$End = convertToDate(loc$End)
+  
+  # ##clean IP
+  # if(!all(is.na(ip))) {
+  #   ip = fixCaseName(ip)
+  #   ip = fixIPnames(ip, log)
+  #   ip$IPStart = convertToDate(ip$IPStart)
+  #   ip$IPEnd = convertToDate(ip$IPEnd)
+  #   ##test for bad IPs:
+  #   if(any(is.na(ip$IPStart) | is.na(ip$IPEnd))) {
+  #     cat("The following cases in the IP table have a missing IP start or end so will have no IP in analysis: ", file = log, append = T)
+  #     cat(as.character(ip$Case[is.na(ip$IPStart) | is.na(ip$IPEnd)]), file = log, append = T)
+  #     cat("\n", file = log, append = T)
+  #   }
+  #   ip = ip[!is.na(ip$IPStart),]
+  #   ip = ip[!is.na(ip$IPEnd),]
+  #   if(any(ip$IPStart >= ip$IPEnd)) {
+  #     cat("The following cases in the IP table have an IP end date before the start date so will have no IP in analysis: ", file = log, append = T)
+  #     cat(as.character(ip$Case[ip$IPStart > ip$IPEnd]), file = log, append = T)
+  #     cat("\n", file = log, append = T)
+  #     ip = ip[ip$IPStart < ip$IPEnd,]
+  #   }
+  #   if(nrow(ip)==0) {
+  #     ip = NA
+  #   }
+  # }
+  
+  ##fix strengths
+  loc$Confidence = tolower(loc$Confidence)
+  if(any(loc$Confidence!="certain" & loc$Confidence!="uncertain")) {
+    cat("The following rows in the location table have invalid confidence values and will be set to uncertain: ", file = log, append = T)
+    # cat(loc[loc$Confidence!="certain" & loc$Confidence!="uncertain",], file = log, append = T)
+    cat(row.names(loc)[loc$Confidence!="certain" & loc$Confidence!="uncertain"], file = log, append = T)
+    cat("\n", file = log, append = T)
+    cat("\tValid confidence values are: certain, uncertain\n", file = log, append = T)
+    loc$Confidence[loc$Confidence!="certain" & loc$Confidence!="uncertain"] = "uncertain"
+  }
+  
+  ###test for bad dates
+  if(any(is.na(loc$Start) | is.na(loc$End))) {
+    cat("The following rows in the location table have invalid dates and will be removed from analysis: ", file = log, append = T)
+    # cat(loc[is.na(loc$Start) | is.na(loc$End),], file = log, append = T)
+    cat(row.names(loc)[is.na(loc$Start) | is.na(loc$End)], file = log, append = T)
+    cat("\n", file = log, append = T)
+    loc = loc[!is.na(loc$Start) & !is.na(loc$End),]
+  }
+  
+  ###test for bad date ranges
+  if(any(loc$Start > loc$End)) {
+    cat("The following rows in the location table have an end date before the start date and will be removed from analysis: ", file = log, append = T)
+    # cat(loc[loc$Start > loc$End,], file = log, append = T)
+    cat(row.names(loc)[loc$Start > loc$End], file = log, append = T)
+    cat("\n", file = log, append = T)
+    loc = loc[loc$Start <= loc$End,]
+  }
+  
+  cases = sort(unique(as.character(loc$Case)))
+
+  ##clean IP
+  if(!all(is.na(ip))) {
+    ip = fixCaseName(ip)
+    ip = fixIPnames(ip, log)
+    ip$IPStart = convertToDate(ip$IPStart)
+    ip$IPEnd = convertToDate(ip$IPEnd)
+    ##message if missing an IP
+    if(any(!cases %in% ip$Case)) {
+      cat("The following cases are in the location table but not in the IP table so will have no IP in analysis: ", file = log, append = T)
+      cat(as.character(cases[!cases %in% ip$Case]), file = log, append = T)
+      cat("\n", file = log, append = T)
+    }
+    ##test for bad IPs:
+    if(any(is.na(ip$IPStart) | is.na(ip$IPEnd))) {
+      cat("The following cases in the IP table have a missing IP start or end so will have no IP in analysis: ", file = log, append = T)
+      cat(as.character(ip$Case[is.na(ip$IPStart) | is.na(ip$IPEnd)]), file = log, append = T)
+      cat("\n", file = log, append = T)
+    }
+    ip = ip[!is.na(ip$IPStart),]
+    ip = ip[!is.na(ip$IPEnd),]
+    if(any(ip$IPStart >= ip$IPEnd)) {
+      cat("The following cases in the IP table have an IP end date before the start date so will have no IP in analysis: ", file = log, append = T)
+      cat(as.character(ip$Case[ip$IPStart > ip$IPEnd]), file = log, append = T)
+      cat("\n", file = log, append = T)
+      ip = ip[ip$IPStart < ip$IPEnd,]
+    }
+    if(nrow(ip)==0) {
+      ip = NA
+    }
+  }
+  
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 1)
+  }
+  
+  ###check still have data after removing bad rows
+  if(length(cases) < 2) {
+    stop("There are ", length(cases), " cases to analyze. At least two cases are needed.")
+  }
+  
+  ###check that no date ranges for a particular case are overlapping (so don't double count days)
+  dedup = NA
+  for(c in cases) {
+    cloc = sort(unique(loc$Location[loc$Case==c])) #location case was in
+    if(length(cloc)) {
+      for(l in cloc) {
+        sub = loc[loc$Case==c & loc$Location==l,]
+        rep = T #repeat the loop if overlaps found
+        while(rep) {
+          rep = F
+          if(nrow(sub) >= 2) {
+            i=1
+            while(i < nrow(sub)) {
+              j = i+1
+              if(rep) {
+                break;
+              }
+              while(j <= nrow(sub)) {
+                ol = getOverlap(sub$Start[i], sub$End[i], sub$Start[j], sub$End[j])
+                if(!all(is.na(ol))) {
+                  cat(paste(c, " has rows with overlapping dates in ", l, ", which have been merged\n", sep=""), file = log, append = T)
+                  rep = T
+                  if(sub$Confidence[i]==sub$Confidence[j]) { #same confidence so can merge
+                    sub$Start[i] = min(sub$Start[i], sub$Start[j])
+                    sub$End[i] = max(sub$End[i], sub$End[j])
+                    sub = sub[-j,]
+                  } else { #remove overlap from uncertain
+                    cert = ifelse(sub$Confidence[i] == "certain", i, j) #certain row
+                    un = ifelse(sub$Confidence[i] == "uncertain", i, j) #uncertain row
+                    if(ol[2] >= sub$Start[un] & ol[1] <= sub$Start[un]) { #uncertain starts in middle of certain
+                      if(ol[2] < sub$End[un]) { #uncertain ends after certain
+                        sub$Start[un] = ol[2] + 1 #change uncertain to start after overlap
+                      } else { #uncertain contained within certain
+                        sub = sub[-un,]
+                      }
+                    } else if(ol[1] <= sub$End[un] & ol[2] >= sub$End[un]) { #certain starts in middle of uncertain and ends after
+                      sub$End[un] = ol[1] - 1
+                    } else { #certain contained within uncertain
+                      sub = rbind(sub, 
+                                  data.frame(Case = c,
+                                             Location = l,
+                                             Start = ol[2]+1,
+                                             End = sub$End[un],
+                                             Confidence = "uncertain"))
+                      sub$End[un] = ol[1] - 1
+                    }
+                    i = 1
+                    break;
+                  } 
+                } else {
+                  rep=F
+                  j = j + 1
+                }
+              }
+              i = i+1
+            }
+          }
+        }
+        if(all(is.na(dedup))) {
+          dedup = sub
+        } else {
+          dedup = rbind(dedup, sub)
+        }
+      }
+    }
+  }
+  loc = dedup
+  
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 2)
+  }
+  
+  ###get list of overlaps
+  res = NA
+  for(i in 1:(length(cases)-1)) {
+    cloc = sort(unique(loc$Location[loc$Case==cases[i]])) #location case was in
+    if(length(cloc)) {
+      for(l in cloc) {
+        dates1 = loc[loc$Case==cases[i] & loc$Location==l,]
+        for(j in (i+1):length(cases)) {
+          dates2 = loc[loc$Case==cases[j] & loc$Location==l,]
+          if(nrow(dates2)) {
+            for(r1 in 1:nrow(dates1)) {
+              for(r2 in 1:nrow(dates2)) {
+                ol = getOverlap(dates1$Start[r1], dates1$End[r1], dates2$Start[r2], dates2$End[r2])
+                if(!all(is.na(ol))) {
+                  temp = data.frame(Case1=cases[i],
+                                    Case2=cases[j],
+                                    Location=l,
+                                    Strength=ifelse(dates1$Confidence[r1]=="uncertain" | dates2$Confidence[r2]=="uncertain",
+                                                    "uncertain", "certain"),
+                                    NumDaysOverlap=as.numeric(ol[2]-ol[1])+1,
+                                    OverlapStart=ol[1],
+                                    OverlapEnd=ol[2],
+                                    OverlapCase1IP=as.character(overlapIP(ol[1], ol[2], ip, cases[i])),
+                                    OverlapCase2IP=as.character(overlapIP(ol[1], ol[2], ip, cases[j])))
+                  if(all(is.na(res))) {
+                    res = temp
+                  } else {
+                    res = rbind(res, temp, stringsAsFactors=F)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 3)
+  }
+  
+  ###convert to epi links (one link per pair; if pair has multiple overlaps in time and space, strength = strongest, location=all locations (even ones with weaker epi))
+  epi = NA
+  if(!all(is.na((res)))) {
+    if(ipEpiLink) {
+      if(all(is.na(ip))) {
+        cat("There are no IP epi links because there are no valid infectious periods\n", file = log, append = T)
+        # cat("Generating IP epi links, but there are no valid infectious periods, so there are no IP epi links\n", file = log, append = T)
+      } else {
+        cat(paste("Generating IP epi links with cutoff of ", cutoff, " days overlapping each other and an IP", 
+                  ifelse(removeAfter, ". Overlaps after either IP has ended were removed from link analysis.", ""), "\n", sep=""), file = log, append = T)
+        epi = getIPEpiLinks(res, cutoff, removeAfter)
+      }
+    } else {
+      cat("Generating epi links with cutoff of", cutoff, "days for a definite or probable epi link\n", file = log, append = T)
+      epi = getEpiLinks(res, cutoff)
+    }
+  } else {
+    # cat("There are no links because no overlaps were found\n", file = log, append = T)
+    cat("No overlaps were found. As a result, there are no links.\n", file = log, append = T)
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 4)
+  }
+  return(list(allOverlaps = res, 
+              epiLinks = epi,
+              location = loc,
+              ip = ip))
+}
+
+##run the LATTE algorithm and then produce Excel files of results and timeline figures
+##outPrefix = prefix for output files
+##loc = table of locations, expected columns = case, location, start, end, confidence
+##ip = optional table of infectious periods, expected columns = case, IPStart, IPEnd
+##cutoff = overlap must be more than cutoff number of days to be considered for an epi or IP epi link
+##ipEpiLink = if true, calculate an IP epi link, otherwise calculate an epi link
+##removeAfter = if true, remove overlaps that occur after the IP of either case (for IP epi links)
+##progress = optional progress bar (for Rshiny interface)
+latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter = F, progress = NA) {
+  log = paste(outPrefix, defaultLogName, sep="")
+  results = latte(loc = loc, ip = ip, cutoff = cutoff, ipEpiLink = ipEpiLink, removeAfter = removeAfter, log = log)
+  res = results$allOverlaps
+  epi = results$epiLinks
+  loc = results$location
+  ip = results$ip
+  
+  ##if Excel spreadsheet already exists, delete file; otherwise will not write the new results
+  overlapName = paste(outPrefix, "LATTE_All_Overlaps.xlsx", sep="")
+  epiName = paste(outPrefix, ifelse(ipEpiLink, "LATTE_IPEpi_Links_", "LATTE_Epi_Links_"), cutoff, "Cutoff",
+                  ifelse(removeAfter & ipEpiLink, "_RemoveOLAfterIPEnd", ""), ".xlsx", sep="")
+  outputExcelFiles = c(overlapName, epiName)
+  results$outputFiles = c(log, outputExcelFiles)
+  if(any(file.exists(outputExcelFiles))) {
+    outputExcelFiles = outputExcelFiles[file.exists(outputExcelFiles)]
+    file.remove(outputExcelFiles)
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 5)
+  }
+  
+  ###write out overlaps, epi links
+  if(!all(is.na(res))) {
+    # write.table(res, sub(".xlsx", ".txt", overlapName), row.names = F, col.names = T, quote = F, sep = "\t")
+    res$OverlapStart = format(res$OverlapStart, format="%m/%d/%Y")
+    res$OverlapEnd = format(res$OverlapEnd, format="%m/%d/%Y")
+    writeExcelTable(df=res, fileName=overlapName, wrapHeader = T)
+  } 
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 7)
+  }
+  
+  if(!all(is.na(epi))) {
+    # write.table(epi, sub(".xlsx", ".txt", overlapName), row.names = F, col.names = T, quote = F, sep = "\t")
+    writeExcelTable(df=epi, fileName = epiName, 
+                    sheetName = paste(ifelse(ipEpiLink, "IP Epi Links ", "Epi Links "), cutoff, "d Cut", 
+                                      ifelse(removeAfter, " rem OL after IP end", ""), sep="")) 
+  } else {
+    if(ipEpiLink & !all(is.na(ip)) & !all(is.na(res))) {
+      cat(paste("No IP epi links detected with ", cutoff, " day cutoff", 
+                ifelse(removeAfter, " and removing overlaps after IP end", ""), "\n", sep=""), file = log, append = T)
+    } else if(!ipEpiLink) {
+      if(!all(is.na(res))) {
+        cat(paste("No epi links detected with", cutoff, "day cutoff\n"), file = log, append = T)
+      }
+    }
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 9)
+  }
+  
+  ###generate figure
+  ###only include cases at the location
+  ###only include times at the location (don't show IP if not on plot)
+  for(l in unique(loc$Location)) {
+    sub = loc[loc$Location==l,]
+    lcases = sort(unique(sub$Case))
+    y = length(lcases):1
+    xrange = range(c(sub$Start, sub$End))
+    jpeg(paste(outPrefix, "LATTE_Timeline_", l, ".jpg", sep=""), width=600, height=length(lcases)*20+500)
+    layout(matrix(1:2, ncol=1, nrow=2), heights = c(1,.09))
+    par(mar=c(4,4,4,.3)) 
+    plot(NA, xaxt="n", yaxt="n", xlim=xrange, ylim=c(0, length(lcases)+1), xlab = "", ylab = "", main=l)
+    axis(side=2, at=y, labels=lcases, las=1)
+    xlabs=seq(xrange[1], xrange[2], length.out = 10)
+    axis(side=1, at=xlabs, labels=format(xlabs, "%m/%d/%Y"))
+    ##separate cases
+    abline(h=y-0.5, col="gray", lty=3)
+    ##plot case data
+    for(i in y) {
+      c = lcases[length(lcases)-i+1] 
+      ##plot times in location
+      sub2 = sub[sub$Case==c,]
+      for(r in 1:nrow(sub2)) {
+        if(sub2$Confidence[r] == "certain") {
+          lines(x=c(sub2$Start[r], sub2$End[r]), y=c(i, i), col="blue", lwd=4)
+        } else if(sub2$Confidence[r] == "uncertain") {
+          lines(x=c(sub2$Start[r], sub2$End[r]), y=c(i, i), col="lightskyblue", lwd=4)
+        } else {
+          cat(paste("Bad strength for plotting in row ", r, ": ", sub2$Confidence[r], "\n", sep=""), file = log, append = T)
+          lines(x=c(sub2$Start[r], sub2$End[r]), y=c(i, i), col="gray", lwd=4)
+        }
+      }
+      ##plot IP
+      if(!all(is.na(ip))) {
+        if(c %in% ip$Case) {
+          lines(x=c(ip$IPStart[ip$Case==c], ip$IPEnd[ip$Case==c]), y=c(i+.25, i+.25), col="red", lwd=4)
+        }
+      }
+    }
+    ##add legend
+    par(mar=c(.1,4,.1,.3))
+    plot(NA, xaxt="n", yaxt="n", bty="n", xlim=c(0,1), ylim=c(0,1), xlab="", ylab="")
+    legend("center", 
+           horiz=T,
+           legend=c("Certain time in location", "Uncertain time in location", "Infectious period"),
+           col=c("blue", "lightskyblue", "red"),
+           lwd=2,
+           bty="n")
+    dev.off()
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 10)
+  }
+  return(results)
+}
