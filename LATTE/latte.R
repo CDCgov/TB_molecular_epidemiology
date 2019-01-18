@@ -19,8 +19,10 @@ fixCaseName <- function(df) {
 ##function that takes the given data frame and corrects the column location name capitalization
 fixLocNames <- function(df, log) {
   names(df)[grep("location", names(df), ignore.case = T)] = "Location"
-  names(df)[grep("start", names(df), ignore.case = T)] = "Start"
-  names(df)[grepl("end", names(df), ignore.case = T) | grepl("stop", names(df), ignore.case = T)] = "End"
+  names(df)[grepl("start", names(df), ignore.case = T) & 
+              !grepl("ip", names(df), ignore.case = T)] = "Start"
+  names(df)[(grepl("end", names(df), ignore.case = T) | grepl("stop", names(df), ignore.case = T)) &
+              !grepl("ip", names(df), ignore.case = T)] = "End"
   names(df)[grepl("confidence", names(df), ignore.case = T) | 
               grepl("probability", names(df), ignore.case = T) | 
               grepl("strength", names(df), ignore.case = T)] = "Confidence"
@@ -524,7 +526,8 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
         # cat("Generating IP epi links, but there are no valid infectious periods, so there are no IP epi links\n", file = log, append = T)
       } else {
         cat(paste("Generating IP epi links with cutoff of ", cutoff, " days overlapping each other and an IP", 
-                  ifelse(removeAfter, ". Overlaps after either IP has ended were removed from link analysis.", ""), "\n", sep=""), file = log, append = T)
+                  ifelse(removeAfter, ". Overlaps after either IP has ended were removed from link analysis.", 
+                         ". Overlaps after either IP has ended were kept in link analysis."), "\n", sep=""), file = log, append = T)
         epi = getIPEpiLinks(res, cutoff, removeAfter)
       }
     } else {

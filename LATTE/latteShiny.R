@@ -72,7 +72,7 @@ server <- function(input, output, session) {
                                   ip = readShinyInputFile(input$ipTab),
                                   cutoff = cutoff,
                                   ipEpiLink = ipEpiLink,
-                                  removeAfter = input$removeAfter,
+                                  removeAfter = !input$removeAfter,
                                   progress = progress)
       outfiles <<- latteres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
@@ -93,12 +93,14 @@ server <- function(input, output, session) {
     },
     content = function(fname) {
       outfiles = sub(tmpdir, "", outfiles, fixed=T)
+      currdir = getwd()
       setwd(tmpdir)
       zip(zipfile = fname, files = outfiles)
       if(file.exists(paste0(fname, ".zip"))) {
         file.rename(paste0(fname, ".zip"), fname)
       }
       output$message <- renderText({paste(outputfontsizestart, "Download complete", outputfontsizeend, sep="")})
+      setwd(currdir)
     },
     contentType = "application/zip"
   )
