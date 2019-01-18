@@ -1,11 +1,12 @@
-# Place holder for Repository Name
+# TB Molecular Epidemiology
 This repository was created for use by CDC programs to collaborate on public health surveillance related projects in support of the CDC Surveillance Strategy.  Github is not hosted by the CDC, but is used by CDC and its partners to share information and collaborate on software.
 
-## ----- Start of respository specific READ ME -----
-### This repository specific READ ME instructions go here
+## Logically Inferred Tuberculosis Transmission (LITT)
 
-Replace everything within this section demarcated with “-----“ with material appropriate to your repo that is useful to your developers and users like installation steps, user guide etc.
-## ----- End of respository specific READ ME -----
+LITT is an algorithm that can be used to integrate whole genome sequencing, clinical, and epidemiological data to identify and rank potential sources for tuberculosis cases.
+
+## Location And Time To Epi (LATTE)
+LATTE identifies all overlaps in space and time from a list of dates that cases (or contacts) were in a particular location, then combines that with infectious periods (IP) to identify and categorize epi or IP epi links.
   
 ## Public Domain
 This repository constitutes a work of the United States Government and is not
@@ -65,13 +66,4 @@ for more information about [contributing to this repository](https://github.com/
 [public domain notices and disclaimers](https://github.com/CDCgov/template/blob/master/DISCLAIMER.md),
 and [code of conduct](https://github.com/CDCgov/template/blob/master/code-of-conduct.md).
 
-## ----- for use in template only -----
-## Hat-tips
-Thanks to [18F](https://18f.gsa.gov/)'s [open source policy](https://github.com/18F/open-source-policy)
-and [code of conduct](https://github.com/CDCgov/code-of-conduct/blob/master/code-of-conduct.md)
-that were very useful in setting up this GitHub organization. Thanks to CDC's
-[Informatics Innovation Unit](https://www.phiresearchlab.org/index.php/code-of-conduct/)
-that was helpful in modeling the code of conduct.
-
-## ----- for use in template only -----
 
