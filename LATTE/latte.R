@@ -17,15 +17,22 @@ fixCaseName <- function(df) {
 }
 
 ##function that takes the given data frame and corrects the column location name capitalization
-fixLocNames <- function(df) {
+fixLocNames <- function(df, log) {
   names(df)[grep("location", names(df), ignore.case = T)] = "Location"
   names(df)[grep("start", names(df), ignore.case = T)] = "Start"
   names(df)[grepl("end", names(df), ignore.case = T) | grepl("stop", names(df), ignore.case = T)] = "End"
   names(df)[grepl("confidence", names(df), ignore.case = T) | 
               grepl("probability", names(df), ignore.case = T) | 
               grepl("strength", names(df), ignore.case = T)] = "Confidence"
-  if(!all(c("Case", "Location", "Start", "End", "Confidence") %in% names(df))) {
-    stop("Location table is missing columns. Columns must include: Case, Location, Start, End, Confidence")
+  reqCols = c("Case", "Location", "Start", "End", "Confidence")
+  if(!all(reqCols %in% names(df))) {
+    # cat("Location table required column names are: Case, Location, Start, End, Confidence\n", file = log, append = T)
+    # cat("Actual location table column names are: ", file = log, append = T)
+    # cat(names(df), file = log, append = T)
+    cat("Location table is missing these required columns: ", file = log, append = T)
+    cat(paste(reqCols[!reqCols %in% names(df)], collapse=", "), file = log, append = T)
+    cat(". Analysis has been stopped.\n", file = log, append = T)
+    stop("Location table is missing required columns. Columns must include: Case, Location, Start, End, Confidence.")
   }
   return(df)
 }
@@ -60,7 +67,7 @@ fixIPnames <- function(df, log) {
     }
   }
   if(!all(c("Case", "IPStart", "IPEnd") %in% names(df))) {
-    cat("Infectious period inputs need column for case, IP start and IP end; this data is missing so IP will not be included\n", file = log, append = T)
+    cat("Infectious period inputs need column for case, IP start and IP end, but some or all of this data is missing so IP will not be included\n", file = log, append = T)
     df=NA
   }
   return(df)
@@ -118,6 +125,8 @@ namesForOutput <- function(df) {
   names(df)[names(df)=="OverlapEnd"] = "Overlap end date"
   names(df)[names(df)=="OverlapCase1IP"] = "Number of days overlap in case1 IP"
   names(df)[names(df)=="OverlapCase2IP"] = "Number of days overlap in case2 IP"
+  names(df)[names(df)=="IPStart"] = "IP Start"
+  names(df)[names(df)=="IPEnd"] = "IP End"
   
   ##format dates
   for(c in 1:ncol(df)) {
@@ -282,7 +291,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   
   ###clean up headers
   loc = fixCaseName(loc)
-  loc = fixLocNames(loc)
+  loc = fixLocNames(loc, log)
   
   ###if location end is empty, assume it is one day and assign location start
   loc[] = lapply(loc, as.character)
@@ -347,11 +356,13 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   }
   
   cases = sort(unique(as.character(loc$Case)))
-
+  
   ##clean IP
   if(!all(is.na(ip))) {
     ip = fixCaseName(ip)
     ip = fixIPnames(ip, log)
+  }
+  if(!all(is.na(ip))) {
     ip$IPStart = convertToDate(ip$IPStart)
     ip$IPEnd = convertToDate(ip$IPEnd)
     ##message if missing an IP
@@ -551,33 +562,38 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   overlapName = paste(outPrefix, "LATTE_All_Overlaps.xlsx", sep="")
   epiName = paste(outPrefix, ifelse(ipEpiLink, "LATTE_IPEpi_Links_", "LATTE_Epi_Links_"), cutoff, "Cutoff",
                   ifelse(removeAfter & ipEpiLink, "_RemoveOLAfterIPEnd", ""), ".xlsx", sep="")
-  outputExcelFiles = c(overlapName, epiName)
-  results$outputFiles = c(log, outputExcelFiles)
+  locName = paste0(outPrefix, "LATTE_Location.xlsx")
+  ipName = paste0(outPrefix, "LATTE_IP.xlsx")
+  outputExcelFiles = c(overlapName, epiName, locName, ipName)
   if(any(file.exists(outputExcelFiles))) {
-    outputExcelFiles = outputExcelFiles[file.exists(outputExcelFiles)]
-    file.remove(outputExcelFiles)
+    del = outputExcelFiles[file.exists(outputExcelFiles)]
+    file.remove(del)
   }
   if(all(class(progress)!="logical")) {
     progress$set(value = 5)
   }
   
-  ###write out overlaps, epi links
+  ###write out overlaps
   if(!all(is.na(res))) {
     # write.table(res, sub(".xlsx", ".txt", overlapName), row.names = F, col.names = T, quote = F, sep = "\t")
     res$OverlapStart = format(res$OverlapStart, format="%m/%d/%Y")
     res$OverlapEnd = format(res$OverlapEnd, format="%m/%d/%Y")
     writeExcelTable(df=res, fileName=overlapName, wrapHeader = T)
-  } 
+  } else {
+    outputExcelFiles = outputExcelFiles[outputExcelFiles != overlapName]
+  }
   if(all(class(progress)!="logical")) {
     progress$set(value = 7)
   }
   
+  ###write out epi links
   if(!all(is.na(epi))) {
     # write.table(epi, sub(".xlsx", ".txt", overlapName), row.names = F, col.names = T, quote = F, sep = "\t")
     writeExcelTable(df=epi, fileName = epiName, 
                     sheetName = paste(ifelse(ipEpiLink, "IP Epi Links ", "Epi Links "), cutoff, "d Cut", 
                                       ifelse(removeAfter, " rem OL after IP end", ""), sep="")) 
   } else {
+    outputExcelFiles = outputExcelFiles[outputExcelFiles != epiName]
     if(ipEpiLink & !all(is.na(ip)) & !all(is.na(res))) {
       cat(paste("No IP epi links detected with ", cutoff, " day cutoff", 
                 ifelse(removeAfter, " and removing overlaps after IP end", ""), "\n", sep=""), file = log, append = T)
@@ -591,58 +607,79 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
     progress$set(value = 9)
   }
   
-  ###generate figure
-  ###only include cases at the location
-  ###only include times at the location (don't show IP if not on plot)
-  for(l in unique(loc$Location)) {
-    sub = loc[loc$Location==l,]
-    lcases = sort(unique(sub$Case))
-    y = length(lcases):1
-    xrange = range(c(sub$Start, sub$End))
-    jpeg(paste(outPrefix, "LATTE_Timeline_", l, ".jpg", sep=""), width=600, height=length(lcases)*20+500)
-    layout(matrix(1:2, ncol=1, nrow=2), heights = c(1,.09))
-    par(mar=c(4,4,4,.3)) 
-    plot(NA, xaxt="n", yaxt="n", xlim=xrange, ylim=c(0, length(lcases)+1), xlab = "", ylab = "", main=l)
-    axis(side=2, at=y, labels=lcases, las=1)
-    xlabs=seq(xrange[1], xrange[2], length.out = 10)
-    axis(side=1, at=xlabs, labels=format(xlabs, "%m/%d/%Y"))
-    ##separate cases
-    abline(h=y-0.5, col="gray", lty=3)
-    ##plot case data
-    for(i in y) {
-      c = lcases[length(lcases)-i+1] 
-      ##plot times in location
-      sub2 = sub[sub$Case==c,]
-      for(r in 1:nrow(sub2)) {
-        if(sub2$Confidence[r] == "certain") {
-          lines(x=c(sub2$Start[r], sub2$End[r]), y=c(i, i), col="blue", lwd=4)
-        } else if(sub2$Confidence[r] == "uncertain") {
-          lines(x=c(sub2$Start[r], sub2$End[r]), y=c(i, i), col="lightskyblue", lwd=4)
-        } else {
-          cat(paste("Bad strength for plotting in row ", r, ": ", sub2$Confidence[r], "\n", sep=""), file = log, append = T)
-          lines(x=c(sub2$Start[r], sub2$End[r]), y=c(i, i), col="gray", lwd=4)
-        }
-      }
-      ##plot IP
-      if(!all(is.na(ip))) {
-        if(c %in% ip$Case) {
-          lines(x=c(ip$IPStart[ip$Case==c], ip$IPEnd[ip$Case==c]), y=c(i+.25, i+.25), col="red", lwd=4)
-        }
-      }
-    }
-    ##add legend
-    par(mar=c(.1,4,.1,.3))
-    plot(NA, xaxt="n", yaxt="n", bty="n", xlim=c(0,1), ylim=c(0,1), xlab="", ylab="")
-    legend("center", 
-           horiz=T,
-           legend=c("Certain time in location", "Uncertain time in location", "Infectious period"),
-           col=c("blue", "lightskyblue", "red"),
-           lwd=2,
-           bty="n")
-    dev.off()
+  ###write out location table
+  if(!all(is.na(loc))) {
+    writeExcelTable(df=loc, fileName=locName, wrapHeader = T)
+  } else {
+    outputExcelFiles = outputExcelFiles[outputExcelFiles != locName]
   }
+  
   if(all(class(progress)!="logical")) {
     progress$set(value = 10)
   }
+  
+  ###write out IP table
+  if(!all(is.na(ip))) {
+    writeExcelTable(df=ip, fileName=ipName, wrapHeader = T)
+  } else {
+    outputExcelFiles = outputExcelFiles[outputExcelFiles != ipName]
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 11)
+  }
+  ###generate figure
+  ###only include cases at the location
+  ###only include times at the location (don't show IP if not on plot)
+  if(all(class(progress)!="logical")) {#if given progress bar then don't make figures
+    for(l in unique(loc$Location)) {
+      sub = loc[loc$Location==l,]
+      lcases = sort(unique(sub$Case))
+      y = length(lcases):1
+      xrange = range(c(sub$Start, sub$End))
+      jpeg(paste(outPrefix, "LATTE_Timeline_", l, ".jpg", sep=""), width=600, height=length(lcases)*20+500)
+      layout(matrix(1:2, ncol=1, nrow=2), heights = c(1,.09))
+      par(mar=c(4,4,4,.3)) 
+      plot(NA, xaxt="n", yaxt="n", xlim=xrange, ylim=c(0, length(lcases)+1), xlab = "", ylab = "", main=l)
+      axis(side=2, at=y, labels=lcases, las=1)
+      xlabs=seq(xrange[1], xrange[2], length.out = 10)
+      axis(side=1, at=xlabs, labels=format(xlabs, "%m/%d/%Y"))
+      ##separate cases
+      abline(h=y-0.5, col="gray", lty=3)
+      ##plot case data
+      for(i in y) {
+        c = lcases[length(lcases)-i+1] 
+        ##plot times in location
+        sub2 = sub[sub$Case==c,]
+        for(r in 1:nrow(sub2)) {
+          if(sub2$Confidence[r] == "certain") {
+            lines(x=c(sub2$Start[r], sub2$End[r]), y=c(i, i), col="blue", lwd=4)
+          } else if(sub2$Confidence[r] == "uncertain") {
+            lines(x=c(sub2$Start[r], sub2$End[r]), y=c(i, i), col="lightskyblue", lwd=4)
+          } else {
+            cat(paste("Bad strength for plotting in row ", r, ": ", sub2$Confidence[r], "\n", sep=""), file = log, append = T)
+            lines(x=c(sub2$Start[r], sub2$End[r]), y=c(i, i), col="gray", lwd=4)
+          }
+        }
+        ##plot IP
+        if(!all(is.na(ip))) {
+          if(c %in% ip$Case) {
+            lines(x=c(ip$IPStart[ip$Case==c], ip$IPEnd[ip$Case==c]), y=c(i+.25, i+.25), col="red", lwd=4)
+          }
+        }
+      }
+      ##add legend
+      par(mar=c(.1,4,.1,.3))
+      plot(NA, xaxt="n", yaxt="n", bty="n", xlim=c(0,1), ylim=c(0,1), xlab="", ylab="")
+      legend("center", 
+             horiz=T,
+             legend=c("Certain time in location", "Uncertain time in location", "Infectious period"),
+             col=c("blue", "lightskyblue", "red"),
+             lwd=2,
+             bty="n")
+      dev.off()
+    }
+  }
+  
+  results$outputFiles = c(log, outputExcelFiles)
   return(results)
 }
