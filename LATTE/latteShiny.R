@@ -9,16 +9,12 @@ ui <- fluidPage(
   fluidRow(
     column(6,
            h3("Set up inputs"),
-           fileInput("locTab", "Table of dates in locations"),
-           fileInput("ipTab", "Table of infectious periods"),
+           fileInput("locTab", "Table of dates in locations", accept=c(".xlsx", ".csv")),
+           fileInput("ipTab", "Table of infectious periods", accept=c(".xlsx", ".csv")),
            br(),
            br(),
            h3("Set up outputs"),
-           # h5("Choose directory for output:"), #helpText
-           # shinyDirButton("outdir", title = "Choose directory for output", label = "Browse"),
-           # verbatimTextOutput("outdirpath"),
            textInput("prefix", "Name prefix for output files")),
-    # downloadLink("lk", "Output file location")),
     useShinyjs(),
     column(6,
            h3("Set up link definitions"),
@@ -38,7 +34,6 @@ ui <- fluidPage(
                     htmlOutput("message"))), #use instead of textOutput so can change font of returning string: https://stackoverflow.com/questions/24049159/change-the-color-and-font-of-text-in-shiny-app
     fluidRow(column(12, align="center",
                     br(),
-                    # uiOutput("download"))),
                     downloadButton("downloadData", "Download Results")))
     
   ))
@@ -48,7 +43,6 @@ outputfontsizestart = "<font font-size=\"30px\"><b>"
 outputfontsizeend = "</b></font>"
 
 dash <- .Platform$file.sep #file separator
-# wd = getwd()
 tmpdir = tempdir() #temporary directory to write outputs
 tmpdir = paste(tmpdir, dash, sep="")
 outfiles = NA #list of output files
@@ -56,12 +50,6 @@ outfiles = NA #list of output files
 # Define server logic ----
 server <- function(input, output, session) {
   shinyjs::hide("downloadData")
-  # volumes <- c(Home = fs::path_home(), "R Installation" = R.home(), getVolumes()())
-  # shinyDirChoose(input, "outdir", roots=volumes)
-  # output$outdirpath <- renderText({getOutPath()})
-  # getOutPath = reactive({ifelse(length(parseDirPath(volumes,input$outdir))==0,
-  #                               getwd(),
-  #                               parseDirPath(volumes, input$outdir))})
   
   ##run LATTE when action button hit
   observeEvent(input$run, {
@@ -70,14 +58,13 @@ server <- function(input, output, session) {
       output$message <- renderText({paste(outputfontsizestart, "No location data; please input a location table", outputfontsizeend, sep="")})
       return(NULL)
     }
-    progress <- Progress$new(session, min=-1, max=11) #http://shiny.rstudio.com/reference/shiny/1.2.0/Progress.html
+    progress <- Progress$new(session, min=-1, max=11) 
     on.exit(progress$close())
     progress$set(message = "Running LATTE")
     output$message <- renderText({paste(outputfontsizestart, "Starting analysis", outputfontsizeend, sep="")})
     ipEpiLink = ifelse(input$linkType == "ipepi", T, F)
     cutoff = ifelse(input$linkType == "ipepi", input$ipepicutoff, input$epicutoff)
     progress$set(value=0)
-    # outPrefix = paste(getOutPath(), input$prefix, sep=dash)
     outPrefix = paste(tmpdir, input$prefix, sep="")
     res = tryCatch({
       latteres = latteWithOutputs(outPrefix = outPrefix,
@@ -90,30 +77,29 @@ server <- function(input, output, session) {
       outfiles <<- latteres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
       shinyjs::show("downloadData")
-      # output$download <- renderUI({ #https://stackoverflow.com/questions/44179974/display-download-button-in-shiny-r-only-when-output-appears-in-main-panel 
-      #     downloadButton("out", "Download Results")
-      # })
     }, error = function(e) {
       outfiles <<- paste(tmpdir, input$prefix, defaultLogName, sep="")
       output$message <- renderText({paste(outputfontsizestart, "Error detected:<br/>", geterrmessage(), 
                                           "<br/>Download and view log for more details.", outputfontsizeend, sep="")})
       cat(geterrmessage(), file = outfiles, append = T)
       shinyjs::show("downloadData")
-    })#, warning = function(w) {
-    #   warning(w)
-    #   output$message <- renderText({paste(outputfontsizestart, "See warning message", outputfontsizeend, sep="")})
-    # })
+    })
   })
   
-  ##zip and download outputs: https://stackoverflow.com/questions/28228892/download-multiple-csv-files-in-a-zipped-folder-in-shiny
+  ##zip and download outputs
   output$downloadData <- downloadHandler(
     filename = function() {
-      "LATTE.txt"#paste(input$prefix, "LATTE.zip", sep="")
+      paste(input$prefix, "LATTE.zip", sep="")
     },
     content = function(fname) {
       outfiles = sub(tmpdir, "", outfiles, fixed=T)
       setwd(tmpdir)
       zip(zipfile = fname, files = outfiles)
+      # print(fname)
+      # if(!endsWith(fname, "zip")) {
+      #   file.rename(fname, paste(fname, ".zip", sep=""))
+      # }
+      # print(fname)
       if(file.exists(paste0(fname, ".zip"))) {
         file.rename(paste0(fname, ".zip"), fname)
       }
