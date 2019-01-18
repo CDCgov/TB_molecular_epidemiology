@@ -1,6 +1,6 @@
 ##Identify overlap in time and location between cases
 
-source("\\\\cdc.gov\\private\\m135\\nrf1\\transmission prediction\\MEA algorithm\\sharedFunctions.R") ##need convertToDate
+source("../sharedFunctions.R") ##need convertToDate
 library(xlsx)
 
 afterIPstring = "after IP end" #string used to indicate that an overlap occurs after an IP end
@@ -560,7 +560,7 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   
   ##if Excel spreadsheet already exists, delete file; otherwise will not write the new results
   overlapName = paste(outPrefix, "LATTE_All_Overlaps.xlsx", sep="")
-  epiName = paste(outPrefix, ifelse(ipEpiLink, "LATTE_IPEpi_Links_", "LATTE_Epi_Links_"), cutoff, "Cutoff",
+  epiName = paste(outPrefix, ifelse(ipEpiLink, "LATTE_IPEpi_Links_", "LATTE_Epi_Links_"), cutoff, "DCutoff",
                   ifelse(removeAfter & ipEpiLink, "_RemoveOLAfterIPEnd", ""), ".xlsx", sep="")
   locName = paste0(outPrefix, "LATTE_Location.xlsx")
   ipName = paste0(outPrefix, "LATTE_IP.xlsx")

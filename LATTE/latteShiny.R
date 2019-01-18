@@ -28,7 +28,7 @@ ui <- fluidPage(
                         selected = "epi"),
            sliderInput("epicutoff", "Number of days cases must overlap in a location to form a definite or probable epi link", min=0, max=30, value=defaultCut, step=1, round=T),
            sliderInput("ipepicutoff", "Number of days cases must overlap each other and an IP to form an IP epi link", min=0, max=30, value=defaultCut, step=1, round=T),
-           checkboxInput("removeAfter", "Check if want to include overlaps that occur after either IP end as potential IP epi links")),
+           checkboxInput("removeAfter", "Check if want to include overlaps that occur after either IP end as potential IP epi links (e.g. to identify potential re-exposure during a contact investigation)")),
     
     fluidRow(column(12, align="center",
                     actionButton("run", "Run", style='background-color:royalblue; color:white; padding:20px 40px'))), #https://www.w3schools.com/css/css3_buttons.asp
@@ -70,7 +70,7 @@ server <- function(input, output, session) {
       output$message <- renderText({paste(outputfontsizestart, "No location data; please input a location table", outputfontsizeend, sep="")})
       return(NULL)
     }
-    progress <- Progress$new(session, min=-1, max=10) #http://shiny.rstudio.com/reference/shiny/1.2.0/Progress.html
+    progress <- Progress$new(session, min=-1, max=11) #http://shiny.rstudio.com/reference/shiny/1.2.0/Progress.html
     on.exit(progress$close())
     progress$set(message = "Running LATTE")
     output$message <- renderText({paste(outputfontsizestart, "Starting analysis", outputfontsizeend, sep="")})
@@ -81,12 +81,12 @@ server <- function(input, output, session) {
     outPrefix = paste(tmpdir, input$prefix, sep="")
     res = tryCatch({
       latteres = latteWithOutputs(outPrefix = outPrefix,
-                       loc = loc,
-                       ip = readShinyInputFile(input$ipTab),
-                       cutoff = cutoff,
-                       ipEpiLink = ipEpiLink,
-                       removeAfter = input$removeAfter,
-                       progress = progress)
+                                  loc = loc,
+                                  ip = readShinyInputFile(input$ipTab),
+                                  cutoff = cutoff,
+                                  ipEpiLink = ipEpiLink,
+                                  removeAfter = input$removeAfter,
+                                  progress = progress)
       outfiles <<- latteres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
       shinyjs::show("downloadData")
@@ -94,7 +94,11 @@ server <- function(input, output, session) {
       #     downloadButton("out", "Download Results")
       # })
     }, error = function(e) {
-      output$message <- renderText({paste(outputfontsizestart, "Error detected: ", geterrmessage(), outputfontsizeend, sep="")})
+      outfiles <<- paste(tmpdir, input$prefix, defaultLogName, sep="")
+      output$message <- renderText({paste(outputfontsizestart, "Error detected:<br/>", geterrmessage(), 
+                                          "<br/>Download and view log for more details.", outputfontsizeend, sep="")})
+      cat(geterrmessage(), file = outfiles, append = T)
+      shinyjs::show("downloadData")
     })#, warning = function(w) {
     #   warning(w)
     #   output$message <- renderText({paste(outputfontsizestart, "See warning message", outputfontsizeend, sep="")})
@@ -108,7 +112,6 @@ server <- function(input, output, session) {
     },
     content = function(fname) {
       outfiles = sub(tmpdir, "", outfiles, fixed=T)
-      print(outfiles)
       setwd(tmpdir)
       zip(zipfile = fname, files = outfiles)
       if(file.exists(paste0(fname, ".zip"))) {
