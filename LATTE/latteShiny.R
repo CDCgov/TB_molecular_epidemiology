@@ -95,11 +95,6 @@ server <- function(input, output, session) {
       outfiles = sub(tmpdir, "", outfiles, fixed=T)
       setwd(tmpdir)
       zip(zipfile = fname, files = outfiles)
-      # print(fname)
-      # if(!endsWith(fname, "zip")) {
-      #   file.rename(fname, paste(fname, ".zip", sep=""))
-      # }
-      # print(fname)
       if(file.exists(paste0(fname, ".zip"))) {
         file.rename(paste0(fname, ".zip"), fname)
       }

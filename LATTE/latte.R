@@ -57,11 +57,13 @@ fixIPnames <- function(df, log) {
     df$Case = as.character(df$Case)
     dup = duplicated(df$Case)
     if(any(dup)) {
-      ids = df$Case[dup]
+      ids = unique(df$Case[dup])
+      cat(paste("The following cases have multiple provided IPs. The first IP in the table will be used: ", 
+                paste(ids, collapse = ", ") ,"\n", file = log, append = T))
       for(i in ids) {
         rows = which(df$Case==i)
-        df$IPStart[rows[1]] = getMin(df$IPStart[df$Case==i], i, "IP start")
-        df$IPEnd[rows[1]] = getMin(df$IPEnd[df$Case==i], i, "IP end", min=F, message=F)
+        # df$IPStart[rows[1]] = getMin(df$IPStart[df$Case==i], i, "IP start")
+        # df$IPEnd[rows[1]] = getMin(df$IPEnd[df$Case==i], i, "IP end", min=F, message=F)
         df = df[-rows[-1],]
       }
     }
