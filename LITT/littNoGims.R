@@ -15,7 +15,7 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
   
   names(caseOut) = gsub(".", "", names(caseOut), fixed=T) #clean up risk factors
   
-  writeExcelTable(fileName=paste(outPrefix, "LITT_Calculated_Case_Data.xlsx", sep=""),
+  writeExcelTable(fileName=paste(outPrefix, caseFileName, sep=""),
                   sheetName = "case data",
                   df = caseOut,
                   wrapHeader=T)
@@ -25,7 +25,7 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
 ##prefix = prefix used in the GIMS run
 ##rfs = column names of risk factors used in the GIMS run
 formatLittGimsCaseTable <- function(prefix, rfs=NA) {
-  caseData = read.xlsx(paste(prefix, "LITT_Calculated_Case_Data.xlsx", sep=""), sheetName = 1)
+  caseData = read.xlsx(paste(prefix, caseFileName, sep=""), sheetName = 1)
   vars = c("State.Case.Number", 
            "Calculated.Infectious.Period.Start", "Calculated.Infectious.Period.End",
            "Evidence.of.Cavity.by.X.Ray", "Sputum.Smear",
@@ -49,23 +49,32 @@ formatLittGimsCaseTable <- function(prefix, rfs=NA) {
 ##caseData = combined dataframe with ID, infectious period start and end and additional risk factor data; required field
 ##epi = data frame with columns title case1, case2, strength (strength of the epi link between cases 1 and 2), label (label for link if known) -> optional, if not given, the epi links in GIMS will be used as definite epi links
 ##SNPcutoff = eliminate source if the SNP distance from the target is greater than this cutoff
-littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = snpDefaultCut) {
+##progress = progress bar for R Shiny interface (NA if not running through interface)
+littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = snpDefaultCut, progress = NA) {
+  log = paste(outPrefix, defaultLogName)
+  cat("LITT analysis\n", file = log)
+  
   ####check inputs
   if(all(is.na(caseData)) || !"ID" %in% names(caseData)) {
     if("stcaseno" %in% tolower(names(caseData))) {
       names(caseData)[tolower(names(caseData))=="stcaseno"] = "ID"
     } else {
+      cat("A case data table with one column labeled ID or STATECASNO is required\n", file = log, append = T)
       stop("Case data is required, and must have a column named ID")
     }
   }
   if(nrow(caseData) < 2) {
+    cat("LITT requires at least two cases, but there ", ifelse(nrow(caseData)==1, "is ", "are "),
+        nrow(caseData), ifelse(nrow(caseData)==1, "case", "cases"), "\n", file = log, append = T)
     stop("LITT requires at least two cases, but there are ", nrow(caseData))
   }
   
   ###check IP start present
-  caseData = fixIPnames(caseData)
+  caseData = fixIPnames(caseData, log)
   if(!"IPStart" %in% names(caseData) || !"IPEnd" %in% names(caseData)) {
-    stop("Infectious period (IPStart and IPEnd) is required")
+    cat("The case data table must contain columns called IPStart and IPEnd, which indicate infectious period start and end for each case\n", 
+        file = log, append = T)
+    stop("Infectious period (columns named IPStart and IPEnd) is required in case data table")
   }
   caseData$IPStart = convertToDate(caseData$IPStart)
   caseData$IPEnd = convertToDate(caseData$IPEnd)
@@ -79,28 +88,23 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   
   ###list of cases = cases in caseData
   cases = caseData$ID
-  cat(paste("Number of cases:", length(cases), "\n"))
+  cat(paste("Number of cases:", length(cases), "\n"), file = log, append = T)
   
   ####set up epi
-  epi = fixEpiNames(epi)
-  epi = cleanEpi(epi, cases)
+  epi = fixEpiNames(epi, log)
+  epi = cleanEpi(epi, cases, log)
   epi$strength = as.character(tolower(epi$strength))
-  # if(nrow(epi) > 0) {
-  #   epi$SNPdistance = getSNPDistance(epi, dist) 
-  # }
-  # cat(paste("Number of epi links:", nrow(epi)), "\n")
   
   ##clean up distance matrix
   colnames(dist) = removeXFromNames(colnames(dist))
   
   ####run litt
-  littResults = litt(caseData = caseData, epi = epi, dist = dist, SNPcutoff = SNPcutoff, addlRiskFactor = addlRiskFactor)
+  littResults = litt(caseData = caseData, epi = epi, dist = dist, SNPcutoff = SNPcutoff, addlRiskFactor = addlRiskFactor,
+                     progress = progress, log = log)
   
   ####write results
   ###if Excel spreadsheet already exists, delete file; otherwise will note generate file, and if old table is bigger, will get extra rows from old table
-  outputExcelFiles = paste(outPrefix, c("LITT_Calculated_Epi_Data.xlsx", 
-                                        "LITT_Calculated_Case_Data.xlsx", "LITT_Transmission_Network.xlsx",
-                                        "LITT_All_Potential_Sources.xlsx"), sep="")
+  outputExcelFiles = paste(outPrefix, c(epiFileName, caseFileName, txFileName, psFileName), sep="")
   if(any(file.exists(outputExcelFiles))) {
     outputExcelFiles = outputExcelFiles[file.exists(outputExcelFiles)]
     file.remove(outputExcelFiles)
@@ -149,40 +153,20 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
   
   ###write epi links
-  # if(nrow(littResults$epi)) {
-  #   epiOut = littResults$epi
-  #   writeExcelTable(fileName=paste(outPrefix, "LITT_Calculated_Epi_Data.xlsx", sep=""),
-  #                   sheetName="Epi links",
-  #                   df = epiOut)
-  # } else {
-  #   cat("No epi links\n")
-  # }
-  writeEpiTable(littResults, outPrefix)
+  w = writeEpiTable(littResults, outPrefix, log = log)
+  if(!w) { #table not written, so do not include in output list
+    outputExcelFiles = outputExcelFiles[!grepl(epiFileName, outputExcelFiles)]
+  }
   
-  ####clean up and output transmission network
-  # if(nrow(littResults$topRanked)) {
-  #   writeExcelTable(fileName=paste(outPrefix, "LITT_Top_Ranked_Transmission_Network.xlsx", sep=""),
-  #                   sheetName = "top ranked sources", 
-  #                   df = littResults$topRanked)
-  # } else {
-  #   cat("There were no cases with a potential source that passed all filters.\n")
-  # }
-  writeTopRankedTransmissionTable(littResults, outPrefix)
+  ###clean up and output transmission network
+  w = writeTopRankedTransmissionTable(littResults, outPrefix, log = log)
+  if(!w) { #table not written, so do not include in output list
+    outputExcelFiles = outputExcelFiles[!grepl(txFileName, outputExcelFiles)]
+  }
   
-  ####get categorical labels and combine source matrix and reason filtered into one Excel spreadsheet
-  # allSources = littResults$allPotentialSources
-  # cat = getScoreCategories(allSources)
-  # allSources[,c(3:6, 8:9)] = apply(allSources[,c(3:6, 8:9)], 2, as.numeric) #make columns numeric for Excel
-  # ##move label to end
-  # allSources = cbind(allSources[,names(allSources)!="label"], data.frame(label=allSources[,names(allSources)=="label"]))
-  # cat = cbind(cat[,names(cat)!="label"], data.frame(label=cat[,names(cat)=="label"]))
-  # wb = writeExcelTable(fileName=paste(outPrefix, "LITT_All_Potential_Sources.xlsx", sep=""),
-  #                      sheetName = "numeric potential sources", 
-  #                      df = allSources, 
-  #                      wrapHeader=T)
-  # wb = writeExcelTable(workbook=wb,
-  #                      sheetName = "categorical potential sources", 
-  #                      df = cat, 
-  #                      wrapHeader=T)
+  ###get categorical labels and combine source matrix and reason filtered into one Excel spreadsheet
   writeAllSourcesTable(littResults, outPrefix, stcasenolab = F)
+  
+  littResults$outputFiles = c(log, outputExcelFiles)
+  return(littResults)
 }
