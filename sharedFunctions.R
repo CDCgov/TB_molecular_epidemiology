@@ -124,7 +124,7 @@ getMin <- function(dates, warnID, warnVar, min=T, message=T) {
   }
 }
 
-##function that takes the dataframe df from Rshiny fileInput and returns NA if the file exists or the data frame from the file otherwise
+##function that takes the dataframe df from Rshiny fileInput and returns NA if the file does not exist exists or the data frame from the file otherwise
 ##per https://shiny.rstudio.com/reference/shiny/0.14/fileInput.html : 
 # after the user selects and uploads a file, it will be a data frame with 'name', 'size', 'type', and 'datapath' columns. The 'datapath' column will contain the local filenames where the data can be found.
 readShinyInputFile <- function(df) {

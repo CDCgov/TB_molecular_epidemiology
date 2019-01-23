@@ -289,6 +289,7 @@ getIPEpiLinks <- function(res, cutoff, removeAfter) {
 ##ipEpiLink = if true, calculate an IP epi link, otherwise calculate an epi link
 ##removeAfter = if true, remove overlaps that occur after the IP of either case (for IP epi links)
 ##log = log file name (where messages will be written)
+##progress = progress bar for R Shiny interface (NA if not running through interface)
 latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter = F, progress = NA, log = defaultLogName) {
   ##set up log
   cat("LATTE analysis\n", file = log)

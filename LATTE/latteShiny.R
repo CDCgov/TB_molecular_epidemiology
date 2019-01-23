@@ -6,6 +6,7 @@ source("latte.R")
 # Define UI ----
 ui <- fluidPage(
   titlePanel("LATTE"),
+  useShinyjs(),
   fluidRow(
     column(6,
            h3("Set up inputs"),
@@ -15,7 +16,7 @@ ui <- fluidPage(
            br(),
            h3("Set up outputs"),
            textInput("prefix", "Name prefix for output files")),
-    useShinyjs(),
+    
     column(6,
            h3("Set up link definitions"),
            radioButtons("linkType", "Type of link", 
@@ -42,6 +43,7 @@ ui <- fluidPage(
 outputfontsizestart = "<font font-size=\"30px\"><b>"
 outputfontsizeend = "</b></font>"
 
+##set up for downloading results
 dash <- .Platform$file.sep #file separator
 tmpdir = tempdir() #temporary directory to write outputs
 tmpdir = paste(tmpdir, dash, sep="")
