@@ -26,19 +26,27 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
 ##rfs = column names of risk factors used in the GIMS run
 formatLittGimsCaseTable <- function(prefix, rfs=NA) {
   caseData = read.xlsx(paste(prefix, caseFileName, sep=""), sheetName = 1)
-  vars = c("State.Case.Number", 
-           "Calculated.Infectious.Period.Start", "Calculated.Infectious.Period.End",
-           "Evidence.of.Cavity.by.X.Ray", "Sputum.Smear",
-           "Extrapulmonary.Only", "Pediatric", "User.Input.Date.Data.Available")
-  if(!any(is.na(rfs))) {
-    vars = c(vars, rfs)
-  }
-  caseData = caseData[,names(caseData) %in% vars]
+  return(cleanedCaseDataHeadersToVarNames(caseData, rfs=rfs))
+}
+
+##for the given data frame df, convert the cleaned header name to the needed variable name
+##for using case data table from previous LITT runs
+##rfs = column names of risk factors to keep
+cleanedCaseDataHeadersToVarNames <- function(caseData, rfs = NA) {
+  ##fix names
+  names(caseData)[tolower(names(caseData))=="stcaseno"] = "ID"
   names(caseData)[names(caseData)=="State.Case.Number"] = "ID"
+  names(caseData)[names(caseData)=="Case.ID"] = "ID"
   names(caseData)[names(caseData)=="Evidence.of.Cavity.by.X.Ray"] = "XRAYCAV"
   names(caseData)[names(caseData)=="Sputum.Smear"] = "SPSMEAR"
   names(caseData)[names(caseData)=="Extrapulmonary.Only"] = "ExtrapulmonaryOnly"
   names(caseData)[names(caseData)=="User.Input.Date.Data.Available"] = "UserDateData"
+  ##subset to needed variables
+  vars = c(expectedcolnames, "Calculated.Infectious.Period.Start", "Calculated.Infectious.Period.End")
+  if(!any(is.na(rfs))) {
+    vars = c(vars, rfs)
+  }
+  caseData = caseData[,names(caseData) %in% vars]
   return(caseData)
 }
 
@@ -51,17 +59,20 @@ formatLittGimsCaseTable <- function(prefix, rfs=NA) {
 ##SNPcutoff = eliminate source if the SNP distance from the target is greater than this cutoff
 ##progress = progress bar for R Shiny interface (NA if not running through interface)
 littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = snpDefaultCut, progress = NA) {
-  log = paste(outPrefix, defaultLogName)
+  log = paste(outPrefix, defaultLogName, sep="")
   cat("LITT analysis\n", file = log)
   
   ####check inputs
-  if(all(is.na(caseData)) || !"ID" %in% names(caseData)) {
-    if("stcaseno" %in% tolower(names(caseData))) {
-      names(caseData)[tolower(names(caseData))=="stcaseno"] = "ID"
-    } else {
-      cat("A case data table with one column labeled ID or STATECASNO is required\n", file = log, append = T)
-      stop("Case data is required, and must have a column named ID")
-    }
+  if(all(is.na(caseData))) {
+    cat("A case data table is required\n", file = log, append = T)
+    stop("A case data table is required")
+  }
+  if(!"ID" %in% names(caseData)) {
+    caseData = cleanedCaseDataHeadersToVarNames(caseData)
+  }
+  if(!"ID" %in% names(caseData)) {
+    cat("A case data table with one column labeled ID or STATECASNO is required\n", file = log, append = T)
+    stop("Case data table must have a column with the case ID, named ID")
   }
   if(nrow(caseData) < 2) {
     cat("LITT requires at least two cases, but there ", ifelse(nrow(caseData)==1, "is ", "are "),
@@ -91,9 +102,11 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   cat(paste("Number of cases:", length(cases), "\n"), file = log, append = T)
   
   ####set up epi
-  epi = fixEpiNames(epi, log)
-  epi = cleanEpi(epi, cases, log)
-  epi$strength = as.character(tolower(epi$strength))
+  if(!all(is.na(epi))) {
+    epi = fixEpiNames(epi, log)
+    epi = cleanEpi(epi, cases, log)
+    epi$strength = as.character(tolower(epi$strength))
+  }
   
   ##clean up distance matrix
   colnames(dist) = removeXFromNames(colnames(dist))
@@ -149,7 +162,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   } else {
     write$numTimesIsRank1 = 0
   }
-  write[write$ID=="weight", names(write) %in% c("numEpiLinks", "numTimesIsRank1")] = NA #do not give numbers for weight
+  write[write$ID=="weight", names(write) %in% c("numEpiLinks", "numTimesIsRank1", "sequenceAvailable")] = NA #do not give numbers for weight
   cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
   
   ###write epi links

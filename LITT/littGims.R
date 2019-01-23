@@ -282,7 +282,7 @@ formatDistanceMatrix <- function(fileName, log) {
 ##progress = progress bar for R Shiny interface (NA if not running through interface)
 littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRiskFactor = NA, 
                      SNPcutoff = snpDefaultCut, progress = NA) {
-  log = paste(outPrefix, defaultLogName)
+  log = paste(outPrefix, defaultLogName, sep="")
   cat("LITT analysis with TB GIMS\n", file = log)
   cat(paste("GIMS patient file: ", gimsPtName, "\n"), file = log, append = T)
   cat(paste("GIMS export file:", gimsAllName, "\n"), file = log, append = T)
@@ -671,7 +671,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
     write$totNumPotSources = 0
   }
   if(any(write$STCASENO=="weight")) {
-    write[write$STCASENO=="weight", names(write) %in% c("numEpiLinks", "numTimesIsRank1", "numPotSourcesRanked1", "totNumPotSources")] = NA #do not give numbers for weight
+    write[write$STCASENO=="weight", names(write) %in% c("numEpiLinks", "numTimesIsRank1", "numPotSourcesRanked1", "totNumPotSources", "sequenceAvailable")] = NA #do not give numbers for weight
   }
   cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
   
