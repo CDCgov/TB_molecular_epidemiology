@@ -69,7 +69,7 @@ addlRFLabel <- function(label, rfname) {
 getAddlRFUserUserWeights <- function(addlRiskFactor) {
   userWeight = addlRiskFactor[grepl("weight", addlRiskFactor$ID, ignore.case = T),-1]
   userWeight[] = lapply(userWeight, as.character)
-  # if(class(userWeight)=="factor") {
+  userWeight[!grepl("^[0-9]+$", userWeight)] = NA #anything that is a character 
   if(class(userWeight)!="data.frame") {
     userWeight = as.numeric(as.character(userWeight))
   } else {
@@ -90,7 +90,7 @@ fixEpiNames <- function(epi, log) {
     } else if(sum(c1) > 1) {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
       cat(paste("\nHowever, more than one column for first case was found in epi link table:", paste(names(epi)[c1], collapse = ", ")),
-           "\nPlease label one column case1.\n", file = log, append = T)
+          "\nPlease label one column case1.\n", file = log, append = T)
       stop(paste("More than one column for first case in epi link table:", paste(names(epi)[c1], collapse = ", ")),
            "\nPlease label one column case1.")
     } else {
@@ -159,12 +159,12 @@ fixEpiNames <- function(epi, log) {
                 "\n"), file = log, append = T)
     }
     epi = epi[,names(epi) %in% epicolnames] #remove extra columns (needed for rbind with TB GIMS data)
-  }
-  epi$case1 = as.character(epi$case1)
-  epi$case2 = as.character(epi$case2)
-  epi$strength = as.character(epi$strength)
-  if("label" %in% names(epi)) {
-    epi$label = as.character(epi$label)
+    epi$case1 = as.character(epi$case1)
+    epi$case2 = as.character(epi$case2)
+    epi$strength = as.character(epi$strength)
+    if("label" %in% names(epi)) {
+      epi$label = as.character(epi$label)
+    }
   }
   return(epi)
 }
@@ -353,91 +353,6 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   return(df)
 }
 
-# ##writes the data frame df to the Excel file or workbook and sheet (using XLConnect)
-# ##df = data to write
-# ##if fileName is not NA, generate the workbook first
-# ##workbook should be provided if no fileName is given, otherwise the value will be ignored
-# ##returns the workbook in case additional sheets need to be written
-# ##if wrapHeader is true, set column widths to the longest length and wrap the header (rather than using auto, which will not wrap the header)
-# ##stcasenolab = if true, ID column is named state case number, otherwise is ID
-# ##snpRate = if true, SNP column is SNP rating, otherwise is SNP distance
-# writeExcelTable<-function(fileName=NA, workbook, sheetName="Sheet1", df, wrapHeader=F, stcasenolab = F, snpRate = F) {
-#   df = cleanHeaderForOutput(df, stcasenolab = stcasenolab, snpRate = snpRate)
-#   if(!is.na(fileName)) {
-#     workbook = loadWorkbook(fileName, create=T)
-#   }
-#   createSheet(workbook, name=sheetName)
-#   # # writeWorksheet(workbook, df, sheet = sheetName) ##this results in occasional duplicated rows, and flags that numbers were treated as strings
-#   # if(wrapHeader) {
-#   #   ##set column widths
-#   #   cwidth = (sapply(1:ncol(df), function(c){max(nchar(as.character(df[,c]), keepNA=F))})+5)*256 #width is 1/256 of char
-#   #   minWidth = 10*256 #minimum width for column
-#   #   cwidth[cwidth < minWidth] = minWidth
-#   #   setColumnWidth(workbook, sheetName, column=1:ncol(df), width=cwidth)
-#   #   
-#   #   # wrap header and not other columns
-#   #   wrap = createCellStyle(workbook)
-#   #   setWrapText(wrap, wrap=T)
-#   #   setFillPattern(wrap, fill = XLC$"FILL.SOLID_FOREGROUND")
-#   #   setFillForegroundColor(wrap, color=XLC$"COLOR.GREY_25_PERCENT")
-#   #   setCellStyle(workbook, sheet=sheetName, row=1, col=1:ncol(df), cellstyle=wrap)
-#   #   
-#   # } else {
-#   #   ##autofit column width
-#   #   setColumnWidth(workbook, sheetName, column=1:ncol(df), width=-1)
-#   # }
-#   
-#   ##set up header
-#   writeWorksheet(workbook, t(names(df)), sheet = sheetName, header = F, rownames = F)
-#   ##write data
-#   for(r in 1:nrow(df)) {
-#     for(c in 1:ncol(df)) {
-#       if(!is.na(df[r,c])) {
-#         if(as.character(df[r,c])!="") {
-#           # if(grepl("[A-Z]|[a-z]", df[r,c]) | grepl("*", df[r,c], fixed=T) | grepl("-", df[r,c]) | grepl("/", df[r,c]) | 
-#           #    grepl("+", df[r,c], fixed = T) | is.Date(df[r,c])) {
-#           #   writeWorksheet(workbook, df[r,c], sheet = sheetName, startRow = r+1, startCol = c, header = F, rownames = F)
-#           # } else {
-#           #   writeWorksheet(workbook, as.numeric(df[r,c]), sheet = sheetName, startRow = r+1, startCol = c, header = F, rownames = F)
-#           # }
-#           if(all(grepl("[0-9.]", strsplit(as.character(df[r,c]), "")[[1]]))) {
-#             writeWorksheet(workbook, as.numeric(df[r,c]), sheet = sheetName, startRow = r+1, startCol = c, header = F, rownames = F)
-#           } else {
-#             writeWorksheet(workbook, df[r,c], sheet = sheetName, startRow = r+1, startCol = c, header = F, rownames = F)
-#           }
-#         }
-#       }
-#     }
-#   }
-#   ##format worksheet
-#   if(wrapHeader) {
-#     ##set column widths
-#     cwidth = (sapply(1:ncol(df), function(c){max(nchar(as.character(df[,c]), keepNA=F))})+5)*256 #width is 1/256 of char
-#     minWidth = 10*256 #minimum width for column
-#     cwidth[cwidth < minWidth] = minWidth
-#     setColumnWidth(workbook, sheetName, column=1:ncol(df), width=cwidth)
-#     
-#     # wrap header and not other columns
-#     wrap = createCellStyle(workbook)
-#     setWrapText(wrap, wrap=T)
-#     setFillPattern(wrap, fill = XLC$"FILL.SOLID_FOREGROUND")
-#     setFillForegroundColor(wrap, color=XLC$"COLOR.GREY_25_PERCENT")
-#     setCellStyle(workbook, sheet=sheetName, row=1, col=1:ncol(df), cellstyle=wrap)
-#     
-#   } else {
-#     ##autofit column width
-#     setColumnWidth(workbook, sheetName, column=1:ncol(df), width=-1)
-#     cs  = createCellStyle(workbook)
-#     setFillPattern(cs, fill = XLC$"FILL.SOLID_FOREGROUND")
-#     setFillForegroundColor(cs, color=XLC$"COLOR.GREY_25_PERCENT")
-#     setCellStyle(workbook, sheet=sheetName, row=1, col=1:ncol(df), cellstyle=cs)
-#   }
-#   ##add filter
-#   setAutoFilter(workbook, sheet = sheetName, reference = aref("A1", dim(df)))
-#   saveWorkbook(workbook)
-#   return(workbook)
-# }
-
 ##writes the data frame df to the Excel file or workbook and sheet
 ##df = data to write
 ##if fileName is not NA, generate the workbook first
@@ -448,9 +363,6 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
 ##snpRate = if true, SNP column is SNP rating, otherwise is SNP distance
 ##save = if true, save the workbook
 writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHeader=F, stcasenolab = F, snpRate = F, save = T) {
-  # detach(package:XLConnect, unload=T)
-  # detach(package:XLConnectJars, unload=T)
-  # library(xlsx)
   df = cleanHeaderForOutput(df, stcasenolab = stcasenolab, snpRate = snpRate)
   if(class(workbook)!="jobjRef") {
     workbook = createWorkbook()
@@ -485,9 +397,8 @@ writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHea
   ##set column widths
   if(wrapHeader) {
     cwidth = (sapply(1:ncol(df), function(c){max(nchar(as.character(df[,c]), keepNA=F))})+5)#*256 #width is 1/256 of char
-    minWidth = 10# 10*256 #minimum width for column
+    minWidth = 10 #minimum width for column
     cwidth[cwidth < minWidth] = minWidth
-    # setColumnWidth(sheet = sheet, colIndex = 1:ncol(df), colWidth = cwidth)
     for(c in 1:length(cwidth)) {
       setColumnWidth(sheet = sheet, colIndex = c, colWidth = cwidth[c])
     }
@@ -498,12 +409,9 @@ writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHea
   r1 = sheet$getRow(1L)
   lastcol = r1$getCell(as.integer(ncol(df)-1))
   addAutoFilter(sheet = sheet, cellRange =paste("A1:", lastcol$getReference(), sep=""))
-  # addAutoFilter(sheet = sheet, cellRange = "1")
   if(save) {
     saveWorkbook(workbook, fileName)
   }
-  # detach(package:xlsx, unload=T)
-  # library(XLConnect)
   return(workbook)
 }
 
@@ -590,7 +498,6 @@ readShinyDistanceMatrix <- function(df, bn=F) {
     return(NA)
   } 
   fname = df$datapath
-  # print(fname)
   if(!file.exists(fname)) {
     return(NA)
   }
@@ -630,7 +537,6 @@ cleanEpi <- function(epi, cases, log) {
       r = which(epi$strength != "definite" & epi$strength != "probable" & epi$strength != "possible")
       cat(paste("These rows have an invalid epi link strength and have been set to probable:",
                 paste(r, collapse = ", "), "\n"), file = log, append = T)
-      # print(epi[r,])
       cat(paste(names(epi), collapse ="\t"), file = log, append = T)
       for(z in r) {
         cat("\n", file = log, append = T)
@@ -812,7 +718,7 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
             warning(paste("additional risk factor has multiple values for", i, "in column", c, 
                           "\nThe value in the first row containing", i, "will be used."))
             cat(paste("additional risk factor has multiple values for", i, "in column", c, 
-                          "\nThe value in the first row containing", i, "will be used.\n"), file = log, append = T)
+                      "\nThe value in the first row containing", i, "will be used.\n"), file = log, append = T)
           }
         }
       }
@@ -828,32 +734,26 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
     ##set up weights (weights should add to 1)
     weights = rep(1/(ncol(addlRiskFactor)-1), ncol(addlRiskFactor)-1) #all equal if no user input
     if(any(grepl("weight", addlRiskFactor$ID, ignore.case = T))) {
-      # userWeight = addlRiskFactor[grepl("weight", addlRiskFactor$ID, ignore.case = T),-1]
-      # userWeight[] = lapply(userWeight, as.character)
-      # if(class(userWeight)=="factor") {
-      #   userWeight = as.numeric(as.character(userWeight))
-      # } else {
-      #   userWeight = as.numeric(userWeight[1,])
-      # }
-      # userWeight = as.numeric(addlRiskFactor[grepl("weight", addlRiskFactor$ID, ignore.case = T),-1]) #won't work with factors
       userWeight = getAddlRFUserUserWeights(addlRiskFactor)
       if(!all(is.na(userWeight))) { #if no weights given, use all equal
-        if(any(is.na(userWeight) | userWeight <= 0)) { #remove missing or negative weights
+        if(any(is.na(userWeight) | userWeight <= 0) & !all(is.na(userWeight))) { #remove missing or negative weights, unless all are missing
           miss = is.na(userWeight) | (!is.na(userWeight) & userWeight <= 0) #missing or negative weight
           cat(paste("Risk factor weight is missing or negative for: ", 
                     paste(names(addlRiskFactor)[-1][miss], collapse = ", "), "\n", sep=""), file = log, append = T)
           cat(paste(ifelse(sum(miss)==1, " This risk factor has", " These risk factors have"), 
                     " been removed from analysis.\n", sep=""), file = log, append = T)
           addlRiskFactor = addlRiskFactor[,c(T, !is.na(userWeight) & userWeight > 0)]
-          # userWeight = getAddlRFUserUserWeights(addlRiskFactor)
         }
-        # weights = userWeight/sum(userWeight, na.rm = T) #sum to 1
       }
     }
     if(class(addlRiskFactor)=="data.frame") { #check still have some risk factors
       if(any(grepl("weight", addlRiskFactor$ID, ignore.case = T))) {
         userWeight = getAddlRFUserUserWeights(addlRiskFactor)
-        weights = userWeight/sum(userWeight, na.rm = T) #sum to 1
+        if(all(is.na(userWeight))) {
+          weights = rep(1/(ncol(addlRiskFactor)-1), ncol(addlRiskFactor)-1) #all equal if all missing
+        } else {
+          weights = userWeight/sum(userWeight, na.rm = T) #sum to 1
+        }
       } else {
         weights = rep(1/(ncol(addlRiskFactor)-1), ncol(addlRiskFactor)-1) #all equal if no user input
       }
@@ -872,6 +772,9 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
   } else {
     rfWeights = NA
   }
+  
+  ##which cases to update progress bar; note that it includes 1, so will update in first loop to account for setup
+  updateProgress = round(seq(from=1, to=length(cases), length=5))
   
   ####set up final results
   results = data.frame(target = cases,
@@ -1135,7 +1038,6 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
         if(!all(is.na(score$score))) {
           dup = duplicated(score$score)
           for(r in 2:nrow(score)) {
-            # if(!is.na(score$score[r]) & (is.na(score$score[r-1]) | score$score[r-1] < score$score[r])) {
             if(!is.na(score$score[r]) & !dup[r]) { #source is not tied with the previous source (assumes score was sorted) or was a non-sequenced case in a mix of sequenced and non-sequenced cases not also tie
               rank = r
             }
@@ -1212,6 +1114,13 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
       results$scores[results$target==target] = sc
     } else {
       allSources = rbind(allSources, noSource)
+    }
+    ##update progress bar
+    if(all(class(progress)!="logical")) {
+      ncases = which(cases==target)
+      if(ncases %in% updateProgress) {
+        progress$set(value = 1 + which(updateProgress==ncases))
+      }
     }
   }
   

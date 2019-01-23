@@ -66,13 +66,13 @@ server <- function(input, output, session) {
       output$message <- renderText({paste(outputfontsizestart, "No case data; please input a case data table", outputfontsizeend, sep="")})
       return(NULL)
     }
-    progress <- Progress$new(session, min=-1, max=11) 
+    progress <- Progress$new(session, min=0, max=11) 
     on.exit(progress$close())
     progress$set(message = "Running LITT")
     output$message <- renderText({paste(outputfontsizestart, "Analyzing data", outputfontsizeend, sep="")})
     progress$set(value=0)
     outPrefix = paste(tmpdir, input$prefix, sep="")
-    # res = tryCatch({
+    res = tryCatch({
       littres = littNoGims(outPrefix = outPrefix,
                            caseData = caseData,
                            dist = readShinyDistanceMatrix(input$distMatrix, bn=F), #input$BNdist),
@@ -82,13 +82,13 @@ server <- function(input, output, session) {
       outfiles <<- littres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
       shinyjs::show("downloadData")
-    # }, error = function(e) {
-    #   outfiles <<- paste(tmpdir, input$prefix, defaultLogName, sep="")
-    #   output$message <- renderText({paste(outputfontsizestart, "Error detected:<br/>", geterrmessage(), 
-    #                                       "<br/>Download and view log for more details.", outputfontsizeend, sep="")})
-    #   cat(geterrmessage(), file = outfiles, append = T)
-    #   shinyjs::show("downloadData")
-    # })
+    }, error = function(e) {
+      outfiles <<- paste(tmpdir, input$prefix, defaultLogName, sep="")
+      output$message <- renderText({paste(outputfontsizestart, "Error detected:<br/>", geterrmessage(),
+                                          "<br/>Download and view log for more details.", outputfontsizeend, sep="")})
+      cat(geterrmessage(), file = outfiles, append = T)
+      shinyjs::show("downloadData")
+    })
   })
   
   ##zip and download outputs

@@ -291,10 +291,6 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   ####check inputs
   ##fix field names
   caseData = fixStcasenoName(caseData)
-  # caseData = fixSxOnsetNames(caseData, log)
-  # names(caseData)[names(caseData)=="STCASENO"] = "ID"
-  # caseData = fixIPnames(caseData, log)
-  # names(caseData)[names(caseData)=="ID"] = "STCASENO"
   epi = fixEpiNames(epi, log)
   colnames(dist) = removeXFromNames(colnames(dist))
   
@@ -355,6 +351,10 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   cat(paste("Number cases:", length(cases), "\n"), file = log, append = T)
   
   gimsCases = gimsAll[gimsAll$STCASENO %in% cases,]
+  
+  if(all(class(progress)!="logical")) {
+    progress$set(value = -1)
+  }
   
   ####add needed case data from TB GIMS: smear, cavitary, extrapulmonary, pediatric
   littCaseData = gimsCases[, names(gimsCases) %in% c("STCASENO", "SPSMEAR", "XRAYCAV")]
@@ -464,6 +464,10 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   }
   littCaseData$UserDateData = sapply(littCaseData$STCASENO, caseInInputs, sxOnset, infectiousPeriod)
   
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 0)
+  }
+  
   ####add epi in TB GIMS
   epi = cleanEpi(epi, cases, log)
   gimsCases$LKCASE1YR = replaceMissing(gimsCases$LKCASE1YR)
@@ -546,6 +550,10 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
     }
   }
   
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 1)
+  }
+  
   
   ####run litt
   names(littCaseData)[names(littCaseData) == "STCASENO"] = "ID"
@@ -584,7 +592,6 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   }
   write = merge(so, write, by="STCASENO", all.y=T)
   ##write dates separately
-  # write.table(write, paste(outPrefix, "CalculatedDateData.txt", sep=""), row.names = T, col.names = T, quote = F, na = "", sep="\t")
   datewrite = write
   for(c in 2:ncol(datewrite)) {
     datewrite[,c] = format(datewrite[,c], "%m/%d/%Y")
@@ -594,6 +601,9 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
                   df = datewrite,
                   stcasenolab = T,
                   wrapHeader = T)
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 8) #skip 7 unless have rfs
+  }
   
   ###write out other case data variables
   ##remove all dates but earliest and IP
@@ -674,11 +684,17 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
     write[write$STCASENO=="weight", names(write) %in% c("numEpiLinks", "numTimesIsRank1", "numPotSourcesRanked1", "totNumPotSources", "sequenceAvailable")] = NA #do not give numbers for weight
   }
   cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 9)
+  }
   
   ###write epi links
   w = writeEpiTable(littResults, outPrefix, stcasenolab = T, log = log)
   if(!w) { #table not written, so do not include in output list
     outputExcelFiles = outputExcelFiles[!grepl(epiFileName, outputExcelFiles)]
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 10)
   }
   
   ###clean up and output transmission network
@@ -686,9 +702,15 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   if(!w) { #table not written, so do not include in output list
     outputExcelFiles = outputExcelFiles[!grepl(txFileName, outputExcelFiles)]
   }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 11)
+  }
   
   ###get categorical labels and combine source matrix and reason filtered into one Excel spreadsheet
   writeAllSourcesTable(littResults, outPrefix, stcasenolab = T)
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 12)
+  }
   
   write.table(littResults$summary, paste(outPrefix, "PotentialSources.txt", sep=""),
               row.names = F, col.names = T, quote = F, sep = "\t") ##for consistency in other validation work

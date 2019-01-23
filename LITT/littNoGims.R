@@ -111,6 +111,10 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   ##clean up distance matrix
   colnames(dist) = removeXFromNames(colnames(dist))
   
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 1)
+  }
+  
   ####run litt
   littResults = litt(caseData = caseData, epi = epi, dist = dist, SNPcutoff = SNPcutoff, addlRiskFactor = addlRiskFactor,
                      progress = progress, log = log)
@@ -164,11 +168,17 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   }
   write[write$ID=="weight", names(write) %in% c("numEpiLinks", "numTimesIsRank1", "sequenceAvailable")] = NA #do not give numbers for weight
   cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 8) #skip 7 unless have rfs
+  }
   
   ###write epi links
   w = writeEpiTable(littResults, outPrefix, log = log)
   if(!w) { #table not written, so do not include in output list
     outputExcelFiles = outputExcelFiles[!grepl(epiFileName, outputExcelFiles)]
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 9)
   }
   
   ###clean up and output transmission network
@@ -176,9 +186,15 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   if(!w) { #table not written, so do not include in output list
     outputExcelFiles = outputExcelFiles[!grepl(txFileName, outputExcelFiles)]
   }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 10)
+  }
   
   ###get categorical labels and combine source matrix and reason filtered into one Excel spreadsheet
   writeAllSourcesTable(littResults, outPrefix, stcasenolab = F)
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 11)
+  }
   
   littResults$outputFiles = c(log, outputExcelFiles)
   return(littResults)
