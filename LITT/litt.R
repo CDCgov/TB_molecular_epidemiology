@@ -185,7 +185,7 @@ fixIPnames <- function(df, log) {
           file = log, append = T)
       return(NA)
     } else if(sum(col) < 1) {
-      cat("No infectious period (IP) start column, so user-input IP start was not used in the analysis.\nPlease add a column named IPStart to use IP start in analysis.\n", 
+      cat("No infectious period (IP) start column, so user-input IP was not used in the analysis.\nPlease add a column named IPStart to have user IP in analysis.\n", 
           file = log, append = T)
       return(NA)
     }
@@ -201,11 +201,11 @@ fixIPnames <- function(df, log) {
       cat(paste("More than one column for infectious period (IP) end:", paste(names(df)[col], collapse = ", ")),
           "\nPlease label one column IPEnd.\n User-input IP end was not used in this analysis.\n", 
           file = log, append = T)
-      return(NA)
+      df$IPEnd = NA
     } else if(sum(col) < 1) {
-      cat("No infectious period (IP) end column, so user-input IP end was not used in the analysis.\nPlease add a column named IPEnd. to use IP end in analysis.\n", 
+      cat("No infectious period (IP) end column, so user-input IP end was not used in the analysis.\nPlease add a column named IPEnd to use IP end in analysis.\n", 
           file = log, append = T)
-      return(NA)
+      df$IPEnd = NA
     }
     
     ##check for duplicates and clean up if present
@@ -578,6 +578,26 @@ writeEpiTable <- function(littResults, outPrefix, stcasenolab = F, log) {
   } else {
     cat("No epi links found; no epi link table will be generated.\n", file = log, append = T)
     return(F)
+  }
+}
+
+
+##function that takes the dataframe df from RShiny fileInput and returns NA if the file does not exist
+##otherwise, returns the distance matrix result needed for LITT
+##if BN is true, indicates a BioNumerics distance triangle with accession numbers
+readShinyDistanceMatrix <- function(df, bn=F) {
+  if(is.null(df)) {
+    return(NA)
+  } 
+  fname = df$datapath
+  # print(fname)
+  if(!file.exists(fname)) {
+    return(NA)
+  }
+  if(!bn) {
+    return(formatDistanceMatrixWithoutDedupOrStno(fname))
+  } else {
+    return(formatDistanceMatrix(fname))
   }
 }
 

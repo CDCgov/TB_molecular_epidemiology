@@ -11,6 +11,7 @@ fileinfo = file.info(paste(gimsPtGenoFolder, gimsPtFiles, sep=""))
 gimsPtName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
 cat(paste("GIMS patient file: ", gimsPtName, "\n"))
 gimsPt = read_sas(gimsPtName)
+gimsPtName = sub(gimsPtGenoFolder, "", gimsPtName, fixed=T)
 
 ##get all gims export data
 gimsExportFolder = "\\\\cdc.gov\\project\\NCHHSTP_DTBE_GENO\\TBGIMS\\Surveillance\\"
@@ -25,6 +26,7 @@ gimsAll = merge(gimsAll,
                            sp_coll_date=gimsPt$sp_coll_date),
                 by="STCASENO",
                 all = T)
+gimsAllName = sub(gimsExportFolder, "", gimsAllName, fixed=T)
 
 ##get genotyping data
 gimsPtFiles = list.files(gimsPtGenoFolder)
@@ -33,6 +35,7 @@ fileinfo = file.info(paste(gimsPtGenoFolder, gimsGenoFiles, sep=""))
 gimsGenoName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
 cat(paste("GIMS genotyping file:", gimsGenoName, "\n"))
 gimsGeno = read_sas(gimsGenoName)
+gimsGenoName = sub(gimsPtGenoFolder, "", gimsGenoName, fixed=T)
 
 ###function that replaces all NA values in a vector with an empty string (used for epi links)
 replaceMissing <- function(values) {
@@ -65,16 +68,24 @@ fixStcasenoName <- function(df) {
 }
 
 
-##check symptom onset column names
+##check symptom onset column names; if none present, return NA
 ##check for duplicates; if same isolate has two different sx onset dates, give warning and take the earlier
-fixSxOnsetNames <- function(df) {
+fixSxOnsetNames <- function(df, log) {
   if(any(!is.na(df))) {
     col = grepl("sx[ ]*onset", names(df), ignore.case = T) | grepl("symptom[ ]*onset", names(df), ignore.case = T)
     if(sum(col) == 1) {
       names(df)[col] = "sxOnset"
     } else if(sum(col) > 1) {
       warning(paste("More than one column for symptom onset:", paste(names(df)[col], collapse = ", ")),
-              "\nPlease label one column sxOnset")
+              "\nPlease label one column sxOnset.\n Symptom onset was not used in this analysis.")
+      cat(paste("More than one column for symptom onset:", paste(names(df)[col], collapse = ", ")),
+              "\nPlease label one column sxOnset.\n Symptom onset was not used in this analysis.\n", 
+          file = log, append = T)
+      return(NA)
+    } else if(sum(col) < 1) {
+      cat("No symptom onset column, so symptom onset was not used in the analysis.\nPlease add a column named symptom onset or sxOnset to use symptom onset in analysis.\n", 
+          file = log, append = T)
+      return(NA)
     }
     ##look for duplicates
     df$STCASENO = as.character(df$STCASENO)
@@ -170,7 +181,7 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
   
   names(caseOut) = gsub(".", "", names(caseOut), fixed=T) #clean up risk factors
   
-  writeExcelTable(fileName=paste(outPrefix, "LITT_Calculated_Case_Data.xlsx", sep=""),
+  writeExcelTable(fileName=paste(outPrefix, caseFileName, sep=""),
                   sheetName = "case data",
                   df = caseOut,
                   wrapHeader = T, 
@@ -181,7 +192,7 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
 ##for the given file, return a distance matrix that can be passed to the dist variable in LITT
 ##returns a matrix: fill in whole matrix, with row and column names the state case number and SNP distances rounded to nearest whole number
 ##the fileName is expected to point to a SNP distance matrix or lower triangle, such as from BioNumerics (include file path if not in working dir)
-formatDistanceMatrix <- function(fileName) {
+formatDistanceMatrix <- function(fileName, log) {
   ##read file
   if(endsWith(fileName, ".txt") || endsWith(fileName, ".tsv")) {
     mat = as.matrix(read.table(fileName, sep="\t", header = T, row.names = 1))
@@ -193,7 +204,7 @@ formatDistanceMatrix <- function(fileName) {
   } else if(endsWith(fileName, ".csv")) {
     mat = as.matrix(read.table(fileName, sep=",", header = T, row.names = 1))
   } else {
-    cat("Distance matrix should be in a text, Excel or CSV file format\n")
+    cat("Distance matrix should be in a text, Excel or CSV file format\n", file = log, append = T)
     return(NA)
   }
   colnames(mat) = sub("^X", "", colnames(mat))
@@ -214,10 +225,10 @@ formatDistanceMatrix <- function(fileName) {
       if(!sid[i] %in% gimsAll$STCASENO) { #is accession number
         id = unique(gimsGeno$StCaseNo[gimsGeno$accessionnumber==acc[i]])
         if(length(id) == 0 || id == "NA" || is.na(id)) {
-          cat(paste("No state case number for", acc[i], "\n"))
+          cat(paste("No state case number for", acc[i], "\n"), file = log, append = T)
           sid[i] = NA
         } else if(length(id) > 1) {
-          cat(paste("Multiple state case numbers for", acc[i], "\n"))
+          cat(paste("Multiple state case numbers for", acc[i], "\n"), file = log, append = T)
           sid[i] = NA
         } else {
           sid[i] = id
@@ -246,6 +257,8 @@ formatDistanceMatrix <- function(fileName) {
         if(!all(mat[acc==dacc[i],] == mat[acc==dacc[i-1],])) {
           warning(dacc[i-1], " and ", dacc[i], " have different SNP distances but are the same sample; ", 
                   dacc[i-1], " will be used")
+          cat(dacc[i-1], " and ", dacc[i], " have different SNP distances but are the same sample; ", 
+                  dacc[i-1], " will be used for analysis\n", file = log, append = T)
         }
       }
       mat = mat[!acc %in% dacc[2:length(dacc)],!acc %in% dacc[2:length(dacc)]]
@@ -266,39 +279,40 @@ formatDistanceMatrix <- function(fileName) {
 ##epi = data frame with columns title case1, case2, strength (strength of the epi link between cases 1 and 2), label (label for link if known) -> optional, if not given, the epi links in GIMS will be used as definite epi links
 ##gimsRiskFactor = data frame with first column titled variable and optional second column labeled weight that lists the GIMS variables to use as additional risk factors, with their weights (positive weights are inlcuded in LITT and output; zero in case line list only; negative is not output)
 ##SNPcutoff = eliminate source if the SNP distance from the target is greater than this cutoff
+##progress = progress bar for R Shiny interface (NA if not running through interface)
 littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRiskFactor = NA, 
-                     SNPcutoff = snpDefaultCut) {
+                     SNPcutoff = snpDefaultCut, progress = NA) {
+  log = paste(outPrefix, defaultLogName)
+  cat("LITT analysis with TB GIMS\n", file = log)
+  cat(paste("GIMS patient file: ", gimsPtName, "\n"), file = log, append = T)
+  cat(paste("GIMS export file:", gimsAllName, "\n"), file = log, append = T)
+  cat(paste("GIMS genotyping file:", gimsGenoName, "\n"), file = log, append = T)
+  
   ####check inputs
   ##fix field names
   caseData = fixStcasenoName(caseData)
-  caseData = fixSxOnsetNames(caseData)
-  names(caseData)[names(caseData)=="STCASENO"] = "ID"
-  caseData = fixIPnames(caseData)
-  names(caseData)[names(caseData)=="ID"] = "STCASENO"
-  epi = fixEpiNames(epi)
+  # caseData = fixSxOnsetNames(caseData, log)
+  # names(caseData)[names(caseData)=="STCASENO"] = "ID"
+  # caseData = fixIPnames(caseData, log)
+  # names(caseData)[names(caseData)=="ID"] = "STCASENO"
+  epi = fixEpiNames(epi, log)
   colnames(dist) = removeXFromNames(colnames(dist))
   
   ##split
-  sxOnset = NA #data frame with columns titled stcaseno (state case number) and sxOnset (symptom onset or earliest diagnostic finding) -> optional ideal input
-  if("sxOnset" %in% names(caseData)) {
-    sxOnset = caseData[,names(caseData) %in% c("STCASENO", "sxOnset")]
+  sxOnset = fixSxOnsetNames(caseData, log) #data frame with columns titled stcaseno (state case number) and sxOnset (symptom onset or earliest diagnostic finding) -> optional ideal input
+  if("sxOnset" %in% names(sxOnset)) {
+    sxOnset = sxOnset[,names(sxOnset) %in% c("STCASENO", "sxOnset")]
   }
-  infectiousPeriod=NA #data frame with columns titled stcaseno (state case number), IPStart (date of start of infectious period) and IPEnd (date of end of infectious period) -> optional ideal input if sx onset not available
-  if("IPStart" %in% names(caseData)) {
-    infectiousPeriod = caseData[,names(caseData) %in% c("STCASENO", "IPStart", "IPEnd")]
+  names(caseData)[names(caseData)=="STCASENO"] = "ID" #data frame with columns titled stcaseno (state case number), IPStart (date of start of infectious period) and IPEnd (date of end of infectious period) -> optional ideal input if sx onset not available
+  infectiousPeriod = fixIPnames(caseData, log)
+  names(caseData)[names(caseData)=="ID"] = "STCASENO"
+  if("IPStart" %in% names(infectiousPeriod)) {
+    names(infectiousPeriod)[names(infectiousPeriod)=="ID"] = "STCASENO"
+    infectiousPeriod = infectiousPeriod[,names(infectiousPeriod) %in% c("STCASENO", "IPStart", "IPEnd")]
   }
   addlRiskFactor=NA #data frame with first column titled stcaseno (state case number) and remaining columns represent additional variables with Y or N for additional risk variables (ex Y or N for whether the case was in a homeless shelter) -> optional
   if(!all(names(caseData) %in% c("STCASENO", "sxOnset", "IPStart", "IPEnd"))) { #have RFs
     addlRiskFactor=caseData[,!names(caseData) %in% c("sxOnset", "IPStart", "IPEnd")]
-  }
-  
-  ##if Excel spreadsheet already exists, delete file; otherwise will note generate file, and if old table is bigger, will get extra rows from old table
-  outputExcelFiles = paste(outPrefix, c("LITT_Calculated_Epi_Data.xlsx", "LITT_Calculated_Date_Data.xlsx",
-                                        "LITT_Calculated_Case_Data.xlsx", "LITT_Transmission_Network.xlsx",
-                                        "LITT_All_Potential_Sources.xlsx"), sep="")
-  if(any(file.exists(outputExcelFiles))) {
-    outputExcelFiles = outputExcelFiles[file.exists(outputExcelFiles)]
-    file.remove(outputExcelFiles)
   }
   
   ####get list of cases
@@ -330,14 +344,15 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   if(!all(is.na(cases))) {
     if(any(!(cases %in% gimsAll$STCASENO))) {
       cat(paste("TB GIMS is missing the following cases, which will be removed from the analysis:", 
-                paste(cases[!(cases %in% gimsAll$STCASENO)], collapse = ", "), "\n"))
+                paste(cases[!(cases %in% gimsAll$STCASENO)], collapse = ", "), "\n"), file = log, append = T)
       cases = cases[cases %in% gimsAll$STCASENO]
     }
   }
   if(all(is.na(cases)) || length(cases) < 2) { #no cases to analyze
-    stop("User must provide at least 2 case state case numbers in TB GIMS\n")
+    cat("There must be at least 2 cases with state case numbers in TB GIMS. Analysis has been stopped.\n", file = log, append = T)
+    stop("There must be at least 2 cases with state case numbers in TB GIMS.\n")
   }
-  cat(paste("Number cases:", length(cases), "\n"))
+  cat(paste("Number cases:", length(cases), "\n"), file = log, append = T)
   
   gimsCases = gimsAll[gimsAll$STCASENO %in% cases,]
   
@@ -376,7 +391,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   
   ##update earliest date with symptom onset if available
   if(any(!is.na(sxOnset))) {
-    sxOnset = fixSxOnsetNames(sxOnset)
+    # sxOnset = fixSxOnsetNames(sxOnset, log)
     sxOnset = sxOnset[sxOnset$STCASENO %in% cases,]
     sxOnset$sxOnset = convertToDate(sxOnset$sxOnset)
     sxOnset = sxOnset[!is.na(sxOnset$sxOnset),]
@@ -405,16 +420,30 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
     ##check to see if IP start is after earliest date (and therefore incorrect)
     if(any(dates$IPStart > dates$earliestDate %m-% months(1), na.rm = T)) {
       r = which(dates$IPStart > dates$earliestDate %m-% months(1))
-      cat("The following isolates have an infectious period start later than 1 month prior to the earliest date; 3 months prior to the earliest date will be used instead:\n")
-      print(dates[r,])
-      cat("\n\n")
+      cat("The following isolates have an infectious period start later than 1 month prior to the earliest date; 3 months prior to the earliest date will be used instead:\n", 
+          file = log, append = T)
+      cat(paste(names(dates), collapse ="\t"), file = log, append = T)
+      for(z in r) {
+        cat("\n", dates[z,1], file = log, append = T)
+        for(c in 2:ncol(dates)) {
+          cat(paste0("\t", as.character(dates[z,c])), file = log, append = T)
+        }
+      }
+      cat("\n\n", file = log, append = T)
       dates$IPStart[r] = as.Date(NA)
     }
     if(any(dates$IPEnd < dates$RXDATE, na.rm = T)) {
       r = which(dates$IPEnd < dates$RXDATE & !is.na(dates$RXDATE))
-      cat("The following isolates have an infectious period end earlier than the treatment start date; 2 weeks after the RXDATE will be used instead:\n")
-      print(dates[r,])
-      cat("\n\n")
+      cat("The following isolates have an infectious period end earlier than the treatment start date; 2 weeks after the RXDATE will be used instead:\n", 
+          file = log, append = T)
+      cat(paste(names(dates), collapse ="\t"), file = log, append = T)
+      for(z in r) {
+        cat("\n", dates[z,1], file = log, append = T)
+        for(c in 2:ncol(dates)) {
+          cat(paste(as.character(dates[z,c]), collapse="\t"), file = log, append = T)
+        }
+      }
+      cat("\n\n", file = log, append = T)
       dates$IPEnd[r] = as.Date(NA)
     }
     dates$IPStart[is.na(dates$IPStart)] = dates$earliestDate[is.na(dates$IPStart)] %m-% months(3)
@@ -436,7 +465,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   littCaseData$UserDateData = sapply(littCaseData$STCASENO, caseInInputs, sxOnset, infectiousPeriod)
   
   ####add epi in TB GIMS
-  epi = cleanEpi(epi, cases)
+  epi = cleanEpi(epi, cases, log)
   gimsCases$LKCASE1YR = replaceMissing(gimsCases$LKCASE1YR)
   gimsCases$LKCASE1ST = replaceMissing(gimsCases$LKCASE1ST)
   gimsCases$LKCASE1NO = replaceMissing(gimsCases$LKCASE1NO)
@@ -474,6 +503,8 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   if(any(!is.na(gimsRiskFactor))) {
     names(gimsRiskFactor) = tolower(names(gimsRiskFactor))
     if(!any(names(gimsRiskFactor)=="variable")) {
+      cat("To use GIMS variables as risk factor, input table must have a column labeled \"variable\" that contains a list of the GIMS variables to use. Input table does not contain this column so GIMS variables will not be used.", 
+          file = log, append = T)
       warning("To use GIMS variables as risk factor, input table must have a column labeled \"variable\" that contains a list of the GIMS variables to use. Input table does not contain this column so GIMS variables will not be used.")
     } else {
       gimsRiskFactor$variable = as.character(gimsRiskFactor$variable)
@@ -519,9 +550,17 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   ####run litt
   names(littCaseData)[names(littCaseData) == "STCASENO"] = "ID"
   names(addlRiskFactor)[names(addlRiskFactor) == "STCASENO"] = "ID"
-  littResults = litt(caseData = littCaseData, epi = epi, dist = dist, SNPcutoff = SNPcutoff, addlRiskFactor = addlRiskFactor)
+  littResults = litt(caseData = littCaseData, epi = epi, dist = dist, SNPcutoff = SNPcutoff, addlRiskFactor = addlRiskFactor,
+                     progress = progress, log = log)
   names(littCaseData)[names(littCaseData) == "ID"] = "STCASENO"
   names(addlRiskFactor)[names(addlRiskFactor) == "ID"] = "STCASENO"
+  
+  ##if Excel spreadsheet already exists, delete file; otherwise will note generate file, and if old table is bigger, will get extra rows from old table
+  outputExcelFiles = paste(outPrefix, c(epiFileName, dateFileName, caseFileName, txFileName, psFileName), sep="")
+  if(any(file.exists(outputExcelFiles))) {
+    outputExcelFiles = outputExcelFiles[file.exists(outputExcelFiles)]
+    file.remove(outputExcelFiles)
+  }
   
   ####write results
   ###write out the dates
@@ -545,12 +584,12 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   }
   write = merge(so, write, by="STCASENO", all.y=T)
   ##write dates separately
-  write.table(write, paste(outPrefix, "CalculatedDateData.txt", sep=""), row.names = T, col.names = T, quote = F, na = "", sep="\t")
+  # write.table(write, paste(outPrefix, "CalculatedDateData.txt", sep=""), row.names = T, col.names = T, quote = F, na = "", sep="\t")
   datewrite = write
   for(c in 2:ncol(datewrite)) {
     datewrite[,c] = format(datewrite[,c], "%m/%d/%Y")
   }
-  writeExcelTable(fileName=paste(outPrefix, "LITT_Calculated_Date_Data.xlsx", sep=""), 
+  writeExcelTable(fileName=paste(outPrefix, dateFileName, sep=""), 
                   sheetName = "dates",
                   df = datewrite,
                   stcasenolab = T,
@@ -637,64 +676,22 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
   
   ###write epi links
-  # if(nrow(littResults$epi)) {
-  #   epiOut = littResults$epi
-  #   writeExcelTable(fileName=paste(outPrefix, "LITT_Calculated_Epi_Data.xlsx", sep=""),
-  #                   sheetName="Epi links",
-  #                   df = epiOut,
-  #                   stcasenolab = T)
-  # } else {
-  #   cat("No epi links\n")
-  # }
-  writeEpiTable(littResults, outPrefix, stcasenolab = T)
+  w = writeEpiTable(littResults, outPrefix, stcasenolab = T, log = log)
+  if(!w) { #table not written, so do not include in output list
+    outputExcelFiles = outputExcelFiles[!grepl(epiFileName, outputExcelFiles)]
+  }
   
-  ####clean up and output transmission network
-  # if(nrow(littResults$topRanked)) {
-  #   littResults$topRanked$scoreWoWGS[!is.na(littResults$topRanked$score)] = NA #only give w/o SNP score if score is missing
-  #   writeExcelTable(fileName=paste(outPrefix, "LITT_Top_Ranked_Transmission_Network.xlsx", sep=""),
-  #                   sheetName = "top ranked sources", 
-  #                   df = littResults$topRanked,
-  #                   stcasenolab = T)
-  # } else {
-  #   cat("There were no cases with a potential source that passed all filters.\n")
-  # }
-  writeTopRankedTransmissionTable(littResults, outPrefix, stcasenolab = T)
+  ###clean up and output transmission network
+  w = writeTopRankedTransmissionTable(littResults, outPrefix, stcasenolab = T, log = log)
+  if(!w) { #table not written, so do not include in output list
+    outputExcelFiles = outputExcelFiles[!grepl(txFileName, outputExcelFiles)]
+  }
   
-  ####get categorical labels and combine source matrix and reason filtered into one Excel spreadsheet
-  # allSources = littResults$allPotentialSources
-  # cat = getScoreCategories(allSources)
-  # allSources[,c(3:6, 8:9)] = apply(allSources[,c(3:6, 8:9)], 2, as.numeric) #make columns numeric for Excel
-  # ##move label to end
-  # allSources = cbind(allSources[,names(allSources)!="label"], data.frame(label=allSources[,names(allSources)=="label"]))
-  # cat = cbind(cat[,names(cat)!="label"], data.frame(label=cat[,names(cat)=="label"]))
-  # # wb = writeExcelTable(fileName=paste(outPrefix, "LITT_All_Potential_Sources.xlsx", sep=""),
-  # #                      sheetName = "numeric potential sources", 
-  # #                      df = allSources, 
-  # #                      wrapHeader=T,
-  # #                      stcasenolab = T)
-  # # wb = writeExcelTable(workbook=wb,
-  # #                      sheetName = "categorical potential sources", 
-  # #                      df = cat, 
-  # #                      wrapHeader=T,
-  # #                      stcasenolab = T)
-  # ##merge categorical and numerical rating
-  # cat$timeRate = ifelse(is.na(allSources$timeRate), NA, paste(allSources$timeRate, " (", cat$timeRate, ")", sep=""))
-  # cat$infRate = ifelse(is.na(allSources$infRate), NA, paste(allSources$infRate, " (", cat$infRate, ")", sep=""))
-  # cat$epiRate = ifelse(is.na(allSources$epiRate), NA, paste(allSources$epiRate, " (", cat$epiRate, ")", sep=""))
-  # ##move rank and scores first
-  # cat = cat[,c(1:2, 9, 7:8, 3:6, 10)]
-  # ##write
-  # wb = writeExcelTable(fileName=paste(outPrefix, "LITT_All_Potential_Sources.xlsx", sep=""),
-  #                      sheetName = "potential sources",
-  #                      df = cat,
-  #                      stcasenolab = T,
-  #                      snpRate = T)
-  # wb = writeExcelTable(workbook=wb,
-  #                      sheetName = "filtered cases", 
-  #                      df = littResults$filteredSources,
-  #                      stcasenolab = T)
+  ###get categorical labels and combine source matrix and reason filtered into one Excel spreadsheet
   writeAllSourcesTable(littResults, outPrefix, stcasenolab = T)
   
   write.table(littResults$summary, paste(outPrefix, "PotentialSources.txt", sep=""),
-              row.names = F, col.names = T, quote = F, sep = "\t") ##for consistency in other validation work; delete later
+              row.names = F, col.names = T, quote = F, sep = "\t") ##for consistency in other validation work
+  littResults$outputFiles = c(log, outputExcelFiles)
+  return(littResults)
 }
