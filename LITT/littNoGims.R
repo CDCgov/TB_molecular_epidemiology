@@ -24,7 +24,7 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
 ##function that takes in the outputs of the TB GIMS version and formats it for running the no GIMS version
 ##prefix = prefix used in the GIMS run
 ##rfs = column names of risk factors used in the GIMS run
-formatLittGimsCaseTable <- function(prefix, rfs=NA) {
+formatLittGimsCaseTable <- function(prefix) {
   caseData = read.xlsx(paste(prefix, caseFileName, sep=""), sheetName = 1)
   return(cleanedCaseDataHeadersToVarNames(caseData, rfs=rfs))
 }
@@ -41,12 +41,12 @@ cleanedCaseDataHeadersToVarNames <- function(caseData, rfs = NA) {
   names(caseData)[names(caseData)=="Sputum.Smear"] = "SPSMEAR"
   names(caseData)[names(caseData)=="Extrapulmonary.Only"] = "ExtrapulmonaryOnly"
   names(caseData)[names(caseData)=="User.Input.Date.Data.Available"] = "UserDateData"
-  ##subset to needed variables
-  vars = c(expectedcolnames, "Calculated.Infectious.Period.Start", "Calculated.Infectious.Period.End")
-  if(!any(is.na(rfs))) {
-    vars = c(vars, rfs)
-  }
-  caseData = caseData[,names(caseData) %in% vars]
+  ##remove previously calculated LITT summary
+  caseData = caseData[,!names(caseData) %in%
+                        c("Number.of.Epi.Links", "Number.of.Times.is.Ranked.1st.in.Potential.Source.List",
+                          "Number.of.Potential.Sources.Tied.for.Rank.1", "Total.Number.of.Potential.Sources",
+                          "Sequence.Available.In.Analysis",
+                          "IPStartLocal", "IPEndLocal")]
   return(caseData)
 }
 
@@ -58,8 +58,10 @@ cleanedCaseDataHeadersToVarNames <- function(caseData, rfs = NA) {
 ##epi = data frame with columns title case1, case2, strength (strength of the epi link between cases 1 and 2), label (label for link if known) -> optional, if not given, the epi links in GIMS will be used as definite epi links
 ##SNPcutoff = eliminate source if the SNP distance from the target is greater than this cutoff
 ##rfTable = dataframe with variable (list of additional risk factors, which correspond to column names in caseData) and weight
+##cdFromGimsRun = if true, case data is from a run of LITT with TB GIMS and the user wants to keep the extra surveillance columns
 ##progress = progress bar for R Shiny interface (NA if not running through interface)
-littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = snpDefaultCut, rfTable= NA, progress = NA) {
+littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = snpDefaultCut, rfTable= NA, 
+                       cdFromGimsRun = F, progress = NA) {
   log = paste(outPrefix, defaultLogName, sep="")
   cat("LITT analysis\n", file = log)
   
@@ -133,6 +135,21 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
       }
     }
   }
+  ##if user wants to include extra surveillance columns from gims, merge with printVars
+  if(cdFromGimsRun) {
+    gims = caseData[,!names(caseData) %in% 
+                      c(expectedcolnames[expectedcolnames!="ID"], optionalcolnames, 
+                        "Calculated.Infectious.Period.Start", "Calculated.Infectious.Period.End")]
+    if(!all(is.na(rfTable))) {
+      gims = gims[,!names(gims) %in% rfTable$variable]
+    }
+    if(all(is.na(printVars))) {
+      printVars = gims
+    } else {
+      gims = gims[,!names(gims) %in% names(printVars)[names(printVars)!="ID"]]
+      printVars = merge(gims, printVars, by="ID")
+    }
+  }
   caseData=caseData[,names(caseData) %in% c(expectedcolnames, optionalcolnames)]
   
   ###list of cases = cases in caseData
@@ -168,17 +185,6 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   ###write out other case data variables
   write = caseData
   write$sequenceAvailable = write$ID %in% colnames(dist)
-  
-  ##add risk factors and extra variables
-  if(any(!is.na(addlRiskFactor))) {
-    addlRiskFactor = addlRiskFactor[addlRiskFactor$ID != "weight",]
-    write = merge(write, addlRiskFactor, by="ID", all.x=T)
-  }
-  if(any(!is.na(printVars))) {
-    write = merge(write, printVars, by="ID", all.x=T)
-  }
-  
-  write = write[order(as.character(write$ID)),] #without as.character, order will be weird because factors are out of order
   
   if(any(!is.na(littResults$rfWeights))) {
     # write[] = lapply(write, as.character) #convert to character
@@ -216,8 +222,19 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   }
   # write[write$ID=="weight", names(write) %in% c("numEpiLinks", "numTimesIsRank1", "sequenceAvailable")] = NA #do not give numbers for weight
   
-  ##write case table
+  ###add risk factors and extra variables
+  if(any(!is.na(addlRiskFactor))) {
+    addlRiskFactor = addlRiskFactor[addlRiskFactor$ID != "weight",]
+    write = merge(write, addlRiskFactor, by="ID", all.x=T)
+  }
+  if(any(!is.na(printVars))) {
+    write = merge(write, printVars, by="ID", all.x=T)
+  }
+  
+  ###write case table
+  write = write[order(as.character(write$ID)),] #without as.character, order will be weird because factors are out of order
   cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
+  
   if(all(class(progress)!="logical")) {
     progress$set(value = 8) #skip 7 unless have rfs
   }

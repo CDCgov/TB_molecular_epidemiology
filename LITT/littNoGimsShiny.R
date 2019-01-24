@@ -20,6 +20,9 @@ ui <- fluidPage(
            sliderInput("snpCutoff", "SNP cutoff", min=0, max=10, value=5, step=1, round=T)),
     column(4,
            fileInput("caseData", "Case data table"),
+           checkboxInput("cdFromGimsRun",
+                         "Check if the case data comes from the TB GIMS version of LITT and you want to include the additional surveillance columns in this output"),
+           br(),
            # helpText("Must include: sputum smear results, cavitation status, ",
            #          "whether a case is extrapulmonary only or pediatric, and ",
            #          "infectious period start and end.", 
@@ -79,6 +82,7 @@ server <- function(input, output, session) {
                            epi = readShinyInputFile(input$epi),
                            SNPcutoff = input$snpCutoff,
                            rfTable = readShinyInputFile(input$rfTable),
+                           cdFromGimsRun = input$cdFromGimsRun,
                            progress = progress)
       outfiles <<- littres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
@@ -144,6 +148,11 @@ server <- function(input, output, session) {
   })
   observe({
     input$rfTable
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$cdFromGimsRun
     output$message <- renderText({""})
     shinyjs::hide("downloadData")
   })
