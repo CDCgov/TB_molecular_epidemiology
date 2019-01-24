@@ -78,6 +78,7 @@ server <- function(input, output, session) {
                            dist = readShinyDistanceMatrix(input$distMatrix, bn=F), #input$BNdist),
                            epi = readShinyInputFile(input$epi),
                            SNPcutoff = input$snpCutoff,
+                           rfTable = readShinyInputFile(input$rfTable),
                            progress = progress)
       outfiles <<- littres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})

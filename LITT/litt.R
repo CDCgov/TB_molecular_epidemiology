@@ -178,14 +178,15 @@ fixIPnames <- function(df, log) {
     if(sum(col) == 1) {
       names(df)[col] = "IPStart"
     } else if(sum(col) > 1) {
-      warning(paste("More than one column for infectious period (IP) start:", paste(names(df)[col], collapse = ", ")),
-              "\nPlease label one column IPStart.\n User-input IP start was not used in this analysis.")
-      cat(paste("More than one column for infectious period (IP) start:", paste(names(df)[col], collapse = ", ")),
-          "\nPlease label one column IPStart.\n User-input IP start was not used in this analysis.\n", 
+      warning(paste("More than one  infectious period (IP) start:", paste(names(df)[col], collapse = ", ")),
+              "\nPlease label one column IPStart in case data table.\n User-input IP start was not used in this analysis.")
+      cat(paste("More than one column for infectious period (IP) start in case data table:", paste(names(df)[col], collapse = ", ")),
+          "\nPlease label one column IPStart in case data table.\n User-input IP start was not used in this analysis.\n", 
           file = log, append = T)
       return(NA)
     } else if(sum(col) < 1) {
-      cat("No infectious period (IP) start column, so user-input IP was not used in the analysis.\nPlease add a column named IPStart to have user IP in analysis.\n", 
+      warning("No infectious period (IP) start column, so user-input IP was not used in the analysis.\nPlease add a column named IPStart in case data table to have user IP in analysis.\n")
+      cat("No infectious period (IP) start column, so user-input IP was not used in the analysis.\nPlease add a column named IPStart in case data table to have user IP in analysis.\n", 
           file = log, append = T)
       return(NA)
     }
@@ -197,14 +198,15 @@ fixIPnames <- function(df, log) {
       names(df)[col] = "IPEnd"
     }else if(sum(col) > 1) {
       warning(paste("More than one column for infectious period (IP) end:", paste(names(df)[col], collapse = ", ")),
-              "\nPlease label one column IPEnd.\n User-input IP end was not used in this analysis.")
+              "\nPlease label one column IPEnd in case data table.\n User-input IP end was not used in this analysis.")
       cat(paste("More than one column for infectious period (IP) end:", paste(names(df)[col], collapse = ", ")),
-          "\nPlease label one column IPEnd.\n User-input IP end was not used in this analysis.\n", 
+          "\nPlease label one column IPEnd in case data table.\n User-input IP end was not used in this analysis.\n", 
           file = log, append = T)
       df$IPEnd = NA
     } else if(sum(col) < 1) {
-      cat("No infectious period (IP) end column, so user-input IP end was not used in the analysis.\nPlease add a column named IPEnd to use IP end in analysis.\n", 
+      cat("No infectious period (IP) end column, so user-input IP end was not used in the analysis.\nPlease add a column named IPEnd to case data table to use IP end in analysis.\n", 
           file = log, append = T)
+      warning("No infectious period (IP) end column, so user-input IP end was not used in the analysis.\nPlease add a column named IPEnd to case data table to use IP end in analysis.\n")
       df$IPEnd = NA
     }
     
@@ -221,6 +223,64 @@ fixIPnames <- function(df, log) {
       }
     }
   }
+  return(df)
+}
+
+##clean up risk factor weight table
+##df = dataframe with variable (list of additional risk factors, which correspond to column names in caseData) and weight
+##log = where to write messages to
+fixRfTable <- function(df, log) {
+  ###clean up headers
+  ##variable
+  col = grepl("risk[ .]*factor", names(df), ignore.case = T) | grepl("variable", names(df), ignore.case = T)
+  if(sum(col) == 1) {
+    names(df)[col] = "variable"
+  } else if(sum(col) > 1) {
+    warning(paste("More than one column for risk factor variable name in risk factor table:", paste(names(df)[col], collapse = ", ")),
+            "\nPlease label one column in risk factor table variable.\n Risk factors were not used in this analysis.")
+    cat(paste("More than one column for risk factor variable name:", paste(names(df)[col], collapse = ", ")),
+        "\nPlease label one column variable in risk factor table.\n Risk factors were not used in this analysis.\n", 
+        file = log, append = T)
+    return(NA)
+  } else if(sum(col) < 1) {
+    warning("No risk factor variable column in risk factor table, so risk factors were not used in the analysis.\nPlease add a column named variable in the risk factor table to have risk factors in analysis.\n")
+    cat("No risk factor variable column in risk factor table, so risk factors were not used in the analysis.\nPlease add a column named variable in the risk factor table to have risk factors in analysis.\n", 
+        file = log, append = T)
+    return(NA)
+  }
+  ##weight
+  col = grepl("weight", names(df), ignore.case = T)
+  if(sum(col) == 1) {
+    names(df)[col] = "weight"
+  } else if(sum(col) > 1) {
+    cat(paste("More than one column for risk factor weight:", paste(names(df)[col], collapse = ", ")),
+        "\nRisk factors were given equal weights in this analysis. To use weights, label one column weight in risk factor table.\n", 
+        file = log, append = T)
+    df = df[,!col]
+  } else if(sum(col) < 1) {
+   cat("No risk factor weight column in risk factor table, so risk factors were given equal weights in this analysis. To use weights, label one column weight in risk factor table.\n",
+        file = log, append = T)
+  }
+  
+  ##clean up weights
+  if(!"weight" %in% names(df)) {
+    df$weight = 1
+  } else if(all(is.na(df$weight))) {
+    df$weight = 1
+  } else {
+    df$weight[!grepl("^[0-9]+$", df$weight)] = NA #anything that is a character (will also pick up negative numbers, but these will be filtered anyway)
+    df$weight = as.numeric(as.character(df$weight))
+    if(any(is.na(df$weight))) {
+      cat("Risk factor weights must have a positive numeric value to be included in analysis. The following risk factors will be ignored: ",
+          paste(df$variable[is.na(df$weight)], collapse=", "), "\n",
+          file = log, append = T)
+    }
+    df = df[!is.na(df$weight),] #remove variables missing weight
+    df = df[df$weight >= 0,] #remove variables with negative weight
+  }
+  
+  ##variable names to match R modifying column names
+  df$variable = make.names(df$variable)
   return(df)
 }
 
@@ -350,6 +410,8 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   names(df)[names(df)=="filteredCase"] = "Filtered Case"
   names(df)[names(df)=="reasonFiltered"] = "Reason Filtered"
   
+  ##risk factors
+  names(df) = gsub(".", " ", names(df), fixed=T)
   return(df)
 }
 
@@ -362,7 +424,9 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
 ##stcasenolab = if true, ID column is named state case number, otherwise is ID
 ##snpRate = if true, SNP column is SNP rating, otherwise is SNP distance
 ##save = if true, save the workbook
-writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHeader=F, stcasenolab = F, snpRate = F, save = T) {
+##filter = if true, add a filter
+writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHeader=F, stcasenolab = F, snpRate = F, 
+                          save = T, filter = T) {
   df = cleanHeaderForOutput(df, stcasenolab = stcasenolab, snpRate = snpRate)
   if(class(workbook)!="jobjRef") {
     workbook = createWorkbook()
@@ -408,7 +472,9 @@ writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHea
   ##add filter
   r1 = sheet$getRow(1L)
   lastcol = r1$getCell(as.integer(ncol(df)-1))
-  addAutoFilter(sheet = sheet, cellRange =paste("A1:", lastcol$getReference(), sep=""))
+  if(filter) {
+    addAutoFilter(sheet = sheet, cellRange =paste("A1:", lastcol$getReference(), sep=""))
+  }
   if(save) {
     saveWorkbook(workbook, fileName)
   }
@@ -598,6 +664,7 @@ txFileName = "LITT_Top_Ranked_Transmission_Network.xlsx"
 caseFileName = "LITT_Calculated_Case_Data.xlsx"
 psFileName = "LITT_All_Potential_Sources.xlsx"
 dateFileName = "LITT_Calculated_Date_Data.xlsx"
+rfFileName = "LITT_Risk_Factor_Weights.xlsx"
 
 ###runs the LITT analysis
 ###inputs:
@@ -605,7 +672,8 @@ dateFileName = "LITT_Calculated_Date_Data.xlsx"
 ##epi = data frame with columns title case1, case2, strength (strength of the epi link between cases 1 and 2), label (label for link if known) -> optional, if not given, the epi links in GIMS will be used as definite epi links
 ##dist = WGS SNP distance matrix (row names and column names are state case number) (optional)
 ##SNPcutoff = eliminate source if the SNP distance from the target is greater than this cutoff
-##addlRiskFactor = data frame where one column is ID, and the rest are risk factors with Y/N values
+##addlRiskFactor = data frame where one column is ID, and the rest are risk factors with Y/N values;
+##  if the user wants different weights, one ID should be labeled weight 
 ##log = name of log file to write messages to
 ##progress = progress bar for R Shiny interface (NA if not running through interface)
 ###outputs:

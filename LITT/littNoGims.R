@@ -13,7 +13,7 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
   caseOut$IPStart = format(caseOut$IPStart, format="%m/%d/%Y")
   caseOut$IPEnd = format(caseOut$IPEnd, format="%m/%d/%Y")
   
-  names(caseOut) = gsub(".", "", names(caseOut), fixed=T) #clean up risk factors
+  # names(caseOut) = gsub(".", " ", names(caseOut), fixed=T) #clean up risk factors
   
   writeExcelTable(fileName=paste(outPrefix, caseFileName, sep=""),
                   sheetName = "case data",
@@ -57,8 +57,9 @@ cleanedCaseDataHeadersToVarNames <- function(caseData, rfs = NA) {
 ##caseData = combined dataframe with ID, infectious period start and end and additional risk factor data; required field
 ##epi = data frame with columns title case1, case2, strength (strength of the epi link between cases 1 and 2), label (label for link if known) -> optional, if not given, the epi links in GIMS will be used as definite epi links
 ##SNPcutoff = eliminate source if the SNP distance from the target is greater than this cutoff
+##rfTable = dataframe with variable (list of additional risk factors, which correspond to column names in caseData) and weight
 ##progress = progress bar for R Shiny interface (NA if not running through interface)
-littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = snpDefaultCut, progress = NA) {
+littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = snpDefaultCut, rfTable= NA, progress = NA) {
   log = paste(outPrefix, defaultLogName, sep="")
   cat("LITT analysis\n", file = log)
   
@@ -73,6 +74,10 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   if(!"ID" %in% names(caseData)) {
     cat("A case data table with one column labeled ID or STATECASNO is required\n", file = log, append = T)
     stop("Case data table must have a column with the case ID, named ID")
+  }
+  if("weight" %in% caseData$ID) {
+    cat("Case ID cannot be weight; this row has been removed from case data table.\n", file = log, append = T)
+    caseData = caseData[caseData$ID!="weight",]
   }
   if(nrow(caseData) < 2) {
     cat("LITT requires at least two cases, but there ", ifelse(nrow(caseData)==1, "is ", "are "),
@@ -91,11 +96,44 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   caseData$IPEnd = convertToDate(caseData$IPEnd)
 
   ####split out additional risk factors
-  addlRiskFactor=NA 
-  if(!all(names(caseData) %in% c(expectedcolnames, optionalcolnames))) { #have RFs
-    addlRiskFactor=caseData[,!names(caseData) %in% c(expectedcolnames[expectedcolnames!="ID"], optionalcolnames)]
-    caseData=caseData[caseData$ID!="weight",names(caseData) %in% c(expectedcolnames, optionalcolnames)]
+  # addlRiskFactor=NA 
+  # if(!all(names(caseData) %in% c(expectedcolnames, optionalcolnames))) { #have RFs
+  #   addlRiskFactor=caseData[,!names(caseData) %in% c(expectedcolnames[expectedcolnames!="ID"], optionalcolnames)]
+  #   caseData=caseData[caseData$ID!="weight",names(caseData) %in% c(expectedcolnames, optionalcolnames)]
+  # }
+  addlRiskFactor=NA #risk factor data, with row for weight
+  printVars = NA #additional variables to print but not standard variables or risk factors
+  if(!all(is.na(rfTable))) {
+    rfTable = fixRfTable(rfTable, log)
+    if(!all(is.na(rfTable))) {
+      if(any(!rfTable$variable %in% names(caseData))) { #extra variables not in case data table
+        miss = !rfTable$variable %in% names(caseData)
+        cat("The following variables are in the risk factor table but not in the case data table, so will not be used in analysis: ",
+            paste(rfTable$variable[miss], collapse=", "), "\n", file = log, append = T)
+        rfTable = rfTable[!miss,]
+      }
+      if(any(!names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable))) {
+        miss = !names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable)
+        cat("There are extra columns in the case data table, which will be removed: ",
+            paste(names(caseData)[miss], collapse=", "), "\n", file = log, append = T)
+      }
+      ##set up print table (weight 0)
+      rfTable = rfTable[!is.na(rfTable$weight),]
+      if(any(rfTable$weight==0)) {
+        # printVars = caseData[,names(caseData) %in% c("ID", rfTable$variable[rfTable$weight==0])]
+        printVars = caseData[,c("ID", rfTable$variable[rfTable$weight==0])]
+      }
+      rfTable = rfTable[rfTable$weight > 0,]
+      ##set up additional risk factor table
+      if(nrow(rfTable) > 0) {
+        # addlRiskFactor = caseData[,names(caseData) %in% c("ID", rfTable$variable)]
+        addlRiskFactor = caseData[,c("ID", rfTable$variable)]
+        addlRiskFactor[] = lapply(addlRiskFactor, as.character)
+        addlRiskFactor = rbind(addlRiskFactor, c("weight", rfTable$weight))
+      }
+    }
   }
+  caseData=caseData[,names(caseData) %in% c(expectedcolnames, optionalcolnames)]
   
   ###list of cases = cases in caseData
   cases = caseData$ID
@@ -121,7 +159,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   
   ####write results
   ###if Excel spreadsheet already exists, delete file; otherwise will note generate file, and if old table is bigger, will get extra rows from old table
-  outputExcelFiles = paste(outPrefix, c(epiFileName, caseFileName, txFileName, psFileName), sep="")
+  outputExcelFiles = paste(outPrefix, c(epiFileName, caseFileName, txFileName, psFileName, rfFileName), sep="")
   if(any(file.exists(outputExcelFiles))) {
     outputExcelFiles = outputExcelFiles[file.exists(outputExcelFiles)]
     file.remove(outputExcelFiles)
@@ -131,23 +169,33 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   write = caseData
   write$sequenceAvailable = write$ID %in% colnames(dist)
   
-  ##add risk factors and weights
+  ##add risk factors and extra variables
   if(any(!is.na(addlRiskFactor))) {
-    addlRiskFactor = addlRiskFactor[addlRiskFactor$ID!="weight",] #this weight is pre-calculation; correct weight added below
-    write = merge(write, addlRiskFactor, by="ID", all = T)
+    addlRiskFactor = addlRiskFactor[addlRiskFactor$ID != "weight",]
+    write = merge(write, addlRiskFactor, by="ID", all.x=T)
+  }
+  if(any(!is.na(printVars))) {
+    write = merge(write, printVars, by="ID", all.x=T)
   }
   
   write = write[order(as.character(write$ID)),] #without as.character, order will be weird because factors are out of order
   
   if(any(!is.na(littResults$rfWeights))) {
-    write[] = lapply(write, as.character) #convert to character
-    write = rbind(write,
-                  c("weight", sapply(names(write)[-1], function(v) {
-                    ifelse(v %in% littResults$rfWeights$variable,
-                           littResults$rfWeights$weight[littResults$rfWeights$variable==v], "")
-                  })))
-    # writeExcelTable(fileName=paste(outPrefix, "LITT_Risk_Factor_Weights.xlsx", sep=""),
-    #                 df = littResults$rfWeights)
+    # write[] = lapply(write, as.character) #convert to character
+    # write = rbind(write,
+    #               c("weight", sapply(names(write)[-1], function(v) {
+    #                 ifelse(v %in% littResults$rfWeights$variable,
+    #                        littResults$rfWeights$weight[littResults$rfWeights$variable==v], "")
+    #               })))
+    littResults$rfWeights$variable = gsub(".", " ", littResults$rfWeights$variable, fixed=T)
+    writeExcelTable(fileName=paste(outPrefix, rfFileName, sep=""),
+                    df = littResults$rfWeights,
+                    filter=F)
+    if(all(class(progress)!="logical")) {
+      progress$set(value = 7) 
+    }
+  } else {
+    outputExcelFiles = outputExcelFiles[!grepl(rfFileName, outputExcelFiles)]
   }
   
   if(nrow(littResults$epi)) {
@@ -166,7 +214,9 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   } else {
     write$numTimesIsRank1 = 0
   }
-  write[write$ID=="weight", names(write) %in% c("numEpiLinks", "numTimesIsRank1", "sequenceAvailable")] = NA #do not give numbers for weight
+  # write[write$ID=="weight", names(write) %in% c("numEpiLinks", "numTimesIsRank1", "sequenceAvailable")] = NA #do not give numbers for weight
+  
+  ##write case table
   cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
   if(all(class(progress)!="logical")) {
     progress$set(value = 8) #skip 7 unless have rfs
