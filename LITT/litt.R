@@ -87,7 +87,11 @@ fixEpiNames <- function(epi, log) {
       grepl("stcaseno1", names(epi), ignore.case = T) | grepl("id1", names(epi), ignore.case = T)
     if(sum(c1) == 1) {
       names(epi)[c1] = "case1"
-    } else if(sum(c1) > 1 | sum(names(epi)=="case1") != 1) {
+    } else if(sum(tolower(names(epi))=="case1") == 1) {
+      names(epi)[tolower(names(epi))=="case1"] = "case1"
+    } else if(sum(tolower(names(epi))=="stcaseno1") == 1) {
+      names(epi)[tolower(names(epi))=="stcaseno1"] = "case1"
+    } else if(sum(c1) > 1) {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
       cat(paste("\nHowever, more than one column for first case was found in epi link table:", paste(names(epi)[c1], collapse = ", ")),
           ".\nPlease label one column case1.\n", file = log, append = T)
@@ -102,7 +106,11 @@ fixEpiNames <- function(epi, log) {
       grepl("stcaseno2", names(epi), ignore.case = T) | grepl("id2", names(epi), ignore.case = T)
     if(sum(c1) == 1) {
       names(epi)[c1] = "case2"
-    } else if(sum(c1) > 1 | sum(names(epi)=="case2") != 1) {
+    } else if(sum(tolower(names(epi))=="case2") == 1) {
+      names(epi)[tolower(names(epi))=="case2"] = "case2"
+    } else if(sum(tolower(names(epi))=="stcaseno2") == 1) {
+      names(epi)[tolower(names(epi))=="stcaseno2"] = "case2"
+    } else if(sum(c1) > 1) {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
       cat(paste("\nHowever, more than one column for second case in was found in epi link table:", paste(names(epi)[c1], collapse = ", ")),
           ".\nPlease label one column case2.\n", file = log, append = T)
@@ -116,17 +124,18 @@ fixEpiNames <- function(epi, log) {
     c1 = grepl("strength", names(epi), ignore.case = T)
     if(sum(c1) == 1) {
       names(epi)[c1] = "strength"
+    } else if(sum(tolower(names(epi))=="strength") == 1) {
+      names(epi)[tolower(names(epi))=="strength"] = "strength"
     } else if(sum(c1) > 1) {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
       cat(paste("\nHowever, more than one column forepi link strength was found in epi link table:", 
                 paste(names(epi)[c1], collapse = ", ")),
-          "\nPlease label one column strength\n", file = log, append = T)
-      stop(paste("More than one column for epi link strength in epi link table:", paste(names(epi)[c1], collapse = ", ")),
-           "\nPlease label one column strength")
+          "\nPlease label one column \"strength\".\nAll epi links strengths will be set to probable.\n", file = log, append = T)
+      epi$strength = "probable"
     } else {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
-      cat("\nColumn for epi link strength in epi link table not found. Please label one column strength.\n", file = log, append = T)
-      stop("Column for epi link strength in epi link table not found\n Please label one column strength.")
+      cat("\nColumn for epi link strength (strength) in epi link table not found.\nAll epi links strengths will be set to probable.\n", file = log, append = T)
+      epi$strength = "probable"
     }
     epi$strength = tolower(epi$strength)
     epi$strength = trimws(epi$strength) #remove extra spaces, which can mess up comparisons
@@ -134,10 +143,16 @@ fixEpiNames <- function(epi, log) {
     c1 = grepl("label", names(epi), ignore.case = T) 
     if(sum(c1) == 1) {
       names(epi)[c1] = "label"
+    } else if(sum(tolower(names(epi))=="label") == 1) {
+      names(epi)[tolower(names(epi))=="label"] = "label"
     } else {
-      c1 = grepl("location", names(epi), ignore.case = T)
+      c1 = grepl("location", names(epi), ignore.case = T) #for compatibility with LATTE outputs
       if(sum(c1) == 1) {
+        cat("Location column will be used as label.\n", file = log, append = T)
         names(epi)[c1] = "label"
+      } else if(sum(tolower(names(epi))=="location") == 1) {
+        cat("Location column will be used as label.\n", file = log, append = T)
+        names(epi)[tolower(names(epi))=="location"] = "label"
       } else if(sum(c1) > 1) {
         epi$label=""
         cat(paste("More than one column for epi link label in epi link table:", paste(names(epi)[c1], collapse = ", "), 

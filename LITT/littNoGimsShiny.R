@@ -70,7 +70,11 @@ server <- function(input, output, session) {
   
   ##run LATTE when action button hit
   observeEvent(input$run, {
-    caseData = readShinyInputFile(input$caseData)
+    if(rv$clCaseData) {
+      caseData = NA
+    } else {
+      caseData = readShinyInputFile(input$caseData)
+    }
     if(all(is.na(caseData)) | rv$clCaseData) {
       output$message <- renderText({paste(outputfontsizestart, "No case data. Please input a case data table.", outputfontsizeend, sep="")})
       return(NULL)
@@ -138,15 +142,8 @@ server <- function(input, output, session) {
   
   ##clear inputs if clear button is clicked
   observeEvent(input$clear, {
-    # input$prefix = ""
-    # input$snpCutoff = 5
-    # input$caseData = NULL
-    # input$epi = NULL
-    # input$distMatrix = NULL
-    # input$rfTable = NULL
-    # input$cdFromGimsRun = F
     updateTextInput(session, "prefix", value="")
-    updateSliderInput(session, "snpCutoff", value=5)
+    updateSliderInput(session, "snpCutoff", value=snpDefaultCut)
     output$message <- renderText({""})
     shinyjs::hide("downloadData")
     reset("caseData")
