@@ -63,7 +63,7 @@ cleanedCaseDataHeadersToVarNames <- function(caseData, rfs = NA) {
 littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = snpDefaultCut, rfTable= NA, 
                        cdFromGimsRun = F, progress = NA) {
   log = paste(outPrefix, defaultLogName, sep="")
-  cat("LITT analysis\n", file = log)
+  cat("LITT analysis\nSNP cutoff = ", SNPcutoff, "\n", file = log)
   
   ####check inputs
   if(all(is.na(caseData))) {
@@ -74,8 +74,8 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
     caseData = cleanedCaseDataHeadersToVarNames(caseData)
   }
   if(!"ID" %in% names(caseData)) {
-    cat("A case data table with one column labeled ID or STATECASNO is required\n", file = log, append = T)
-    stop("Case data table must have a column with the case ID, named ID")
+    cat("A case data table with one column labeled ID or STATECASNO is required.\n", file = log, append = T)
+    stop("Case data table must have an ID column.")
   }
   if("weight" %in% caseData$ID) {
     cat("Case ID cannot be weight; this row has been removed from case data table.\n", file = log, append = T)
@@ -114,7 +114,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
             paste(rfTable$variable[miss], collapse=", "), "\n", file = log, append = T)
         rfTable = rfTable[!miss,]
       }
-      if(any(!names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable))) {
+      if(any(!names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable)) & !cdFromGimsRun) {
         miss = !names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable)
         cat("There are extra columns in the case data table, which will be removed: ",
             paste(names(caseData)[miss], collapse=", "), "\n", file = log, append = T)

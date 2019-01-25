@@ -25,7 +25,8 @@ ui <- fluidPage(
                         selected = "epi"),
            sliderInput("epicutoff", "Number of days cases must overlap in a location to form a definite or probable epi link", min=0, max=30, value=defaultCut, step=1, round=T),
            sliderInput("ipepicutoff", "Number of days cases must overlap each other and an IP to form an IP epi link", min=0, max=30, value=defaultCut, step=1, round=T),
-           checkboxInput("removeAfter", "Check if want to include overlaps that occur after either IP end as potential IP epi links (e.g. to identify potential re-exposure during a contact investigation)")),
+           checkboxInput("removeAfter", "Check if want to include overlaps that occur after either IP end as potential IP epi links (e.g. to identify potential re-exposure during a contact investigation)"),
+           actionButton("clear", "Clear inputs")),
     
     fluidRow(column(12, align="center",
                     actionButton("run", "Run", style='background-color:royalblue; color:white; padding:20px 40px'))), #https://www.w3schools.com/css/css3_buttons.asp
@@ -53,9 +54,16 @@ outfiles = NA #list of output files
 server <- function(input, output, session) {
   shinyjs::hide("downloadData")
   
+  rv <- reactiveValues(clLoc = F,
+                       clIP = F) #variables that if true, indicate that clear has been hit but a new table has not been uploaded
+  
   ##run LATTE when action button hit
   observeEvent(input$run, {
-    loc = readShinyInputFile(input$locTab)
+    if(rv$clLoc) {
+      loc = NA
+    } else {
+      loc = readShinyInputFile(input$locTab)
+    }
     if(all(is.na(loc))) {
       output$message <- renderText({paste(outputfontsizestart, "No location data; please input a location table", outputfontsizeend, sep="")})
       return(NULL)
@@ -64,16 +72,21 @@ server <- function(input, output, session) {
     on.exit(progress$close())
     progress$set(message = "Running LATTE")
     output$message <- renderText({paste(outputfontsizestart, "Starting analysis", outputfontsizeend, sep="")})
-    ipEpiLink = ifelse(input$linkType == "ipepi", T, F)
+    # ipEpiLink = ifelse(input$linkType == "ipepi", T, F)
     cutoff = ifelse(input$linkType == "ipepi", input$ipepicutoff, input$epicutoff)
     progress$set(value=0)
     outPrefix = paste(tmpdir, input$prefix, sep="")
+    if(rv$clIP) {
+      ip = NA
+    } else {
+      ip = readShinyInputFile(input$ipTab)
+    }
     res = tryCatch({
       latteres = latteWithOutputs(outPrefix = outPrefix,
                                   loc = loc,
-                                  ip = readShinyInputFile(input$ipTab),
+                                  ip = ip, #readShinyInputFile(input$ipTab),
                                   cutoff = cutoff,
-                                  ipEpiLink = ipEpiLink,
+                                  ipEpiLink = input$linkType == "ipepi",
                                   removeAfter = !input$removeAfter,
                                   progress = progress)
       outfiles <<- latteres$outputFiles
@@ -107,14 +120,32 @@ server <- function(input, output, session) {
     contentType = "application/zip"
   )
   
+  ##clear inputs if clear button is clicked
+  observeEvent(input$clear, {
+    updateTextInput(session, "prefix", value="")
+    updateSliderInput(session, "epicutoff", value=defaultCut)
+    updateSliderInput(session, "ipepicutoff", value=defaultCut)
+    updateCheckboxInput(session, "removeAfter", value=F)
+    # updateRadioButtons(session, "linkType", selected = epi)
+    reset("linkType")
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+    reset("locTab")
+    reset("ipTab")
+    rv$clLoc <- T
+    rv$clIP <- T
+  })
+  
   ##if any inputs change, hide download button and remove output message
   observe({ 
     input$locTab
+    rv$clLoc <- F
     output$message <- renderText({""})
     shinyjs::hide("downloadData")
   })
   observe({
     input$ipTab
+    rv$clIP <- F
     output$message <- renderText({""})
     shinyjs::hide("downloadData")
   })

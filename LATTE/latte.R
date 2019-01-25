@@ -567,7 +567,7 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   ##if Excel spreadsheet already exists, delete file; otherwise will not write the new results
   overlapName = paste(outPrefix, "LATTE_All_Overlaps.xlsx", sep="")
   epiName = paste(outPrefix, ifelse(ipEpiLink, "LATTE_IPEpi_Links_", "LATTE_Epi_Links_"), cutoff, "DCutoff",
-                  ifelse(removeAfter & ipEpiLink, "_RemoveOLAfterIPEnd", ""), ".xlsx", sep="")
+                  ifelse(removeAfter & ipEpiLink, "", "_KeepOLAfterIPEnd"), ".xlsx", sep="")
   locName = paste0(outPrefix, "LATTE_Location.xlsx")
   ipName = paste0(outPrefix, "LATTE_IP.xlsx")
   outputExcelFiles = c(overlapName, epiName, locName, ipName)
@@ -596,8 +596,8 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   if(!all(is.na(epi))) {
     # write.table(epi, sub(".xlsx", ".txt", overlapName), row.names = F, col.names = T, quote = F, sep = "\t")
     writeExcelTable(df=epi, fileName = epiName, 
-                    sheetName = paste(ifelse(ipEpiLink, "IP Epi Links ", "Epi Links "), cutoff, "d Cut", 
-                                      ifelse(removeAfter, " rem OL after IP end", ""), sep="")) 
+                    sheetName = paste(ifelse(ipEpiLink, "IPEpi ", "Epi "), cutoff, "DCutoff", 
+                                      ifelse(removeAfter, "", " KeepOLAfterIPend"), sep="")) 
   } else {
     outputExcelFiles = outputExcelFiles[outputExcelFiles != epiName]
     if(ipEpiLink & !all(is.na(ip)) & !all(is.na(res))) {

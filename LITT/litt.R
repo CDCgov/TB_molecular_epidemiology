@@ -87,12 +87,11 @@ fixEpiNames <- function(epi, log) {
       grepl("stcaseno1", names(epi), ignore.case = T) | grepl("id1", names(epi), ignore.case = T)
     if(sum(c1) == 1) {
       names(epi)[c1] = "case1"
-    } else if(sum(c1) > 1) {
+    } else if(sum(c1) > 1 | sum(names(epi)=="case1") != 1) {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
       cat(paste("\nHowever, more than one column for first case was found in epi link table:", paste(names(epi)[c1], collapse = ", ")),
-          "\nPlease label one column case1.\n", file = log, append = T)
-      stop(paste("More than one column for first case in epi link table:", paste(names(epi)[c1], collapse = ", ")),
-           "\nPlease label one column case1.")
+          ".\nPlease label one column case1.\n", file = log, append = T)
+      stop("Please label one column case1 in epi link table.")
     } else {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
       cat("\nColumn for first case in epi link table not found. Please label one column case1.\n", file = log, append = T)
@@ -103,12 +102,11 @@ fixEpiNames <- function(epi, log) {
       grepl("stcaseno2", names(epi), ignore.case = T) | grepl("id2", names(epi), ignore.case = T)
     if(sum(c1) == 1) {
       names(epi)[c1] = "case2"
-    } else if(sum(c1) > 1) {
+    } else if(sum(c1) > 1 | sum(names(epi)=="case2") != 1) {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
       cat(paste("\nHowever, more than one column for second case in was found in epi link table:", paste(names(epi)[c1], collapse = ", ")),
-          "\nPlease label one column case2.\n", file = log, append = T)
-      stop(paste("More than one column for second case in epi link table:", paste(names(epi)[c1], collapse = ", ")),
-           "\nPlease label one column case2")
+          ".\nPlease label one column case2.\n", file = log, append = T)
+      stop("Please label one column case2 in epi link table.")
     } else {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
       cat("\nColumn for second case in epi link table not found. Please label one column case2.\n", file = log, append = T)
@@ -839,6 +837,12 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
     }
   } else {
     rfWeights = NA
+  }
+  
+  if(all(is.na(rfWeights))) {
+    cat("Number of risk factors: 0\n", file = log, append = T)
+  } else {
+    cat("Number of risk factors: ", nrow(rfWeights), "\n", file = log, append = T)
   }
   
   ##which cases to update progress bar; note that it includes 1, so will update in first loop to account for setup
