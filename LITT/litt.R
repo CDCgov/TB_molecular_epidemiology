@@ -69,7 +69,7 @@ addlRFLabel <- function(label, rfname) {
 getAddlRFUserUserWeights <- function(addlRiskFactor) {
   userWeight = addlRiskFactor[grepl("weight", addlRiskFactor$ID, ignore.case = T),-1]
   userWeight[] = lapply(userWeight, as.character)
-  userWeight[!grepl("^[0-9]+$", userWeight)] = NA #anything that is a character 
+  userWeight[!grepl("^[0-9]+[.]*[0-9]*$", userWeight)] = NA #anything that is a character 
   if(class(userWeight)!="data.frame") {
     userWeight = as.numeric(as.character(userWeight))
   } else {
@@ -271,7 +271,7 @@ fixRfTable <- function(df, log) {
         file = log, append = T)
     df = df[,!col]
   } else if(sum(col) < 1) {
-   cat("No risk factor weight column in risk factor table, so risk factors were given equal weights in this analysis. To use weights, label one column weight in risk factor table.\n",
+    cat("No risk factor weight column in risk factor table, so risk factors were given equal weights in this analysis. To use weights, label one column weight in risk factor table.\n",
         file = log, append = T)
   }
   
@@ -281,7 +281,7 @@ fixRfTable <- function(df, log) {
   } else if(all(is.na(df$weight))) {
     df$weight = 1
   } else {
-    df$weight[!grepl("^[0-9]+$", df$weight)] = NA #anything that is a character (will also pick up negative numbers, but these will be filtered anyway)
+    df$weight[!grepl("^[0-9]+[.]*[0-9]*$", df$weight)] = NA #anything that is a character (will also pick up negative numbers, but these will be filtered anyway)
     df$weight = as.numeric(as.character(df$weight))
     if(any(is.na(df$weight))) {
       cat("Risk factor weights must have a positive numeric value to be included in analysis. The following risk factors will be ignored: ",
@@ -356,14 +356,14 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   names(df)[names(df)=="county"] = "County"
   names(df)[names(df)=="state"] = "State"
   names(df)[names(df)=="gender"] = "Gender"
-  names(df)[names(df)=="RACEHISP"] = "Race/Ethnicity of Patient" #attr(gimsAll$RACEHISP, "label")
+  names(df)[names(df)=="RACEHISP"] = "Race/Ethnicity of Patient (RACEHISP)" #attr(gimsAll$RACEHISP, "label")
   names(df)[names(df)=="age"] = "Age"
   names(df)[names(df)=="earliestDate"] = "Calculated Earliest Date"
   names(df)[names(df)=="IPStart"] = "Calculated Infectious Period Start"
   names(df)[names(df)=="IPEnd"] = "Calculated Infectious Period End"
   # names(df)[names(df)=="infRate"] = "Infectious Category"
-  names(df)[names(df)=="SPSMEAR"] = "Sputum Smear"
-  names(df)[names(df)=="XRAYCAV"] = "Evidence of Cavity by X-Ray"
+  names(df)[names(df)=="SPSMEAR"] = "Sputum Smear (SPSMEAR)"
+  names(df)[names(df)=="XRAYCAV"] = "Evidence of Cavity by X-Ray (XRAYCAV)"
   names(df)[names(df)=="UserDateData"] = "User Input Date Data Available"
   names(df)[names(df)=="sequenceAvailable"] = "Sequence Available In Analysis"
   names(df)[names(df)=="pediatric"] = "Pediatric"
@@ -374,30 +374,31 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   names(df)[names(df)=="totNumPotSources"] = "Total Number of Potential Sources"
   
   ##variables in possible GIMS risk factors
-  names(df)[names(df)=="HOMELESS"] = "GIMS Homeless"# Within Past Year"
-  names(df)[names(df)=="HIVSTAT"] = "GIMS HIV Status"
-  names(df)[names(df)=="CORRINST"] = "GIMS Correctional Facility Resident"
-  names(df)[names(df)=="LONGTERM"] = "GIMS Long-Term Care Facility Resident"
-  names(df)[names(df)=="IDU"] = "GIMS Injecting Drug Use"
-  names(df)[names(df)=="NONIDU"] = "GIMS Non-Injecting Drug Use"
-  names(df)[names(df)=="ALCOHOL"] = "GIMS Alcohol"
-  names(df)[names(df)=="OCCUHCW"] = "GIMS Health Care Worker"
-  names(df)[names(df)=="OCCUCORR"] = "GIMS Correctional Facility Employee"
-  names(df)[names(df)=="RISKTNF"] = "GIMS TNF alpha Antagonist Therapy"
-  names(df)[names(df)=="RISKORGAN"] = "GIMS Post-Organ Transplant"
-  names(df)[names(df)=="RISKDIAB"] = "GIMS Diabetes Mellitus"
-  names(df)[names(df)=="RISKRENAL"] = "GIMS End-Stage Renal Disease"
-  names(df)[names(df)=="RISKIMMUNO"] = "GIMS Immunosuppression Not HIV/AIDS"
+  # names(df)[names(df)=="HOMELESS"] = "GIMS Homeless"# Within Past Year"
+  # names(df)[names(df)=="HIVSTAT"] = "GIMS HIV Status"
+  # names(df)[names(df)=="CORRINST"] = "GIMS Correctional Facility Resident"
+  # names(df)[names(df)=="LONGTERM"] = "GIMS Long-Term Care Facility Resident"
+  # names(df)[names(df)=="IDU"] = "GIMS Injecting Drug Use"
+  # names(df)[names(df)=="NONIDU"] = "GIMS Non-Injecting Drug Use"
+  # names(df)[names(df)=="ALCOHOL"] = "GIMS Alcohol"
+  # names(df)[names(df)=="OCCUHCW"] = "GIMS Health Care Worker"
+  # names(df)[names(df)=="OCCUCORR"] = "GIMS Correctional Facility Employee"
+  # names(df)[names(df)=="RISKTNF"] = "GIMS TNF alpha Antagonist Therapy"
+  # names(df)[names(df)=="RISKORGAN"] = "GIMS Post-Organ Transplant"
+  # names(df)[names(df)=="RISKDIAB"] = "GIMS Diabetes Mellitus"
+  # names(df)[names(df)=="RISKRENAL"] = "GIMS End-Stage Renal Disease"
+  # names(df)[names(df)=="RISKIMMUNO"] = "GIMS Immunosuppression Not HIV/AIDS"
+  names(df) = cleanGimsRiskFactorNames(names(df))
   
   ##additional variables in date file
   names(df)[names(df)=="inputSxOnset"] = "Input Symptom Onset Date"
   names(df)[names(df)=="inputIPStart"] = "Input Infectious Period Start"
   names(df)[names(df)=="inputIPEnd"] = "Input Infectious Period End"
-  names(df)[names(df)=="ISUSDATE"] = "Date of Initial Susceptibility Testing"
-  names(df)[names(df)=="RXDATE"] = "Start Therapy Date"
-  names(df)[names(df)=="CNTDATE"] = "Count Date"
-  names(df)[names(df)=="RPTDATE"] = "Report Date"
-  names(df)[names(df)=="sp_coll_date"] = "Specimen Collection Date"
+  names(df)[names(df)=="ISUSDATE"] = "Date of Initial Susceptibility Testing (ISUSDATE)"
+  names(df)[names(df)=="RXDATE"] = "Start Therapy Date (RXDATE)"
+  names(df)[names(df)=="CNTDATE"] = "Count Date (CNTDATE)"
+  names(df)[names(df)=="RPTDATE"] = "Report Date (RPTDATE)"
+  names(df)[names(df)=="sp_coll_date"] = "Specimen Collection Date (sp_coll_date)"
   names(df)[names(df)=="sxOnset"] = "Calculated Symptom Onset Date"
   
   ##additional variables in epi link file
@@ -426,6 +427,26 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   ##risk factors
   names(df) = gsub(".", " ", names(df), fixed=T)
   return(df)
+}
+
+##for the given vector of names, return the GIMS risk factors converted to a clearer version for table output
+cleanGimsRiskFactorNames <- function(names) {
+  names = as.character(names)
+  names[names=="HOMELESS"] = "GIMS Homeless (HOMELESS)"# Within Past Year"
+  names[names=="HIVSTAT"] = "GIMS HIV Status (HIVSTAT)"
+  names[names=="CORRINST"] = "GIMS Correctional Facility Resident (CORRINST)"
+  names[names=="LONGTERM"] = "GIMS Long-Term Care Facility Resident (LONGTERM)"
+  names[names=="IDU"] = "GIMS Injecting Drug Use (IDU)"
+  names[names=="NONIDU"] = "GIMS Non-Injecting Drug Use (NONIDU)"
+  names[names=="ALCOHOL"] = "GIMS Alcohol (ALCOHOL)"
+  names[names=="OCCUHCW"] = "GIMS Health Care Worker (OCCUHCW)"
+  names[names=="OCCUCORR"] = "GIMS Correctional Facility Employee (OCCUCORR)"
+  names[names=="RISKTNF"] = "GIMS TNF alpha Antagonist Therapy (RISKTNF)"
+  names[names=="RISKORGAN"] = "GIMS Post-Organ Transplant (RISKORGAN)"
+  names[names=="RISKDIAB"] = "GIMS Diabetes Mellitus (RISKDIAB)"
+  names[names=="RISKRENAL"] = "GIMS End-Stage Renal Disease (RISKRENAL)"
+  names[names=="RISKIMMUNO"] = "GIMS Immunosuppression Not HIV/AIDS (RISKIMMUNO)"
+  return(names)
 }
 
 ##writes the data frame df to the Excel file or workbook and sheet
@@ -474,7 +495,7 @@ writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHea
   ##set column widths
   if(wrapHeader) {
     cwidth = (sapply(1:ncol(df), function(c){max(nchar(as.character(df[,c]), keepNA=F))})+5)#*256 #width is 1/256 of char
-    minWidth = 10 #minimum width for column
+    minWidth = 11 #minimum width for column
     cwidth[cwidth < minWidth] = minWidth
     for(c in 1:length(cwidth)) {
       setColumnWidth(sheet = sheet, colIndex = c, colWidth = cwidth[c])

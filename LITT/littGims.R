@@ -62,7 +62,8 @@ calcSxOnset <- function(sxCases, sxOnsetDates, ipCases, ipStart) {
 ##function that takes the given data frame and corrects the state case number capitalization to be uniform across the program
 fixStcasenoName <- function(df) {
   if(any(!is.na(df))) {
-    names(df)[grep("stcaseno", names(df), ignore.case = T)] = "STCASENO"
+    names(df)[grepl("stcaseno", names(df), ignore.case = T) |
+                grepl("state[ .]*case[ .]*number", names(df), ignore.case = T)] = "STCASENO"
   }
   return(df)
 }
@@ -79,7 +80,7 @@ fixSxOnsetNames <- function(df, log) {
       warning(paste("More than one column for symptom onset:", paste(names(df)[col], collapse = ", ")),
               "\nPlease label one column sxOnset.\n Symptom onset was not used in this analysis.")
       cat(paste("More than one column for symptom onset:", paste(names(df)[col], collapse = ", ")),
-              "\nPlease label one column sxOnset.\n Symptom onset was not used in this analysis.\n", 
+          "\nPlease label one column sxOnset.\n Symptom onset was not used in this analysis.\n", 
           file = log, append = T)
       return(NA)
     } else if(sum(col) < 1) {
@@ -179,7 +180,7 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
   caseOut$IPStart = format(caseOut$IPStart, format="%m/%d/%Y")
   caseOut$IPEnd = format(caseOut$IPEnd, format="%m/%d/%Y")
   
-  names(caseOut) = gsub(".", "", names(caseOut), fixed=T) #clean up risk factors
+  # names(caseOut) = gsub(".", " ", names(caseOut), fixed=T) #clean up risk factors
   
   writeExcelTable(fileName=paste(outPrefix, caseFileName, sep=""),
                   sheetName = "case data",
@@ -258,7 +259,7 @@ formatDistanceMatrix <- function(fileName, log) {
           warning(dacc[i-1], " and ", dacc[i], " have different SNP distances but are the same sample; ", 
                   dacc[i-1], " will be used")
           cat(dacc[i-1], " and ", dacc[i], " have different SNP distances but are the same sample; ", 
-                  dacc[i-1], " will be used for analysis\n", file = log, append = T)
+              dacc[i-1], " will be used for analysis\n", file = log, append = T)
         }
       }
       mat = mat[!acc %in% dacc[2:length(dacc)],!acc %in% dacc[2:length(dacc)]]
@@ -280,10 +281,10 @@ formatDistanceMatrix <- function(fileName, log) {
 ##gimsRiskFactor = data frame with first column titled variable and optional second column labeled weight that lists the GIMS variables to use as additional risk factors, with their weights (positive weights are inlcuded in LITT and output; zero in case line list only; negative is not output)
 ##SNPcutoff = eliminate source if the SNP distance from the target is greater than this cutoff
 ##progress = progress bar for R Shiny interface (NA if not running through interface)
-littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRiskFactor = NA, 
+littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTable = NA, gimsRiskFactor = NA, 
                      SNPcutoff = snpDefaultCut, progress = NA) {
   log = paste(outPrefix, defaultLogName, sep="")
-  cat("LITT analysis with TB GIMS\n", file = log)
+  cat("LITT analysis with TB GIMS\nSNP cutoff = ", SNPcutoff, "\n", file = log)
   cat(paste("GIMS patient file: ", gimsPtName, "\n"), file = log, append = T)
   cat(paste("GIMS export file:", gimsAllName, "\n"), file = log, append = T)
   cat(paste("GIMS genotyping file:", gimsGenoName, "\n"), file = log, append = T)
@@ -306,10 +307,42 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
     names(infectiousPeriod)[names(infectiousPeriod)=="ID"] = "STCASENO"
     infectiousPeriod = infectiousPeriod[,names(infectiousPeriod) %in% c("STCASENO", "IPStart", "IPEnd")]
   }
+  ####split out additional risk factors
   addlRiskFactor=NA #data frame with first column titled stcaseno (state case number) and remaining columns represent additional variables with Y or N for additional risk variables (ex Y or N for whether the case was in a homeless shelter) -> optional
-  if(!all(names(caseData) %in% c("STCASENO", "sxOnset", "IPStart", "IPEnd"))) { #have RFs
-    addlRiskFactor=caseData[,!names(caseData) %in% c("sxOnset", "IPStart", "IPEnd")]
+  # if(!all(names(caseData) %in% c("STCASENO", "sxOnset", "IPStart", "IPEnd"))) { #have RFs
+  #   addlRiskFactor=caseData[,!names(caseData) %in% c("sxOnset", "IPStart", "IPEnd")]
+  # }
+  addlRiskFactor=NA #risk factor data, with row for weight
+  printVars = NA #additional variables to print but not standard variables or risk factors
+  if(!all(is.na(rfTable))) {
+    rfTable = fixRfTable(rfTable, log)
+    if(!all(is.na(rfTable))) {
+      if(any(!rfTable$variable %in% names(caseData))) { #extra variables not in case data table
+        miss = !rfTable$variable %in% names(caseData)
+        cat("The following variables are in the risk factor table but not in the case data table, so will not be used in analysis: ",
+            paste(rfTable$variable[miss], collapse=", "), "\n", file = log, append = T)
+        rfTable = rfTable[!miss,]
+      }
+      if(any(!names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable))) {
+        miss = !names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable)
+        cat("There are extra columns in the case data table, which will be removed: ",
+            paste(names(caseData)[miss], collapse=", "), "\n", file = log, append = T)
+      }
+      ##set up print table (weight 0)
+      rfTable = rfTable[!is.na(rfTable$weight),]
+      if(any(rfTable$weight==0)) {
+        printVars = caseData[,names(caseData) %in% c("ID", "STCASENO", rfTable$variable[rfTable$weight==0])]
+      }
+      rfTable = rfTable[rfTable$weight > 0,]
+      ##set up additional risk factor table
+      if(nrow(rfTable) > 0) {
+        addlRiskFactor = caseData[,names(caseData) %in% c("ID", "STCASENO", rfTable$variable)]
+        addlRiskFactor[] = lapply(addlRiskFactor, as.character)
+        addlRiskFactor = rbind(addlRiskFactor, c("weight", rfTable$weight))
+      }
+    }
   }
+  caseData=caseData[,names(caseData) %in% c(expectedcolnames, optionalcolnames)]
   
   ####get list of cases
   if(all(is.na(cases))) {
@@ -348,7 +381,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
     cat("There must be at least 2 cases with state case numbers in TB GIMS. Analysis has been stopped.\n", file = log, append = T)
     stop("There must be at least 2 cases with state case numbers in TB GIMS.\n")
   }
-  cat(paste("Number cases:", length(cases), "\n"), file = log, append = T)
+  cat(paste("Number of cases:", length(cases), "\n"), file = log, append = T)
   
   gimsCases = gimsAll[gimsAll$STCASENO %in% cases,]
   
@@ -440,7 +473,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
       for(z in r) {
         cat("\n", dates[z,1], file = log, append = T)
         for(c in 2:ncol(dates)) {
-          cat(paste(as.character(dates[z,c]), collapse="\t"), file = log, append = T)
+          cat(paste0("\t", as.character(dates[z,c])), file = log, append = T)
         }
       }
       cat("\n\n", file = log, append = T)
@@ -515,10 +548,24 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
       rf = gimsCases[,names(gimsCases) %in% c("STCASENO", gimsRiskFactor$variable)]
       rf[] = lapply(rf, as.character) #convert to character
       if(any(names(gimsRiskFactor)=="weight")) {
-        gimsRiskFactor = gimsRiskFactor[match(names(rf)[-1], gimsRiskFactor$variable),]
-        rf = rbind(rf, c("weight", gimsRiskFactor$weight))
-        rf = rf[,c(T, gimsRiskFactor$weight > 0)] #only include positive values; 0 is for vis only and -1 will not be in any output
+        gimsRiskFactor = gimsRiskFactor[match(names(rf)[names(rf)!="STCASENO"], gimsRiskFactor$variable),]
+        if(all(is.na(gimsRiskFactor$weight))) {
+          gimsRiskFactor$weight = 1
+        }
+      } else {
+        gimsRiskFactor$weight = 1
       }
+      rf = rbind(rf, c("weight", gimsRiskFactor$weight))
+      rf = rf[,c(T, !is.na(gimsRiskFactor$weight))] 
+      gimsRiskFactor = gimsRiskFactor[!is.na(gimsRiskFactor$weight),]
+      if(any(gimsRiskFactor$weight == 0)) {
+        if(all(is.na(printVars))) {
+          printVars = rf[,c(T, gimsRiskFactor$weight==0)]
+        } else {
+          printVars = merge(printVars, rf[,c(T, gimsRiskFactor$weight==0)], by="STCASENO")
+        }
+      }
+      rf = rf[,c(T, gimsRiskFactor$weight[!is.na(gimsRiskFactor$weight)] > 0)] #only include positive values; 0 is for vis only and -1 will not be in any output
       
       if(any(gimsRiskFactor$weight > 0)) {
         ##for HIVSTAT, convert POS to Y
@@ -564,7 +611,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   names(addlRiskFactor)[names(addlRiskFactor) == "ID"] = "STCASENO"
   
   ##if Excel spreadsheet already exists, delete file; otherwise will note generate file, and if old table is bigger, will get extra rows from old table
-  outputExcelFiles = paste(outPrefix, c(epiFileName, dateFileName, caseFileName, txFileName, psFileName), sep="")
+  outputExcelFiles = paste(outPrefix, c(epiFileName, dateFileName, caseFileName, txFileName, psFileName, rfFileName), sep="")
   if(any(file.exists(outputExcelFiles))) {
     outputExcelFiles = outputExcelFiles[file.exists(outputExcelFiles)]
     file.remove(outputExcelFiles)
@@ -625,30 +672,38 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
                    which(!names(write) %in% c("STCASENO", "accessionNumber", "earliestDate", "IPStart", "IPEnd")))]#do dates first
   write$sequenceAvailable = write$STCASENO %in% colnames(dist)
   
-  ##add risk factors and weights
-  if(any(!is.na(addlRiskFactor))) {
-    write = merge(write, addlRiskFactor, by="STCASENO", all.x=T)
-  }
-  if(any(!is.na(gimsRiskFactor))) {
-    if(any(names(gimsRiskFactor)=="weight")) {
-      gimsRiskFactor = gimsRiskFactor[gimsRiskFactor$weight == 0,] #negative numbers indicate do not want variable in output, postive values will be in addlRiskFactor
-    }
-    if(nrow(gimsRiskFactor)) {
-      write = merge(write, gimsCases[,names(gimsCases) %in% c("STCASENO", as.character(gimsRiskFactor$variable))], by="STCASENO", all.x=T)
-    }
-  }
   
-  write = write[order(as.character(write$STCASENO)),] #without as.character, order will be weird because factors are out of order
+  # if(any(!is.na(gimsRiskFactor))) {
+  #   if(any(names(gimsRiskFactor)=="weight")) {
+  #     gimsRiskFactor = gimsRiskFactor[gimsRiskFactor$weight == 0,] #negative numbers indicate do not want variable in output, postive values will be in addlRiskFactor
+  #   }
+  #   if(nrow(gimsRiskFactor)) {
+  #     write = merge(write, gimsCases[,names(gimsCases) %in% c("STCASENO", as.character(gimsRiskFactor$variable))], by="STCASENO", all.x=T)
+  #   }
+  # }
   
   if(any(!is.na(littResults$rfWeights))) {
-    write[] = lapply(write, as.character) #convert to character
-    write = rbind(write,
-                  c("weight", sapply(names(write)[-1], function(v) {
-                    ifelse(v %in% littResults$rfWeights$variable,
-                           littResults$rfWeights$weight[littResults$rfWeights$variable==v], "")
-                  })))
-    # writeExcelTable(fileName=paste(outPrefix, "LITT_Risk_Factor_Weights.xlsx", sep=""),
-    #                 df = littResults$rfWeights)
+    # write[] = lapply(write, as.character) #convert to character
+    # write = rbind(write,
+    #               c("weight", sapply(names(write)[-1], function(v) {
+    #                 ifelse(v %in% littResults$rfWeights$variable,
+    #                        littResults$rfWeights$weight[littResults$rfWeights$variable==v], "")
+    #               })))
+    if(any(!is.na(gimsRiskFactor))) { #clean gims risk factor names so it will be consistent with case data table
+      # gRFs = littResults$rfWeights$variable %in% gimsRiskFactor$variable
+      # cleanNames = cleanGimsRiskFactorNames(littResults$rfWeights$variable[gRFs])
+      # littResults$rfWeights$variable[gRFs] = cleanNames
+      littResults$rfWeights$variable = cleanGimsRiskFactorNames(littResults$rfWeights$variable)
+    }
+    littResults$rfWeights$variable = gsub(".", " ", littResults$rfWeights$variable, fixed=T)
+    writeExcelTable(fileName=paste(outPrefix, rfFileName, sep=""),
+                    df = littResults$rfWeights,
+                    filter=F)
+    if(all(class(progress)!="logical")) {
+      progress$set(value = 7) 
+    }
+  } else {
+    outputExcelFiles = outputExcelFiles[!grepl(rfFileName, outputExcelFiles)]
   }
   
   if(nrow(littResults$epi)) {
@@ -680,9 +735,21 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, gimsRi
   } else {
     write$totNumPotSources = 0
   }
-  if(any(write$STCASENO=="weight")) {
-    write[write$STCASENO=="weight", names(write) %in% c("numEpiLinks", "numTimesIsRank1", "numPotSourcesRanked1", "totNumPotSources", "sequenceAvailable")] = NA #do not give numbers for weight
+  # if(any(write$STCASENO=="weight")) {
+  #   write[write$STCASENO=="weight", names(write) %in% c("numEpiLinks", "numTimesIsRank1", "numPotSourcesRanked1", "totNumPotSources", "sequenceAvailable")] = NA #do not give numbers for weight
+  # }
+  
+  ###add risk factors and weights
+  if(any(!is.na(addlRiskFactor))) {
+    addlRiskFactor = addlRiskFactor[addlRiskFactor$STCASENO != "weight",]
+    write = merge(write, addlRiskFactor, by="STCASENO", all.x=T)
   }
+  if(any(!is.na(printVars))) {
+    write = merge(write, printVars, by="STCASENO", all.x=T)
+  }
+  
+  ###write case data
+  write = write[order(as.character(write$STCASENO)),] #without as.character, order will be weird because factors are out of order
   cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
   if(all(class(progress)!="logical")) {
     progress$set(value = 9)

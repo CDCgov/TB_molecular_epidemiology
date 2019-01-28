@@ -26,27 +26,26 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
 ##rfs = column names of risk factors used in the GIMS run
 formatLittGimsCaseTable <- function(prefix) {
   caseData = read.xlsx(paste(prefix, caseFileName, sep=""), sheetName = 1)
-  return(cleanedCaseDataHeadersToVarNames(caseData, rfs=rfs))
+  return(cleanedCaseDataHeadersToVarNames(caseData))
 }
 
 ##for the given data frame df, convert the cleaned header name to the needed variable name
 ##for using case data table from previous LITT runs
 ##rfs = column names of risk factors to keep
-cleanedCaseDataHeadersToVarNames <- function(caseData, rfs = NA) {
+cleanedCaseDataHeadersToVarNames <- function(caseData) {
   ##fix names
   names(caseData)[tolower(names(caseData))=="stcaseno"] = "ID"
   names(caseData)[names(caseData)=="State.Case.Number"] = "ID"
   names(caseData)[names(caseData)=="Case.ID"] = "ID"
-  names(caseData)[names(caseData)=="Evidence.of.Cavity.by.X.Ray"] = "XRAYCAV"
-  names(caseData)[names(caseData)=="Sputum.Smear"] = "SPSMEAR"
+  names(caseData)[names(caseData)=="Evidence.of.Cavity.by.X.Ray..XRAYCAV."] = "XRAYCAV"
+  names(caseData)[names(caseData)=="Sputum.Smear..SPSMEAR."] = "SPSMEAR" #make.names(spName)
   names(caseData)[names(caseData)=="Extrapulmonary.Only"] = "ExtrapulmonaryOnly"
   names(caseData)[names(caseData)=="User.Input.Date.Data.Available"] = "UserDateData"
   ##remove previously calculated LITT summary
   caseData = caseData[,!names(caseData) %in%
                         c("Number.of.Epi.Links", "Number.of.Times.is.Ranked.1st.in.Potential.Source.List",
                           "Number.of.Potential.Sources.Tied.for.Rank.1", "Total.Number.of.Potential.Sources",
-                          "Sequence.Available.In.Analysis",
-                          "IPStartLocal", "IPEndLocal")]
+                          "Sequence.Available.In.Analysis")]
   return(caseData)
 }
 
