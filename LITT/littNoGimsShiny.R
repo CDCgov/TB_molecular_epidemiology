@@ -3,23 +3,24 @@ library(shinyjs)
 source("littNoGims.R")
 
 # Define UI ----
-ui <- fluidPage(
+ui <- fixedPage( #fixedPage fluidPage #https://stackoverflow.com/questions/35040781/alignment-of-control-widgets-on-fluidpage-in-shiny-r?rq=1
   titlePanel("LITT"),
   useShinyjs(),
+  # fluidRow(
+  #   column(4, align="center",
+  #          h3("Set up")),
+  #   column(4, align="center",
+  #          h3("Input files")),
+  #   column(4, align="center",
+  #          h3("Advanced options"))
+  # ),
   fluidRow(
-    column(4, align="center",
-           h3("Set up")),
-    column(4, align="center",
-           h3("Input files")),
-    column(4, align="center",
-           h3("Advanced options"))
-  ),
-  fluidRow(
-    column(4,
-           textInput("prefix", "Name prefix for output files"),
-           sliderInput("snpCutoff", "SNP cutoff", min=0, max=10, value=5, step=1, round=T),
-           actionButton("clear", "Clear inputs")),
-    column(4,
+    column(4, #align="center",
+           h3("Set up", align="center"),
+           textInput("prefix", "Name prefix for output files"),#, width="90%"),
+           sliderInput("snpCutoff", "SNP cutoff", min=0, max=10, value=5, step=1, round=T)),
+    column(4, #align="center",
+           h3("Input files", align="center"),
            fileInput("caseData", "Case data table", accept=c(".xlsx", ".csv")),
            checkboxInput("cdFromGimsRun",
                          "Check if the case data comes from the TB GIMS version of LITT and you want to include the additional surveillance columns in this output"),
@@ -34,11 +35,15 @@ ui <- fluidPage(
            # checkboxInput("BNdist", 
            #               "Check if this is a table from BioNumerics with accession numbers that must be converted to state case number"), value=F),
     column(4,
+           h3("Advanced options", align="center"),
            fileInput("rfTable", "Table of risk factor weights", accept=c(".xlsx", ".csv")),
            helpText("This table contains a list of the columns in the case data table to use a risk factors, with their weights.",
                     "Variable names must exactly match the name of the column in the case data table."))),
   fluidRow(),
   fluidRow(column(12, align="center",
+                  actionButton("clear", "Clear inputs"),
+                  br(),
+                  br(),
                   actionButton("run", "Run", style='background-color:royalblue; color:white; padding:20px 40px'))), #https://www.w3schools.com/css/css3_buttons.asp
   fluidRow(column(12, align="center",
                   br(),
@@ -134,7 +139,7 @@ server <- function(input, output, session) {
       if(file.exists(paste0(fname, ".zip"))) {
         file.rename(paste0(fname, ".zip"), fname)
       }
-      output$message <- renderText({paste(outputfontsizestart, "Download complete", outputfontsizeend, sep="")})
+      # output$message <- renderText({paste(outputfontsizestart, "Download complete", outputfontsizeend, sep="")})
       setwd(currdir)
     },
     contentType = "application/zip"
