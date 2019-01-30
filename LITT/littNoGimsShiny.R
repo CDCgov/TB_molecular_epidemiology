@@ -32,8 +32,6 @@ ui <- fixedPage( #fixedPage fluidPage #https://stackoverflow.com/questions/35040
            #          "See documentation for more details."),
            fileInput("epi", "Epi link table", accept=c(".xlsx", ".csv")),
            fileInput("distMatrix", "SNP distance matrix", accept=c(".xlsx", ".csv", ".txt"))),
-           # checkboxInput("BNdist", 
-           #               "Check if this is a table from BioNumerics with accession numbers that must be converted to state case number"), value=F),
     column(4,
            h3("Advanced options", align="center"),
            fileInput("rfTable", "Table of risk factor weights", accept=c(".xlsx", ".csv")),
