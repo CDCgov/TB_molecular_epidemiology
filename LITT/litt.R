@@ -589,11 +589,18 @@ writeEpiTable <- function(littResults, outPrefix, stcasenolab = F, log) {
   }
 }
 
+##for the given distance matrix, write out the distance matrix to Excel
+writeDistTable <- function(dist, outPrefix) {
+  # workbook = createWorkbook()
+  # sheet = createSheet(workbook, sheetName = "Distance Matrix")
+  # saveWorkbook(workbook, paste(outPrefix, distFileName, sep=""))
+  write.xlsx(dist, file=paste(outPrefix, distFileName, sep=""), col.names=T, row.names=T, showNA = F)
+}
 
 ##function that takes the dataframe df from RShiny fileInput and returns NA if the file does not exist
 ##otherwise, returns the distance matrix result needed for LITT
 ##if BN is true, indicates a BioNumerics distance triangle with accession numbers
-readShinyDistanceMatrix <- function(df, bn=F) {
+readShinyDistanceMatrix <- function(df, bn=F, log) {
   if(is.null(df)) {
     return(NA)
   } 
@@ -602,9 +609,9 @@ readShinyDistanceMatrix <- function(df, bn=F) {
     return(NA)
   }
   if(!bn) {
-    return(formatDistanceMatrixWithoutDedupOrStno(fname))
+    return(formatDistanceMatrixWithoutDedupOrStno(fname, log=log, appendlog=F))
   } else {
-    return(formatDistanceMatrix(fname))
+    return(formatBNDistanceMatrix(fname, log=log, appendlog=F))
   }
 }
 
@@ -699,6 +706,7 @@ caseFileName = "LITT_Calculated_Case_Data.xlsx"
 psFileName = "LITT_All_Potential_Sources.xlsx"
 dateFileName = "LITT_Calculated_Date_Data.xlsx"
 rfFileName = "LITT_Risk_Factor_Weights.xlsx"
+distFileName = "LITT_Distance_Matrix.xlsx"
 
 ###runs the LITT analysis
 ###inputs:

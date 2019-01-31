@@ -56,7 +56,10 @@ getSNPDistance <- function(epi, dist) {
 ##compared to LITT version, does not de-duplicate or convert to state case number
 ##returns a matrix: fill in whole matrix, with row and column names the state case number and SNP distances rounded to nearest whole number
 ##the fileName is expected to point to a SNP distance matrix or lower triangle, such as from BioNumerics (include file path if not in working dir)
-formatDistanceMatrixWithoutDedupOrStno <- function(fileName) { #formerly formatDistanceMatrixWithoutDedup
+##log is file to write results to
+##if appendlog is true, append results to log file; otherwise overwrite (needed because may read distance matrix first)
+formatDistanceMatrixWithoutDedupOrStno <- function(fileName, log, appendlog=T) { #formerly formatDistanceMatrixWithoutDedup
+  cat("", file=log, append=appendlog)
   ##read file
   if(endsWith(fileName, ".txt") || endsWith(fileName, ".tsv")) {
     mat = as.matrix(read.table(fileName, sep="\t", header = T, row.names = 1))
@@ -68,7 +71,7 @@ formatDistanceMatrixWithoutDedupOrStno <- function(fileName) { #formerly formatD
   } else if(endsWith(fileName, ".csv")) {
     mat = as.matrix(read.table(fileName, sep=",", header = T, row.names = 1))
   } else {
-    cat("Distance matrix should be in a text, Excel or CSV file format\n")
+    cat("Distance matrix should be in a text, Excel or CSV file format\n", file = log, append = T)
     return(NA)
   }
   colnames(mat) = sub("^X", "", colnames(mat))

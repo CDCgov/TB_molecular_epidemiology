@@ -31,11 +31,13 @@ ui <- fixedPage( #fixedPage fluidPage #https://stackoverflow.com/questions/35040
            #          "Any additional columns will be treated as risk factors.",
            #          "See documentation for more details."),
            fileInput("epi", "Epi link table", accept=c(".xlsx", ".csv")),
-           fileInput("distMatrix", "SNP distance matrix", accept=c(".xlsx", ".csv", ".txt"))),
+           fileInput("distMatrix", "SNP distance matrix", accept=c(".xlsx", ".csv", ".txt")),
+           checkboxInput("writeDist",
+                         "Check to include distance matrix in outputs", value=F)),
     column(4,
            h3("Advanced options", align="center"),
            fileInput("rfTable", "Table of risk factor weights", accept=c(".xlsx", ".csv")),
-           helpText("This table contains a list of the columns in the case data table to use a risk factors, with their weights.",
+           helpText("This table contains a list of the columns in the case data table to use as risk factors, with their weights.",
                     "Variable names must exactly match the name of the column in the case data table."))),
   fluidRow(),
   fluidRow(column(12, align="center",
@@ -91,7 +93,7 @@ server <- function(input, output, session) {
     if(rv$clDist) {
       dist = NA
     } else {
-      dist = readShinyDistanceMatrix(input$distMatrix, bn=F)
+      dist = readShinyDistanceMatrix(input$distMatrix, bn=F, log = paste(outPrefix, defaultLogName, sep=""))
     }
     if(rv$clEpi) {
       epi = NA
@@ -111,6 +113,8 @@ server <- function(input, output, session) {
                            SNPcutoff = input$snpCutoff,
                            rfTable = rf, #readShinyInputFile(input$rfTable),
                            cdFromGimsRun = input$cdFromGimsRun,
+                           writeDist = input$writeDist,
+                           appendlog = F,
                            progress = progress)
       outfiles <<- littres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
@@ -158,6 +162,7 @@ server <- function(input, output, session) {
     rv$clDist <- T
     rv$clRF <- T
     updateCheckboxInput(session, "cdFromGimsRun", value=F)
+    updateCheckboxInput(session, "writeDist", value=F)
   })
   
   ##if any inputs change, hide download button and remove output message
@@ -189,11 +194,11 @@ server <- function(input, output, session) {
     output$message <- renderText({""})
     shinyjs::hide("downloadData")
   })
-  # observe({
-  #   input$BNdist
-  #   output$message <- renderText({""})
-  #   shinyjs::hide("downloadData")
-  # })
+  observe({
+    input$writeDist
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
   observe({
     input$rfTable
     rv$clRF = F

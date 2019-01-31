@@ -58,11 +58,13 @@ cleanedCaseDataHeadersToVarNames <- function(caseData) {
 ##SNPcutoff = eliminate source if the SNP distance from the target is greater than this cutoff
 ##rfTable = dataframe with variable (list of additional risk factors, which correspond to column names in caseData) and weight
 ##cdFromGimsRun = if true, case data is from a run of LITT with TB GIMS and the user wants to keep the extra surveillance columns
+##writeDist = if true, write distance matrix to Excel and include in list of outputs
+##if appendlog is true, append results to log file; otherwise overwrite (needed because may read distance matrix first)
 ##progress = progress bar for R Shiny interface (NA if not running through interface)
 littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = snpDefaultCut, rfTable= NA, 
-                       cdFromGimsRun = F, progress = NA) {
+                       cdFromGimsRun = F, writeDist = F, appendlog = F, progress = NA) {
   log = paste(outPrefix, defaultLogName, sep="")
-  cat("LITT analysis\nSNP cutoff = ", SNPcutoff, "\n", file = log)
+  cat("LITT analysis\nSNP cutoff = ", SNPcutoff, "\n", file = log, append=appendlog)
   
   ####check inputs
   if(all(is.na(caseData))) {
@@ -175,7 +177,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   
   ####write results
   ###if Excel spreadsheet already exists, delete file; otherwise will note generate file, and if old table is bigger, will get extra rows from old table
-  outputExcelFiles = paste(outPrefix, c(epiFileName, caseFileName, txFileName, psFileName, rfFileName), sep="")
+  outputExcelFiles = paste(outPrefix, c(epiFileName, caseFileName, txFileName, psFileName, rfFileName, distFileName), sep="")
   if(any(file.exists(outputExcelFiles))) {
     outputExcelFiles = outputExcelFiles[file.exists(outputExcelFiles)]
     file.remove(outputExcelFiles)
@@ -236,6 +238,13 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   
   if(all(class(progress)!="logical")) {
     progress$set(value = 8) #skip 7 unless have rfs
+  }
+  
+  ###write distance matrix if writeDist is true
+  if(!all(is.na(dist)) & writeDist) {
+    writeDistTable(dist, outPrefix)
+  } else {
+    outputExcelFiles = outputExcelFiles[!grepl(distFileName, outputExcelFiles)] 
   }
   
   ###write epi links

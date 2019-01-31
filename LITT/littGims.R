@@ -4,38 +4,38 @@ source("litt.R")
 library(haven) #to read GIMS data
 
 ##get patient data
-gimsPtGenoFolder = "\\\\cdc.gov\\project\\NCHHSTP_DTBE_GENO\\TBGIMS\\GIMS data\\"
-gimsPtFiles = list.files(gimsPtGenoFolder)
-gimsPtFiles = gimsPtFiles[grepl("gims_patient_[0-9]*.sas7bdat", gimsPtFiles)]
-fileinfo = file.info(paste(gimsPtGenoFolder, gimsPtFiles, sep=""))
-gimsPtName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
-cat(paste("GIMS patient file: ", gimsPtName, "\n"))
-gimsPt = read_sas(gimsPtName)
-gimsPtName = sub(gimsPtGenoFolder, "", gimsPtName, fixed=T)
-
-##get all gims export data
-gimsExportFolder = "\\\\cdc.gov\\project\\NCHHSTP_DTBE_GENO\\TBGIMS\\Surveillance\\"
-gimsExportFiles = list.files(gimsExportFolder)
-gimsAllFiles = gimsExportFiles[grepl("^gims_export_[0-9]*.sas7bdat$", gimsExportFiles)]
-fileinfo = file.info(paste(gimsExportFolder, gimsAllFiles, sep=""))
-gimsAllName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
-cat(paste("GIMS export file:", gimsAllName, "\n"))
-gimsAll = read_sas(gimsAllName)
-gimsAll = merge(gimsAll,
-                data.frame(STCASENO=gimsPt$Stcaseno,
-                           sp_coll_date=gimsPt$sp_coll_date),
-                by="STCASENO",
-                all = T)
-gimsAllName = sub(gimsExportFolder, "", gimsAllName, fixed=T)
-
-##get genotyping data
-gimsPtFiles = list.files(gimsPtGenoFolder)
-gimsGenoFiles = gimsPtFiles[grepl("gims_genotype_[0-9]*.sas7bdat", gimsPtFiles)]
-fileinfo = file.info(paste(gimsPtGenoFolder, gimsGenoFiles, sep=""))
-gimsGenoName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
-cat(paste("GIMS genotyping file:", gimsGenoName, "\n"))
-gimsGeno = read_sas(gimsGenoName)
-gimsGenoName = sub(gimsPtGenoFolder, "", gimsGenoName, fixed=T)
+# gimsPtGenoFolder = "\\\\cdc.gov\\project\\NCHHSTP_DTBE_GENO\\TBGIMS\\GIMS data\\"
+# gimsPtFiles = list.files(gimsPtGenoFolder)
+# gimsPtFiles = gimsPtFiles[grepl("gims_patient_[0-9]*.sas7bdat", gimsPtFiles)]
+# fileinfo = file.info(paste(gimsPtGenoFolder, gimsPtFiles, sep=""))
+# gimsPtName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
+# cat(paste("GIMS patient file: ", gimsPtName, "\n"))
+# gimsPt = read_sas(gimsPtName)
+# gimsPtName = sub(gimsPtGenoFolder, "", gimsPtName, fixed=T)
+# 
+# ##get all gims export data
+# gimsExportFolder = "\\\\cdc.gov\\project\\NCHHSTP_DTBE_GENO\\TBGIMS\\Surveillance\\"
+# gimsExportFiles = list.files(gimsExportFolder)
+# gimsAllFiles = gimsExportFiles[grepl("^gims_export_[0-9]*.sas7bdat$", gimsExportFiles)]
+# fileinfo = file.info(paste(gimsExportFolder, gimsAllFiles, sep=""))
+# gimsAllName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
+# cat(paste("GIMS export file:", gimsAllName, "\n"))
+# gimsAll = read_sas(gimsAllName)
+# gimsAll = merge(gimsAll,
+#                 data.frame(STCASENO=gimsPt$Stcaseno,
+#                            sp_coll_date=gimsPt$sp_coll_date),
+#                 by="STCASENO",
+#                 all = T)
+# gimsAllName = sub(gimsExportFolder, "", gimsAllName, fixed=T)
+# 
+# ##get genotyping data
+# gimsPtFiles = list.files(gimsPtGenoFolder)
+# gimsGenoFiles = gimsPtFiles[grepl("gims_genotype_[0-9]*.sas7bdat", gimsPtFiles)]
+# fileinfo = file.info(paste(gimsPtGenoFolder, gimsGenoFiles, sep=""))
+# gimsGenoName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
+# cat(paste("GIMS genotyping file:", gimsGenoName, "\n"))
+# gimsGeno = read_sas(gimsGenoName)
+# gimsGenoName = sub(gimsPtGenoFolder, "", gimsGenoName, fixed=T)
 
 ###function that replaces all NA values in a vector with an empty string (used for epi links)
 replaceMissing <- function(values) {
@@ -189,11 +189,13 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
                   stcasenolab = T)
 }
 
-
 ##for the given file, return a distance matrix that can be passed to the dist variable in LITT
 ##returns a matrix: fill in whole matrix, with row and column names the state case number and SNP distances rounded to nearest whole number
 ##the fileName is expected to point to a SNP distance matrix or lower triangle, such as from BioNumerics (include file path if not in working dir)
-formatDistanceMatrix <- function(fileName, log) {
+##log is file to write results to
+##if appendlog is true, append results to log file; otherwise overwrite (needed because may read distance matrix first)
+formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly formatDistanceMatrix
+  cat("", file=log, append=appendlog)
   ##read file
   if(endsWith(fileName, ".txt") || endsWith(fileName, ".tsv")) {
     mat = as.matrix(read.table(fileName, sep="\t", header = T, row.names = 1))
@@ -280,11 +282,14 @@ formatDistanceMatrix <- function(fileName, log) {
 ##epi = data frame with columns title case1, case2, strength (strength of the epi link between cases 1 and 2), label (label for link if known) -> optional, if not given, the epi links in GIMS will be used as definite epi links
 ##gimsRiskFactor = data frame with first column titled variable and optional second column labeled weight that lists the GIMS variables to use as additional risk factors, with their weights (positive weights are inlcuded in LITT and output; zero in case line list only; negative is not output)
 ##SNPcutoff = eliminate source if the SNP distance from the target is greater than this cutoff
+##writeDate = if true, write date table to Excel and include in list of outputs
+##writeDist = if true, write distance matrix to Excel and include in list of outputs
+##if appendlog is true, append results to log file; otherwise overwrite (needed because may read distance matrix first)
 ##progress = progress bar for R Shiny interface (NA if not running through interface)
 littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTable = NA, gimsRiskFactor = NA, 
-                     SNPcutoff = snpDefaultCut, progress = NA) {
+                     writeDate = F, writeDist = F, appendlog=F, SNPcutoff = snpDefaultCut, progress = NA) {
   log = paste(outPrefix, defaultLogName, sep="")
-  cat("LITT analysis with TB GIMS\nSNP cutoff = ", SNPcutoff, "\n", file = log)
+  cat("LITT analysis with TB GIMS\nSNP cutoff = ", SNPcutoff, "\n", file = log, append=appendlog)
   cat(paste("GIMS patient file: ", gimsPtName, "\n"), file = log, append = T)
   cat(paste("GIMS export file:", gimsAllName, "\n"), file = log, append = T)
   cat(paste("GIMS genotyping file:", gimsGenoName, "\n"), file = log, append = T)
@@ -611,7 +616,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   names(addlRiskFactor)[names(addlRiskFactor) == "ID"] = "STCASENO"
   
   ##if Excel spreadsheet already exists, delete file; otherwise will note generate file, and if old table is bigger, will get extra rows from old table
-  outputExcelFiles = paste(outPrefix, c(epiFileName, dateFileName, caseFileName, txFileName, psFileName, rfFileName), sep="")
+  outputExcelFiles = paste(outPrefix, c(epiFileName, dateFileName, caseFileName, txFileName, psFileName, rfFileName, distFileName), sep="")
   if(any(file.exists(outputExcelFiles))) {
     outputExcelFiles = outputExcelFiles[file.exists(outputExcelFiles)]
     file.remove(outputExcelFiles)
@@ -649,7 +654,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
                   stcasenolab = T,
                   wrapHeader = T)
   if(all(class(progress)!="logical")) {
-    progress$set(value = 8) #skip 7 unless have rfs
+    progress$set(value = 7) 
   }
   
   ###write out other case data variables
@@ -700,7 +705,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
                     df = littResults$rfWeights,
                     filter=F)
     if(all(class(progress)!="logical")) {
-      progress$set(value = 7) 
+      progress$set(value = 8) 
     }
   } else {
     outputExcelFiles = outputExcelFiles[!grepl(rfFileName, outputExcelFiles)]
@@ -752,7 +757,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   write = write[order(as.character(write$STCASENO)),] #without as.character, order will be weird because factors are out of order
   cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
   if(all(class(progress)!="logical")) {
-    progress$set(value = 9)
+    progress$set(value = 9) #skip 8 unless have risk factors
   }
   
   ###write epi links
@@ -762,6 +767,11 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   }
   if(all(class(progress)!="logical")) {
     progress$set(value = 10)
+  }
+  
+  ###write distance matrix if writeDist is true
+  if(!all(is.na(dist)) & writeDist) {
+    writeDistTable(dist, outPrefix)
   }
   
   ###clean up and output transmission network
