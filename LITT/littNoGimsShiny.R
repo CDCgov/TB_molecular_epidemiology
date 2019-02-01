@@ -114,7 +114,7 @@ server <- function(input, output, session) {
                            rfTable = rf, #readShinyInputFile(input$rfTable),
                            cdFromGimsRun = input$cdFromGimsRun,
                            writeDist = input$writeDist,
-                           appendlog = F,
+                           appendlog = T,
                            progress = progress)
       outfiles <<- littres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})

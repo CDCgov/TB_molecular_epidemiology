@@ -58,8 +58,7 @@ getSNPDistance <- function(epi, dist) {
 ##the fileName is expected to point to a SNP distance matrix or lower triangle, such as from BioNumerics (include file path if not in working dir)
 ##log is file to write results to
 ##if appendlog is true, append results to log file; otherwise overwrite (needed because may read distance matrix first)
-formatDistanceMatrixWithoutDedupOrStno <- function(fileName, log, appendlog=T) { #formerly formatDistanceMatrixWithoutDedup
-  cat("", file=log, append=appendlog)
+formatDistanceMatrixWithoutStno <- function(fileName, log, appendlog=T) { #formerly formatDistanceMatrixWithoutDedup; formatDistanceMatrixWithoutDedupOrStno
   ##read file
   if(endsWith(fileName, ".txt") || endsWith(fileName, ".tsv")) {
     mat = as.matrix(read.table(fileName, sep="\t", header = T, row.names = 1))
@@ -71,7 +70,7 @@ formatDistanceMatrixWithoutDedupOrStno <- function(fileName, log, appendlog=T) {
   } else if(endsWith(fileName, ".csv")) {
     mat = as.matrix(read.table(fileName, sep=",", header = T, row.names = 1))
   } else {
-    cat("Distance matrix should be in a text, Excel or CSV file format\n", file = log, append = T)
+    cat("Distance matrix should be in a text, Excel or CSV file format. SNP distances will not be used.\n\n", file = log, append = T)
     return(NA)
   }
   colnames(mat) = sub("^X", "", colnames(mat))
@@ -83,6 +82,25 @@ formatDistanceMatrixWithoutDedupOrStno <- function(fileName, log, appendlog=T) {
   
   ##round to bring the .99 to whole number
   mat = round(mat)
+  
+  ##check for duplicates
+  ids = rownames(mat)
+  dup = duplicated(ids)
+  if(any(dup)) {
+    cat("Distance matrix contains multiple distances for these IDs: ", paste(unique(ids[dup]), collapse=", "), "\n", file = log, append = T)
+    
+    ##warning if any are different
+    for(d in unique(ids[dup])) {
+      sub = mat[rownames(mat)==d,]
+      same = sapply(2:nrow(sub), function(r) {all(sub[1,]==sub[r,])})
+      if(!all(same)) {
+        cat("WARNING: ", d, " is present multiple times in the distance matrix, with different distances.\n", file = log, append = T)
+      }
+    }
+    cat("The first appearance of these cases in the matrix will be used.\n", file = log, append = T)
+    
+    mat = mat[!dup, !dup]
+  }
   
   return(mat)
 }

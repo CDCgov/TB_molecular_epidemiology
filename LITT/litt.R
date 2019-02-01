@@ -591,10 +591,24 @@ writeEpiTable <- function(littResults, outPrefix, stcasenolab = F, log) {
 
 ##for the given distance matrix, write out the distance matrix to Excel
 writeDistTable <- function(dist, outPrefix) {
-  # workbook = createWorkbook()
-  # sheet = createSheet(workbook, sheetName = "Distance Matrix")
-  # saveWorkbook(workbook, paste(outPrefix, distFileName, sep=""))
-  write.xlsx(dist, file=paste(outPrefix, distFileName, sep=""), col.names=T, row.names=T, showNA = F)
+  # write.xlsx(dist, file=paste(outPrefix, distFileName, sep=""), col.names=T, row.names=T, showNA = F) #adds X to header
+  workbook = createWorkbook()
+  sheet = createSheet(workbook, sheetName = "Distance Matrix")
+  # addDataFrame(dist, sheet)#adds X to header
+  rows = createRow(sheet, rowIndex = 1:(nrow(dist)+1))
+  cells = createCell(rows, colIndex = 1:(ncol(dist)+1))
+  ##column names
+  for(c in 1:ncol(dist)) {
+    setCellValue(cells[[1, 1+c]], colnames(dist)[c])
+  }
+  ##matrix with row names
+  for(r in 1:nrow(dist)) {
+    setCellValue(cells[[r+1, 1]], row.names(dist)[r])
+    for(c in 1:ncol(dist)) {
+      setCellValue(cells[[r+1, c+1]], dist[r,c])
+    }
+  }
+  saveWorkbook(workbook, paste(outPrefix, distFileName, sep=""))
 }
 
 ##function that takes the dataframe df from RShiny fileInput and returns NA if the file does not exist
@@ -609,7 +623,7 @@ readShinyDistanceMatrix <- function(df, bn=F, log) {
     return(NA)
   }
   if(!bn) {
-    return(formatDistanceMatrixWithoutDedupOrStno(fname, log=log, appendlog=F))
+    return(formatDistanceMatrixWithoutStno(fname, log=log, appendlog=F))
   } else {
     return(formatBNDistanceMatrix(fname, log=log, appendlog=F))
   }

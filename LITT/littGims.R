@@ -644,15 +644,19 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   }
   write = merge(so, write, by="STCASENO", all.y=T)
   ##write dates separately
-  datewrite = write
-  for(c in 2:ncol(datewrite)) {
-    datewrite[,c] = format(datewrite[,c], "%m/%d/%Y")
+  if(writeDate) {
+    datewrite = write
+    for(c in 2:ncol(datewrite)) {
+      datewrite[,c] = format(datewrite[,c], "%m/%d/%Y")
+    }
+    writeExcelTable(fileName=paste(outPrefix, dateFileName, sep=""), 
+                    sheetName = "dates",
+                    df = datewrite,
+                    stcasenolab = T,
+                    wrapHeader = T)
+  } else {
+    outputExcelFiles = outputExcelFiles[!grepl(dateFileName, outputExcelFiles)] 
   }
-  writeExcelTable(fileName=paste(outPrefix, dateFileName, sep=""), 
-                  sheetName = "dates",
-                  df = datewrite,
-                  stcasenolab = T,
-                  wrapHeader = T)
   if(all(class(progress)!="logical")) {
     progress$set(value = 7) 
   }
@@ -772,6 +776,8 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   ###write distance matrix if writeDist is true
   if(!all(is.na(dist)) & writeDist) {
     writeDistTable(dist, outPrefix)
+  } else {
+    outputExcelFiles = outputExcelFiles[!grepl(distFileName, outputExcelFiles)] 
   }
   
   ###clean up and output transmission network
