@@ -2,9 +2,10 @@ library(shiny)
 library(shinyjs)
 # source("littGims.R")
 
-gimsVars = c("HOMELESS", "HIVSTAT", "CORRINST", "LONGTERM", "IDU", "NONIDU", "ALCOHOL", 
-             "OCCUHCW", "OCCUCORR",
-             "RISKTNF", "RISKORGAN", "RISKDIAB", "RISKRENAL", "RISKIMMUNO")
+# gimsVars = c("HOMELESS", "HIVSTAT", "CORRINST", "LONGTERM", "IDU", "NONIDU", "ALCOHOL", 
+#              "OCCUHCW", "OCCUCORR",
+#              "RISKTNF", "RISKORGAN", "RISKDIAB", "RISKRENAL", "RISKIMMUNO")
+gimsVars = c("IDU", "NONIDU", "ALCOHOL", "HOMELESS", "AnyCorr")
 
 # Define UI ----
 ui <- fluidPage(
@@ -27,8 +28,6 @@ ui <- fluidPage(
            checkboxInput("writeDate", "Output dates used in IP calculations"),
            br(),
            h3("Included cases"),
-           # helpText("Upload or type state case numbers to analyze. ",
-           #          "This is optional and if not provided, LITT will analyze all cases in the inputs."),
            fileInput("caseListFile", "Upload list of state case numbers to analyze"),
            textAreaInput("caseListManual", "Type list of state case numbers", rows=5)),
     column(3,
@@ -41,47 +40,23 @@ ui <- fluidPage(
                          "Distance matrix contains accession numbers that must be converted to state case number", value=F),
            checkboxInput("writeDist",
                          "Include distance matrix in outputs", value=T)),
-    # fluidRow(align="center",
-    #          br(),
-    #          br(),
-    #          br(),
-    #          br(),
-    #          br(),
-    #          br(),
-    #          actionButton("clear", "Clear inputs"))),
-    # br(),
-    # br(),
-    # actionButton("run", "Run", style='background-color:royalblue; color:white; padding:20px 40px')),
-    # helpText("Case data includes, if available, columns for symptom onset, ",
-    #          "infectious period start and end, and risk factors."),
     column(1),
-    column(width=5, #https://stackoverflow.com/questions/37472915/r-shiny-how-to-generate-this-layout-with-nested-rows-in-column-2
-           fluidRow(
-             column(4, align="center",
-                    lapply(gimsVars[1:5], function(g) {
-                      numericInput(g, g, 0, min = 0, step = 1, width="70px")
-                      # sliderInput(g, g, min=0, max=3, value=0, step=1, round=T)
-                    })),
-             column(4, align="center", 
-                    lapply(gimsVars[6:10], function(g) {
-                      numericInput(g, g, 0, min = 1, step = 1, width="70px")
-                    })),
-             column(4, align="center", 
-                    lapply(gimsVars[11:14], function(g) {
-                      numericInput(g, g, 0, min = 1, step = 1, width="70px")
-                    }))),
-           # helpText("Weight > 0 means RF included in ranking. Weight = 0 means RF not in ranking but in outputs. Weight < 0 means RF not in ranking or outputs.", 
-           #          align="left"))),
+    column(width=5, 
+           fluidRow(width=12,
+                    column(6, align="center",
+                           lapply(gimsVars[1:3], function(g) {
+                             sliderInput(g, g, min=-1, max=5, value=-1, step=1, round=T)
+                           })),
+                    column(6, align="center",
+                           lapply(gimsVars[4:5], function(g) {
+                             sliderInput(g, g, min=-1, max=5, value=-1, step=1, round=T)
+                           }))),
            fluidRow(
              column(12, 
-                    helpText("Weight > 0 means RF included in ranking. Weight = 0 means RF not in ranking but in outputs. Weight < 0 means RF not in ranking or outputs.",
+                    helpText("Weight > 0 means RF included in ranking. Weight = 0 means RF not in ranking but in outputs. Weight = -1 means RF not in ranking or outputs.",
                              align="left"),
-                    # br(),
                     h4("Additional Risk Factors", align="center"),
                     fileInput("rfTable", "Table of risk factor weights", accept=c(".xlsx", ".csv")))))),
-  # helpText("This table contains a list of the columns in the case data table to use a risk factors, with their weights.",
-  #          "Variable names must exactly match the name of the column in the case data table."))))),
-  # fluidRow(),
   fluidRow(column(12, align="center",
                   actionButton("clear", "Clear inputs"),
                   actionButton("run", "Run", style='background-color:royalblue; color:white; padding:20px 40px'), #https://www.w3schools.com/css/css3_buttons.asp

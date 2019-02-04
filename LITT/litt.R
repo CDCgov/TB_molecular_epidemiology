@@ -447,6 +447,7 @@ cleanGimsRiskFactorNames <- function(names) {
   names[names=="RISKDIAB"] = "GIMS Diabetes Mellitus (RISKDIAB)"
   names[names=="RISKRENAL"] = "GIMS End-Stage Renal Disease (RISKRENAL)"
   names[names=="RISKIMMUNO"] = "GIMS Immunosuppression Not HIV/AIDS (RISKIMMUNO)"
+  names[names=="AnyCorr"] = "GIMS Correctional Facility Resident or Employee (CORRINST or OCCUCORR)"
   return(names)
 }
 

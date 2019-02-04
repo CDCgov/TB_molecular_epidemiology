@@ -541,7 +541,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   ##expected variables:
   ## c("HOMELESS", "HIVSTAT", "CORRINST", "LONGTERM", "IDU", "NONIDU", "ALCOHOL", 
   ##   "OCCUHCW", "OCCUCORR",
-  ##   "RISKTNF", "RISKORGAN", "RISKDIAB", "RISKRENAL", "RISKIMMUNO")
+  ##   "RISKTNF", "RISKORGAN", "RISKDIAB", "RISKRENAL", "RISKIMMUNO"); add AnyCorr
   if(any(!is.na(gimsRiskFactor))) {
     names(gimsRiskFactor) = tolower(names(gimsRiskFactor))
     if(!any(names(gimsRiskFactor)=="variable")) {
@@ -550,6 +550,9 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
       warning("To use GIMS variables as risk factor, input table must have a column labeled \"variable\" that contains a list of the GIMS variables to use. Input table does not contain this column so GIMS variables will not be used.")
     } else {
       gimsRiskFactor$variable = as.character(gimsRiskFactor$variable)
+      if("AnyCorr" %in% gimsRiskFactor$variable) {
+        gimsCases$AnyCorr = ""
+      }
       rf = gimsCases[,names(gimsCases) %in% c("STCASENO", gimsRiskFactor$variable)]
       rf[] = lapply(rf, as.character) #convert to character
       if(any(names(gimsRiskFactor)=="weight")) {
@@ -590,6 +593,16 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
             return(ifelse((!is.na(gimsCases$OCCUCORR[gimsCases$STCASENO==sid]) & gimsCases$OCCUCORR[gimsCases$STCASENO==sid]=="Y") | 
                             (!is.na(gimsCases$PRIMARYOCC[gimsCases$STCASENO==sid]) & gimsCases$PRIMARYOCC[gimsCases$STCASENO==sid]=="CORR"),
                           "Y", "N"))})
+        }
+        
+        ##for AnyCorr, combine OCCURCORR and CORRINST
+        if("AnyCorr" %in% names(rf)) {
+          rf$AnyCorr[rf$STCASENO!="weight"] = sapply(rf$AnyCorr[rf$STCASENO!="weight"], function(sid){
+            ifelse((!is.na(gimsCases$OCCUCORR[gimsCases$STCASENO==sid]) & gimsCases$OCCUCORR[gimsCases$STCASENO==sid]=="Y") | 
+                     (!is.na(gimsCases$PRIMARYOCC[gimsCases$STCASENO==sid]) & gimsCases$PRIMARYOCC[gimsCases$STCASENO==sid]=="CORR") |
+                     (!is.na(gimsCases$CORRINST[gimsCases$STCASENO==sid]) & gimsCases$CORRINST[gimsCases$STCASENO==sid]=="Y"),
+                   "Y", "N")
+          })
         }
         
         ## merge with addlRiskFactor
