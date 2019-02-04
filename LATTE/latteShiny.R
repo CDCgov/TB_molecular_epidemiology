@@ -25,7 +25,7 @@ ui <- fluidPage(
                         selected = "epi"),
            sliderInput("epicutoff", "Number of days cases must overlap in a location to form a definite or probable epi link", min=0, max=30, value=defaultCut, step=1, round=T),
            sliderInput("ipepicutoff", "Number of days cases must overlap each other and an IP to form an IP epi link", min=0, max=30, value=defaultCut, step=1, round=T),
-           checkboxInput("removeAfter", "Check if want to include overlaps that occur after either IP end as potential IP epi links (e.g. to identify potential re-exposure during a contact investigation)"),
+           checkboxInput("removeAfter", "Include overlaps that occur after either IP end as potential IP epi links (e.g. to identify potential re-exposure during a contact investigation)"),
            actionButton("clear", "Clear inputs")),
     
     fluidRow(column(12, align="center",
