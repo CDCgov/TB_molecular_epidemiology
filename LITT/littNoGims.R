@@ -177,7 +177,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   
   ####write results
   ###if Excel spreadsheet already exists, delete file; otherwise will note generate file, and if old table is bigger, will get extra rows from old table
-  outputExcelFiles = paste(outPrefix, c(epiFileName, caseFileName, txFileName, psFileName, rfFileName, distFileName), sep="")
+  outputExcelFiles = paste(outPrefix, c(epiFileName, caseFileName, txFileName, psFileName, rfFileName, distFileName, heatmapFileName), sep="")
   if(any(file.exists(outputExcelFiles))) {
     outputExcelFiles = outputExcelFiles[file.exists(outputExcelFiles)]
     file.remove(outputExcelFiles)
@@ -269,6 +269,16 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   writeAllSourcesTable(littResults, outPrefix, stcasenolab = F)
   if(all(class(progress)!="logical")) {
     progress$set(value = 11)
+  }
+  
+  ###generate heatmap if any cases are ranked
+  if(nrow(littResults$topRanked)) {
+    littHeatmap(outPrefix = outPrefix, all = littResults$allPotentialSources)
+  } else {
+    outputExcelFiles = outputExcelFiles[!grepl(heatmapFileName, outputExcelFiles)]
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 12)
   }
   
   littResults$outputFiles = c(log, outputExcelFiles)

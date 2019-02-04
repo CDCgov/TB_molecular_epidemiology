@@ -33,7 +33,7 @@ ui <- fixedPage( #fixedPage fluidPage #https://stackoverflow.com/questions/35040
            fileInput("epi", "Epi link table", accept=c(".xlsx", ".csv")),
            fileInput("distMatrix", "SNP distance matrix", accept=c(".xlsx", ".csv", ".txt")),
            checkboxInput("writeDist",
-                         "Check to include distance matrix in outputs", value=F)),
+                         "Include distance matrix in outputs", value=F)),
     column(4,
            h3("Advanced options", align="center"),
            fileInput("rfTable", "Table of risk factor weights", accept=c(".xlsx", ".csv")),
@@ -84,7 +84,7 @@ server <- function(input, output, session) {
       output$message <- renderText({paste(outputfontsizestart, "No case data. Please input a case data table.", outputfontsizeend, sep="")})
       return(NULL)
     }
-    progress <- Progress$new(session, min=0, max=11) 
+    progress <- Progress$new(session, min=0, max=12) 
     on.exit(progress$close())
     progress$set(message = "Running LITT")
     output$message <- renderText({paste(outputfontsizestart, "Analyzing data", outputfontsizeend, sep="")})

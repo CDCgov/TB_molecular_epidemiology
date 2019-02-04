@@ -2,6 +2,7 @@
 ##for each case, produces a ranked list of potential sources
 
 source("../sharedFunctions.R")
+source("littHeatmap.R")
 library(lubridate) #for adding months
 library(xlsx) #for Excel writing functions (not used directly by LITT)
 
@@ -565,7 +566,7 @@ writeTopRankedTransmissionTable <- function(littResults, outPrefix, stcasenolab 
                     stcasenolab = stcasenolab)
     return(T)
   } else {
-    cat("There were no cases with a potential source that passed all filters.\n", file = log, append = T)
+    cat("There were no cases with a potential source that passed all filters.\nTop ranked transmission table and heatmap file not generated..\n", file = log, append = T)
     return(F)
   }
 }
@@ -721,6 +722,7 @@ psFileName = "LITT_All_Potential_Sources.xlsx"
 dateFileName = "LITT_Calculated_Date_Data.xlsx"
 rfFileName = "LITT_Risk_Factor_Weights.xlsx"
 distFileName = "LITT_Distance_Matrix.xlsx"
+heatmapFileName = "LITT_Heatmap.xlsx"
 
 ###runs the LITT analysis
 ###inputs:

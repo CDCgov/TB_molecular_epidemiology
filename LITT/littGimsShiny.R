@@ -1,5 +1,6 @@
 library(shiny)
 library(shinyjs)
+# source("littGims.R")
 
 gimsVars = c("HOMELESS", "HIVSTAT", "CORRINST", "LONGTERM", "IDU", "NONIDU", "ALCOHOL", 
              "OCCUHCW", "OCCUCORR",
@@ -23,7 +24,7 @@ ui <- fluidPage(
     column(3,
            textInput("prefix", "Name prefix for output files"),
            sliderInput("snpCutoff", "SNP cutoff", min=0, max=10, value=5, step=1, round=T),
-           checkboxInput("incDateTab", "Check to output dates used in IP calculations"),
+           checkboxInput("writeDate", "Output dates used in IP calculations"),
            br(),
            h3("Included cases"),
            # helpText("Upload or type state case numbers to analyze. ",
@@ -32,21 +33,22 @@ ui <- fluidPage(
            textAreaInput("caseListManual", "Type list of state case numbers", rows=5)),
     column(3,
            # fluidRow(
-             # h3("Input files"),
-             fileInput("distMatrix", "SNP distance matrix"),
-             checkboxInput("BNdist",
-                           "Check if this contains accession numbers that must be converted to state case number", value=F),
-             br(),
-             fileInput("epi", "Epi link list"),
-             fileInput("caseData", "Case data")),
-           # fluidRow(align="center",
-           #          br(),
-           #          br(),
-           #          br(),
-           #          br(),
-           #          br(),
-           #          br(),
-           #          actionButton("clear", "Clear inputs"))),
+           # h3("Input files"),
+           fileInput("caseData", "Case data"),
+           fileInput("epi", "Epi link list"),
+           fileInput("distMatrix", "SNP distance matrix"),
+           checkboxInput("BNdist",
+                         "Distance matrix contains accession numbers that must be converted to state case number", value=F),
+           checkboxInput("writeDist",
+                         "Include distance matrix in outputs", value=T)),
+    # fluidRow(align="center",
+    #          br(),
+    #          br(),
+    #          br(),
+    #          br(),
+    #          br(),
+    #          br(),
+    #          actionButton("clear", "Clear inputs"))),
     # br(),
     # br(),
     # actionButton("run", "Run", style='background-color:royalblue; color:white; padding:20px 40px')),
@@ -91,8 +93,172 @@ ui <- fluidPage(
 
 # Define server logic ----
 server <- function(input, output, session) {
-  output$message <- renderText({"test"})
-  updateTextInput(session,'caseListManual',value="test") 
+  shinyjs::hide("downloadData")
+  
+  rv <- reactiveValues(clCaseData = F,
+                       clEpi = F,
+                       clDist = F,
+                       clRF = F,
+                       clCaseList = F) #variables that if true, indicate that clear has been hit but a new table has not been uploaded
+  
+  ##run LATTE when action button hit
+  observeEvent(input$run, {
+    if(rv$clCaseData) {
+      caseData = NA
+    } else {
+      caseData = readShinyInputFile(input$caseData)
+    }
+    if(all(is.na(caseData)) | rv$clCaseData) {
+      output$message <- renderText({paste(outputfontsizestart, "No case data. Please input a case data table.", outputfontsizeend, sep="")})
+      return(NULL)
+    }
+    progress <- Progress$new(session, min=-2, max=13) 
+    on.exit(progress$close())
+    progress$set(message = "Running LITT")
+    output$message <- renderText({paste(outputfontsizestart, "Analyzing data", outputfontsizeend, sep="")})
+    progress$set(value=0)
+    outPrefix = paste(tmpdir, input$prefix, sep="")
+    if(rv$clDist) {
+      dist = NA
+    } else {
+      dist = readShinyDistanceMatrix(input$distMatrix, bn=input$BNdist, log = paste(outPrefix, defaultLogName, sep=""))
+    }
+    if(rv$clEpi) {
+      epi = NA
+    } else {
+      epi = readShinyInputFile(input$epi)
+    }
+    if(rv$clRF) {
+      rf = NA
+    } else {
+      rf = readShinyInputFile(input$rfTable)
+    }
+    res = tryCatch({
+      littres = littGims(outPrefix = outPrefix,
+                         caseData = caseData,
+                         dist = dist, 
+                         epi = epi, 
+                         SNPcutoff = input$snpCutoff,
+                         rfTable = rf, 
+                         cdFromGimsRun = input$cdFromGimsRun,
+                         writeDate = input$writeDate,
+                         writeDist = input$writeDist,
+                         appendlog = F,
+                         progress = progress)
+      outfiles <<- littres$outputFiles
+      output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
+      shinyjs::show("downloadData")
+    }, error = function(e) {
+      outfiles <<- paste(tmpdir, input$prefix, defaultLogName, sep="")
+      output$message <- renderText({paste(outputfontsizestart, "Error detected:<br/>", geterrmessage(),
+                                          "<br/>Download and view log for more details.", outputfontsizeend, sep="")})
+      cat(geterrmessage(), file = outfiles, append = T)
+      shinyjs::show("downloadData")
+    })
+  })
+  
+  ##zip and download outputs
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste(input$prefix, "LITT.zip", sep="")
+    },
+    content = function(fname) {
+      outfiles = sub(tmpdir, "", outfiles, fixed=T)
+      currdir = getwd()
+      setwd(tmpdir)
+      zip(zipfile = fname, files = outfiles)
+      if(file.exists(paste0(fname, ".zip"))) {
+        file.rename(paste0(fname, ".zip"), fname)
+      }
+      # output$message <- renderText({paste(outputfontsizestart, "Download complete", outputfontsizeend, sep="")})
+      setwd(currdir)
+    },
+    contentType = "application/zip"
+  )
+  
+  ##clear inputs if clear button is clicked
+  observeEvent(input$clear, {
+    updateTextInput(session, "prefix", value="")
+    updateSliderInput(session, "snpCutoff", value=snpDefaultCut)
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+    reset("caseData")
+    reset("epi")
+    reset("distMatrix")
+    reset("rfTable")
+    reset("caseListFile")
+    rv$clCaseData <- T
+    rv$clEpi <- T
+    rv$clDist <- T
+    rv$clRF <- T
+    rv$clCaseList <- T
+    updateCheckboxInput(session, "BNdist", value=F)
+    updateCheckboxInput(session, "writeDist", value=T)
+    updateCheckboxInput(session, "writeDate", value=F)
+    updateTextInput(session,'caseListManual',value="") 
+  })
+  
+  ##if any inputs change, hide download button and remove output message
+  observe({
+    input$prefix
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$snpCutoff
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$writeDate
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$caseData
+    rv$clCaseData <- F
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$epi
+    rv$clEpi <- F
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$distMatrix
+    rv$clDist <- F
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$BNdist
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$writeDist
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$rfTable
+    rv$clRF = F
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$caseListFile
+    rv$clCaseList = F
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$caseListManual
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
 }
 
 # Run the app ----
