@@ -31,15 +31,11 @@ ui <- fluidPage(
            fileInput("caseListFile", "Upload list of state case numbers to analyze"),
            textAreaInput("caseListManual", "Type list of state case numbers", rows=5)),
     column(3,
-           # fluidRow(
-           # h3("Input files"),
            fileInput("caseData", "Case data"),
            fileInput("epi", "Epi link list"),
            fileInput("distMatrix", "SNP distance matrix"),
-           checkboxInput("BNdist",
-                         "Distance matrix contains accession numbers that must be converted to state case number", value=F),
            checkboxInput("writeDist",
-                         "Include distance matrix in outputs", value=T)),
+                         "Output distance matrix", value=F)),
     column(1),
     column(width=5, 
            fluidRow(width=12,
@@ -96,7 +92,7 @@ server <- function(input, output, session) {
     if(rv$clDist) {
       dist = NA
     } else {
-      dist = readShinyDistanceMatrix(input$distMatrix, bn=input$BNdist, log = paste(outPrefix, defaultLogName, sep=""))
+      dist = readShinyDistanceMatrix(input$distMatrix, bn=F, log = paste(outPrefix, defaultLogName, sep=""))
     }
     if(rv$clEpi) {
       epi = NA
@@ -167,7 +163,6 @@ server <- function(input, output, session) {
     rv$clDist <- T
     rv$clRF <- T
     rv$clCaseList <- T
-    updateCheckboxInput(session, "BNdist", value=F)
     updateCheckboxInput(session, "writeDist", value=T)
     updateCheckboxInput(session, "writeDate", value=F)
     updateTextInput(session,'caseListManual',value="") 
@@ -204,11 +199,6 @@ server <- function(input, output, session) {
   observe({
     input$distMatrix
     rv$clDist <- F
-    output$message <- renderText({""})
-    shinyjs::hide("downloadData")
-  })
-  observe({
-    input$BNdist
     output$message <- renderText({""})
     shinyjs::hide("downloadData")
   })
