@@ -4,38 +4,38 @@ source("litt.R")
 library(haven) #to read GIMS data
 
 ##get patient data
-gimsPtGenoFolder = "\\\\cdc.gov\\project\\NCHHSTP_DTBE_GENO\\TBGIMS\\GIMS data\\"
-gimsPtFiles = list.files(gimsPtGenoFolder)
-gimsPtFiles = gimsPtFiles[grepl("gims_patient_[0-9]*.sas7bdat", gimsPtFiles)]
-fileinfo = file.info(paste(gimsPtGenoFolder, gimsPtFiles, sep=""))
-gimsPtName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
-cat(paste("GIMS patient file: ", gimsPtName, "\n"))
-gimsPt = read_sas(gimsPtName)
-gimsPtName = sub(gimsPtGenoFolder, "", gimsPtName, fixed=T)
-
-##get all gims export data
-gimsExportFolder = "\\\\cdc.gov\\project\\NCHHSTP_DTBE_GENO\\TBGIMS\\Surveillance\\"
-gimsExportFiles = list.files(gimsExportFolder)
-gimsAllFiles = gimsExportFiles[grepl("^gims_export_[0-9]*.sas7bdat$", gimsExportFiles)]
-fileinfo = file.info(paste(gimsExportFolder, gimsAllFiles, sep=""))
-gimsAllName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
-cat(paste("GIMS export file:", gimsAllName, "\n"))
-gimsAll = read_sas(gimsAllName)
-gimsAll = merge(gimsAll,
-                data.frame(STCASENO=gimsPt$Stcaseno,
-                           sp_coll_date=gimsPt$sp_coll_date),
-                by="STCASENO",
-                all = T)
-gimsAllName = sub(gimsExportFolder, "", gimsAllName, fixed=T)
-
-##get genotyping data
-gimsPtFiles = list.files(gimsPtGenoFolder)
-gimsGenoFiles = gimsPtFiles[grepl("gims_genotype_[0-9]*.sas7bdat", gimsPtFiles)]
-fileinfo = file.info(paste(gimsPtGenoFolder, gimsGenoFiles, sep=""))
-gimsGenoName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
-cat(paste("GIMS genotyping file:", gimsGenoName, "\n"))
-gimsGeno = read_sas(gimsGenoName)
-gimsGenoName = sub(gimsPtGenoFolder, "", gimsGenoName, fixed=T)
+# gimsPtGenoFolder = "\\\\cdc.gov\\project\\NCHHSTP_DTBE_GENO\\TBGIMS\\GIMS data\\"
+# gimsPtFiles = list.files(gimsPtGenoFolder)
+# gimsPtFiles = gimsPtFiles[grepl("gims_patient_[0-9]*.sas7bdat", gimsPtFiles)]
+# fileinfo = file.info(paste(gimsPtGenoFolder, gimsPtFiles, sep=""))
+# gimsPtName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
+# cat(paste("GIMS patient file: ", gimsPtName, "\n"))
+# gimsPt = read_sas(gimsPtName)
+# gimsPtName = sub(gimsPtGenoFolder, "", gimsPtName, fixed=T)
+# 
+# ##get all gims export data
+# gimsExportFolder = "\\\\cdc.gov\\project\\NCHHSTP_DTBE_GENO\\TBGIMS\\Surveillance\\"
+# gimsExportFiles = list.files(gimsExportFolder)
+# gimsAllFiles = gimsExportFiles[grepl("^gims_export_[0-9]*.sas7bdat$", gimsExportFiles)]
+# fileinfo = file.info(paste(gimsExportFolder, gimsAllFiles, sep=""))
+# gimsAllName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
+# cat(paste("GIMS export file:", gimsAllName, "\n"))
+# gimsAll = read_sas(gimsAllName)
+# gimsAll = merge(gimsAll,
+#                 data.frame(STCASENO=gimsPt$Stcaseno,
+#                            sp_coll_date=gimsPt$sp_coll_date),
+#                 by="STCASENO",
+#                 all = T)
+# gimsAllName = sub(gimsExportFolder, "", gimsAllName, fixed=T)
+# 
+# ##get genotyping data
+# gimsPtFiles = list.files(gimsPtGenoFolder)
+# gimsGenoFiles = gimsPtFiles[grepl("gims_genotype_[0-9]*.sas7bdat", gimsPtFiles)]
+# fileinfo = file.info(paste(gimsPtGenoFolder, gimsGenoFiles, sep=""))
+# gimsGenoName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
+# cat(paste("GIMS genotyping file:", gimsGenoName, "\n"))
+# gimsGeno = read_sas(gimsGenoName)
+# gimsGenoName = sub(gimsPtGenoFolder, "", gimsGenoName, fixed=T)
 
 ###function that replaces all NA values in a vector with an empty string (used for epi links)
 replaceMissing <- function(values) {

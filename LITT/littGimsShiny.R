@@ -1,6 +1,6 @@
 library(shiny)
 library(shinyjs)
-# source("littGims.R")
+source("littGims.R")
 
 # gimsVars = c("HOMELESS", "HIVSTAT", "CORRINST", "LONGTERM", "IDU", "NONIDU", "ALCOHOL", 
 #              "OCCUHCW", "OCCUCORR",
@@ -74,6 +74,7 @@ server <- function(input, output, session) {
   
   ##run LATTE when action button hit
   observeEvent(input$run, {
+    ##case data
     if(rv$clCaseData) {
       caseData = NA
     } else {
@@ -83,12 +84,14 @@ server <- function(input, output, session) {
       output$message <- renderText({paste(outputfontsizestart, "No case data. Please input a case data table.", outputfontsizeend, sep="")})
       return(NULL)
     }
-    progress <- Progress$new(session, min=-2, max=13) 
+    ##set up progress and output prefix
+    progress <- Progress$new(session, min=-2, max=13)
     on.exit(progress$close())
     progress$set(message = "Running LITT")
     output$message <- renderText({paste(outputfontsizestart, "Analyzing data", outputfontsizeend, sep="")})
     progress$set(value=0)
     outPrefix = paste(tmpdir, input$prefix, sep="")
+    ##distance matrix, epi and rf table
     if(rv$clDist) {
       dist = NA
     } else {
@@ -104,13 +107,23 @@ server <- function(input, output, session) {
     } else {
       rf = readShinyInputFile(input$rfTable)
     }
+    ##gims risk factors
+    gimsRF = data.frame(variable = gimsVars,
+                         weight = sapply(1:length(gimsVars), function(i){input[[gimsVars[i]]]}))
+    gimsRF = gimsRF[gimsRF$weight >= 0,]
+    if(nrow(gimsRF) < 1) {
+      gimsRF = NA
+    }
+    print(gimsRF)
+    
     res = tryCatch({
       littres = littGims(outPrefix = outPrefix,
                          caseData = caseData,
-                         dist = dist, 
-                         epi = epi, 
+                         dist = dist,
+                         epi = epi,
                          SNPcutoff = input$snpCutoff,
-                         rfTable = rf, 
+                         rfTable = rf,
+                         gimsRiskFactor = gimsRF,
                          cdFromGimsRun = input$cdFromGimsRun,
                          writeDate = input$writeDate,
                          writeDist = input$writeDist,
@@ -151,6 +164,7 @@ server <- function(input, output, session) {
   observeEvent(input$clear, {
     updateTextInput(session, "prefix", value="")
     updateSliderInput(session, "snpCutoff", value=snpDefaultCut)
+    lapply(gimsVars, function(g) {updateSliderInput(session, g, value=-1)})
     output$message <- renderText({""})
     shinyjs::hide("downloadData")
     reset("caseData")
@@ -221,6 +235,31 @@ server <- function(input, output, session) {
   })
   observe({
     input$caseListManual
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$IDU
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$NONIDU
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$ALCOHOL
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$HOMELESS
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$AnyCorr
     output$message <- renderText({""})
     shinyjs::hide("downloadData")
   })
