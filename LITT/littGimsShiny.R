@@ -34,23 +34,26 @@ ui <- fluidPage(
            fileInput("caseData", "Case data", accept=c(".xlsx", ".csv")),
            fileInput("epi", "Epi link list", accept=c(".xlsx", ".csv")),
            fileInput("distMatrix", "SNP distance matrix", accept=c(".xlsx", ".csv", ".txt")),
+           checkboxInput("BNmat",
+                         "Distance matrix from BioNumerics", value=T),
            checkboxInput("writeDist",
-                         "Output distance matrix", value=F)),
+                         "Output cleaned distance matrix", value=T)),
     column(1),
     column(width=5, 
            fluidRow(width=12,
                     column(6, align="center",
                            lapply(gimsVars[1:3], function(g) {
-                             sliderInput(g, g, min=-1, max=5, value=-1, step=1, round=T)
+                             sliderInput(g, g, min=-1, max=10, value=-1, step=1, round=T)
                            })),
                     column(6, align="center",
                            lapply(gimsVars[4:5], function(g) {
-                             sliderInput(g, g, min=-1, max=5, value=-1, step=1, round=T)
+                             sliderInput(g, g, min=-1, max=10, value=-1, step=1, round=T)
                            }))),
            fluidRow(
              column(12, 
                     helpText("Weight > 0 means RF included in ranking. Weight = 0 means RF not in ranking but in outputs. Weight = -1 means RF not in ranking or outputs.",
                              align="left"),
+                    br(),
                     h4("Additional Risk Factors", align="center"),
                     fileInput("rfTable", "Table of risk factor weights", accept=c(".xlsx", ".csv")))))),
   fluidRow(column(12, align="center",
@@ -93,83 +96,81 @@ server <- function(input, output, session) {
   ##run LATTE when action button hit
   observeEvent(input$run, {
     ##case data
-    # if(rv$clCaseData) {
-    #   caseData = NA
-    # } else if(all(is.na(rv$caseData))) {
-    #   caseData = readShinyInputFile(input$caseData)
-    # } else {
-    #   caseData = rv$caseData
-    # }
-    # if(all(is.na(caseData)) | rv$clCaseData) {
-    #   output$message <- renderText({paste(outputfontsizestart, "No case data. Please input a case data table.", outputfontsizeend, sep="")})
-    #   return(NULL)
-    # }
-    # ##set up progress and output prefix
-    # progress <- Progress$new(session, min=-2, max=13)
-    # on.exit(progress$close())
-    # progress$set(message = "Running LITT")
-    # output$message <- renderText({paste(outputfontsizestart, "Analyzing data", outputfontsizeend, sep="")})
-    # progress$set(value=0)
-    # outPrefix = paste(tmpdir, input$prefix, sep="")
-    # ##distance matrix, epi and rf table
-    # if(rv$clDist) {
-    #   dist = NA
-    # } else if(all(is.na(rv$dist))){
-    #   dist = readShinyDistanceMatrix(input$distMatrix, bn=F, log = paste(outPrefix, defaultLogName, sep=""))
-    # } else {
-    #   dist = rv$dist
-    # }
-    # if(rv$clEpi) {
-    #   epi = NA
-    # } else if(all(is.na(rv$epi))){
-    #   epi = readShinyInputFile(input$epi)
-    # } else {
-    #   epi = rv$epi
-    # }
-    # if(rv$clRF) {
-    #   rf = NA
-    # } else {
-    #   rf = readShinyInputFile(input$rfTable)
-    # }
-    # ##gims risk factors
-    # gimsRF = data.frame(variable = gimsVars,
-    #                     weight = sapply(1:length(gimsVars), function(i){input[[gimsVars[i]]]}))
-    # gimsRF = gimsRF[gimsRF$weight >= 0,]
-    # if(nrow(gimsRF) < 1) {
-    #   gimsRF = NA
-    # }
+    if(rv$clCaseData) {
+      caseData = NA
+    } else if(all(is.na(rv$caseData))) {
+      caseData = readShinyInputFile(input$caseData)
+    } else {
+      caseData = rv$caseData
+    }
+    if(all(is.na(caseData)) | rv$clCaseData) {
+      output$message <- renderText({paste(outputfontsizestart, "No case data. Please input a case data table.", outputfontsizeend, sep="")})
+      return(NULL)
+    }
+    ##set up progress and output prefix
+    progress <- Progress$new(session, min=-2, max=13)
+    on.exit(progress$close())
+    progress$set(message = "Running LITT")
+    output$message <- renderText({paste(outputfontsizestart, "Analyzing data", outputfontsizeend, sep="")})
+    progress$set(value=0)
+    outPrefix = paste(tmpdir, input$prefix, sep="")
+    ##distance matrix, epi and rf table
+    if(rv$clDist) {
+      dist = NA
+    } else if(all(is.na(rv$dist))){
+      dist = readShinyDistanceMatrix(input$distMatrix, bn=input$BNmat, log = paste(outPrefix, defaultLogName, sep=""))
+    } else {
+      dist = rv$dist
+    }
+    if(rv$clEpi) {
+      epi = NA
+    } else if(all(is.na(rv$epi))){
+      epi = readShinyInputFile(input$epi)
+    } else {
+      epi = rv$epi
+    }
+    if(rv$clRF) {
+      rf = NA
+    } else {
+      rf = readShinyInputFile(input$rfTable)
+    }
+    ##gims risk factors
+    gimsRF = data.frame(variable = gimsVars,
+                        weight = sapply(1:length(gimsVars), function(i){input[[gimsVars[i]]]}))
+    gimsRF = gimsRF[gimsRF$weight >= 0,]
+    if(nrow(gimsRF) < 1) {
+      gimsRF = NA
+    }
     
     ##case list
     cases = NA
     if(input$caseListManual != "") {
       cases = strsplit(input$caseListManual, "\n")[[1]]
     }
-    print(cases)
-    print(delCases)
-    # res = tryCatch({
-    #   littres = littGims(outPrefix = outPrefix,
-    #                      cases = cases,
-    #                      caseData = caseData,
-    #                      dist = dist,
-    #                      epi = epi,
-    #                      SNPcutoff = input$snpCutoff,
-    #                      rfTable = rf,
-    #                      gimsRiskFactor = gimsRF,
-    #                      cdFromGimsRun = input$cdFromGimsRun,
-    #                      writeDate = input$writeDate,
-    #                      writeDist = input$writeDist,
-    #                      appendlog = F,
-    #                      progress = progress)
-    #   outfiles <<- littres$outputFiles
-    #   output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
-    #   shinyjs::show("downloadData")
-    # }, error = function(e) {
-    #   outfiles <<- paste(tmpdir, input$prefix, defaultLogName, sep="")
-    #   output$message <- renderText({paste(outputfontsizestart, "Error detected:<br/>", geterrmessage(),
-    #                                       "<br/>Download and view log for more details.", outputfontsizeend, sep="")})
-    #   cat(geterrmessage(), file = outfiles, append = T)
-    #   shinyjs::show("downloadData")
-    # })
+    
+    res = tryCatch({
+      littres = littGims(outPrefix = outPrefix,
+                         cases = cases,
+                         caseData = caseData,
+                         dist = dist,
+                         epi = epi,
+                         SNPcutoff = input$snpCutoff,
+                         rfTable = rf,
+                         gimsRiskFactor = gimsRF,
+                         writeDate = input$writeDate,
+                         writeDist = input$writeDist,
+                         appendlog = F,
+                         progress = progress)
+      outfiles <<- littres$outputFiles
+      output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
+      shinyjs::show("downloadData")
+    }, error = function(e) {
+      outfiles <<- paste(tmpdir, input$prefix, defaultLogName, sep="")
+      output$message <- renderText({paste(outputfontsizestart, "Error detected:<br/>", geterrmessage(),
+                                          "<br/>Download and view log for more details.", outputfontsizeend, sep="")})
+      cat(geterrmessage(), file = outfiles, append = T)
+      shinyjs::show("downloadData")
+    })
   })
   
   ##zip and download outputs
@@ -211,7 +212,8 @@ server <- function(input, output, session) {
     incCases <<- ""
     delCases <<- "MRCA"
     rv$inputCaseList <- F
-    updateCheckboxInput(session, "writeDist", value=F)
+    updateCheckboxInput(session, "BNmat", value=T)
+    updateCheckboxInput(session, "writeDist", value=T)
     updateCheckboxInput(session, "writeDate", value=F)
     updateTextInput(session,"caseListManual",value="") 
   })
@@ -268,7 +270,7 @@ server <- function(input, output, session) {
   observe({
     input$distMatrix
     if(!is.null(input$distMatrix) & !rv$inputCaseList & !rv$clDist) {
-      rv$dist = fixStcasenoName(readShinyDistanceMatrix(input$distMatrix, bn=F, 
+      rv$dist = fixStcasenoName(readShinyDistanceMatrix(input$distMatrix, bn=input$BNmat, 
                                                         log = paste(tmpdir, input$prefix, defaultLogName, sep="")))
       if(all(incCases=="")) {
         incCases <<- sort(unique(row.names(rv$dist)))
@@ -284,6 +286,11 @@ server <- function(input, output, session) {
   })
   observe({
     input$writeDist
+    output$message <- renderText({""})
+    shinyjs::hide("downloadData")
+  })
+  observe({
+    input$BNmat
     output$message <- renderText({""})
     shinyjs::hide("downloadData")
   })
