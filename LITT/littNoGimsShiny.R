@@ -16,14 +16,10 @@ ui <- fixedPage( #fixedPage fluidPage #https://stackoverflow.com/questions/35040
   # ),
   fluidRow(
     column(4, #align="center",
-           h3("Set up", align="center"),
-           textInput("prefix", "Name prefix for output files"),#, width="90%"),
-           sliderInput("snpCutoff", "SNP cutoff", min=0, max=10, value=5, step=1, round=T)),
-    column(4, #align="center",
            h3("Input files", align="center"),
-           fileInput("caseData", "Case data table", accept=c(".xlsx", ".csv")),
+           fileInput("caseData", "Case data table (required)", accept=c(".xlsx", ".csv")),
            checkboxInput("cdFromGimsRun",
-                         "Check if the case data comes from the TB GIMS version of LITT and you want to include the additional surveillance columns in this output"),
+                         "Output extra columns from the TB GIMS version"),
            br(),
            # helpText("Must include: sputum smear results, cavitation status, ",
            #          "whether a case is extrapulmonary only or pediatric, and ",
@@ -34,6 +30,10 @@ ui <- fixedPage( #fixedPage fluidPage #https://stackoverflow.com/questions/35040
            fileInput("distMatrix", "SNP distance matrix", accept=c(".xlsx", ".csv", ".txt")),
            checkboxInput("writeDist",
                          "Include distance matrix in outputs", value=F)),
+    column(4, #align="center",
+           h3("Set up", align="center"),
+           textInput("prefix", "Name prefix for output files"),#, width="90%"),
+           sliderInput("snpCutoff", "SNP cutoff", min=0, max=10, value=5, step=1, round=T)),
     column(4,
            h3("Advanced options", align="center"),
            fileInput("rfTable", "Table of risk factor weights", accept=c(".xlsx", ".csv")),
@@ -84,7 +84,7 @@ server <- function(input, output, session) {
       output$message <- renderText({paste(outputfontsizestart, "No case data. Please input a case data table.", outputfontsizeend, sep="")})
       return(NULL)
     }
-    progress <- Progress$new(session, min=0, max=12) 
+    progress <- Progress$new(session, min=0, max=12) #max=6) (6 if no Excel tables)
     on.exit(progress$close())
     progress$set(message = "Running LITT")
     output$message <- renderText({paste(outputfontsizestart, "Analyzing data", outputfontsizeend, sep="")})

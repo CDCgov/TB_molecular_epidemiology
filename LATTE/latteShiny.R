@@ -5,40 +5,47 @@ source("latte.R")
 
 # Define UI ----
 ui <- fluidPage(
-  titlePanel("LATTE"),
+  # titlePanel("LATTE"),
+  fluidRow(column(10, offset=2, titlePanel("LATTE"))),
+  # column(12, align="center", titlePanel("LATTE")),
   useShinyjs(),
   fluidRow(
-    column(6,
+    column(2),
+    column(4,
            h3("Set up inputs"),
-           fileInput("locTab", "Table of dates in locations", accept=c(".xlsx", ".csv")),
+           fileInput("locTab", "Table of dates in locations (required)", accept=c(".xlsx", ".csv")),
            fileInput("ipTab", "Table of infectious periods", accept=c(".xlsx", ".csv")),
            br(),
            br(),
            h3("Set up outputs"),
            textInput("prefix", "Name prefix for output files")),
-    
-    column(6,
+    column(4,
            h3("Set up link definitions"),
-           radioButtons("linkType", "Type of link", 
+           radioButtons("linkType", "Type of link",
                         choiceNames = list("Epi link", "IP epi link"),
                         choiceValues = list("epi", "ipepi"),
                         selected = "epi"),
            sliderInput("epicutoff", "Number of days cases must overlap in a location to form a definite or probable epi link", min=0, max=30, value=defaultCut, step=1, round=T),
            sliderInput("ipepicutoff", "Number of days cases must overlap each other and an IP to form an IP epi link", min=0, max=30, value=defaultCut, step=1, round=T),
-           checkboxInput("removeAfter", "Include overlaps that occur after either IP end as potential IP epi links (e.g. to identify potential re-exposure during a contact investigation)"),
-           actionButton("clear", "Clear inputs")),
-    
+           checkboxInput("removeAfter", "Include overlaps that occur after either IP end as potential IP epi links (e.g. to identify potential re-exposure during a contact investigation)")),
+           # actionButton("clear", "Clear inputs")),
+    column(2)),
+
     fluidRow(column(12, align="center",
-                    actionButton("run", "Run", style='background-color:royalblue; color:white; padding:20px 40px'))), #https://www.w3schools.com/css/css3_buttons.asp
+                    br(),
+                    actionButton("run", "Run", style='background-color:royalblue; color:white; padding:20px 40px'), #https://www.w3schools.com/css/css3_buttons.asp
+                    br(),
+                    br(),
+                    actionButton("clear", "Clear inputs"))),
     fluidRow(column(12, align="center",
                     br(),
                     br(),
                     htmlOutput("message"))), #use instead of textOutput so can change font of returning string: https://stackoverflow.com/questions/24049159/change-the-color-and-font-of-text-in-shiny-app
     fluidRow(column(12, align="center",
                     br(),
-                    downloadButton("downloadData", "Download Results")))
-    
-  ))
+                    downloadButton("downloadData", "Download Results"))
+
+    ))
 
 ##text to format html string to increase message font size
 outputfontsizestart = "<font font-size=\"30px\"><b>"
@@ -53,10 +60,10 @@ outfiles = NA #list of output files
 # Define server logic ----
 server <- function(input, output, session) {
   shinyjs::hide("downloadData")
-  
+
   rv <- reactiveValues(clLoc = F,
                        clIP = F) #variables that if true, indicate that clear has been hit but a new table has not been uploaded
-  
+
   ##run LATTE when action button hit
   observeEvent(input$run, {
     if(rv$clLoc) {
@@ -68,7 +75,7 @@ server <- function(input, output, session) {
       output$message <- renderText({paste(outputfontsizestart, "No location data; please input a location table", outputfontsizeend, sep="")})
       return(NULL)
     }
-    progress <- Progress$new(session, min=-1, max=11) 
+    progress <- Progress$new(session, min=-1, max=11)
     on.exit(progress$close())
     progress$set(message = "Running LATTE")
     output$message <- renderText({paste(outputfontsizestart, "Starting analysis", outputfontsizeend, sep="")})
@@ -94,13 +101,13 @@ server <- function(input, output, session) {
       shinyjs::show("downloadData")
     }, error = function(e) {
       outfiles <<- paste(tmpdir, input$prefix, defaultLogName, sep="")
-      output$message <- renderText({paste(outputfontsizestart, "Error detected:<br/>", geterrmessage(), 
+      output$message <- renderText({paste(outputfontsizestart, "Error detected:<br/>", geterrmessage(),
                                           "<br/>Download and view log for more details.", outputfontsizeend, sep="")})
       cat(geterrmessage(), file = outfiles, append = T)
       shinyjs::show("downloadData")
     })
   })
-  
+
   ##zip and download outputs
   output$downloadData <- downloadHandler(
     filename = function() {
@@ -119,7 +126,7 @@ server <- function(input, output, session) {
     },
     contentType = "application/zip"
   )
-  
+
   ##clear inputs if clear button is clicked
   observeEvent(input$clear, {
     updateTextInput(session, "prefix", value="")
@@ -135,9 +142,9 @@ server <- function(input, output, session) {
     rv$clLoc <- T
     rv$clIP <- T
   })
-  
+
   ##if any inputs change, hide download button and remove output message
-  observe({ 
+  observe({
     input$locTab
     rv$clLoc <- F
     output$message <- renderText({""})
@@ -174,7 +181,7 @@ server <- function(input, output, session) {
     output$message <- renderText({""})
     shinyjs::hide("downloadData")
   })
-  
+
   ##show correct cutoff and check box, depending on link type
   observe({
     if(input$linkType == "ipepi") {
