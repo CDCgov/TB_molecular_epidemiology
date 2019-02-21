@@ -90,6 +90,7 @@ server <- function(input, output, session) {
     output$message <- renderText({paste(outputfontsizestart, "Analyzing data", outputfontsizeend, sep="")})
     progress$set(value=0)
     outPrefix = paste(tmpdir, input$prefix, sep="")
+    cat("", file = paste(outPrefix, defaultLogName, sep=""), append=F) #re-initialize log on new runs
     if(rv$clDist) {
       dist = NA
     } else {

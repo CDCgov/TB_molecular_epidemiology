@@ -744,7 +744,7 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
     cat(paste("\r\nHowever, these required columns are missing required columns in case data table: ", 
               paste(expectedcolnames[!expectedcolnames %in% names(caseData)], collapse = ", "), 
               ". Analysis was stopped. See documentation for more details.\r\n"), file = log, append = T)
-    stop(paste("Missing required columns in caseData:", paste(expectedcolnames[!expectedcolnames %in% names(caseData)], collapse = ", ")))
+    stop(paste("Missing required columns in case data:", paste(expectedcolnames[!expectedcolnames %in% names(caseData)], collapse = ", ")))
   }
   caseData$IPStart = convertToDate(caseData$IPStart)
   caseData$IPEnd = convertToDate(caseData$IPEnd)
