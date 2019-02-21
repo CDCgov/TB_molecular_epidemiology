@@ -28,12 +28,12 @@ fixLocNames <- function(df, log) {
               grepl("strength", names(df), ignore.case = T)] = "Confidence"
   reqCols = c("Case", "Location", "Start", "End", "Confidence")
   if(!all(reqCols %in% names(df))) {
-    # cat("Location table required column names are: Case, Location, Start, End, Confidence\n", file = log, append = T)
+    # cat("Location table required column names are: Case, Location, Start, End, Confidence\r\n", file = log, append = T)
     # cat("Actual location table column names are: ", file = log, append = T)
     # cat(names(df), file = log, append = T)
     cat("Location table is missing these required columns: ", file = log, append = T)
     cat(paste(reqCols[!reqCols %in% names(df)], collapse=", "), file = log, append = T)
-    cat(". Analysis has been stopped.\n", file = log, append = T)
+    cat(". Analysis has been stopped.\r\n", file = log, append = T)
     stop("Location table is missing required columns. Columns must include: Case, Location, Start, End, Confidence.")
   }
   return(df)
@@ -51,7 +51,7 @@ fixIPnames <- function(df, log) {
       grepl("ip[ ]*stop", names(df), ignore.case = T) | grepl("infectious[ ]*period[ ]*stop", names(df), ignore.case = T)
     names(df)[col] = "IPEnd"
     if(sum(names(df) == "IPStart") != 1 | sum(names(df) == "IPEnd") != 1) {
-      cat("Invalid number of IP start or end columns, so IP will not be included\n", file = log, append = T)
+      cat("Invalid number of IP start or end columns, so IP will not be included\r\n", file = log, append = T)
       return(NA)
     }
     
@@ -61,7 +61,7 @@ fixIPnames <- function(df, log) {
     if(any(dup)) {
       ids = unique(df$Case[dup])
       cat(paste("The following cases have multiple provided IPs. The first IP in the table will be used: ", 
-                paste(ids, collapse = ", ") ,"\n", file = log, append = T))
+                paste(ids, collapse = ", ") ,"\r\n", file = log, append = T))
       for(i in ids) {
         rows = which(df$Case==i)
         # df$IPStart[rows[1]] = getMin(df$IPStart[df$Case==i], i, "IP start")
@@ -71,7 +71,7 @@ fixIPnames <- function(df, log) {
     }
   }
   if(!all(c("Case", "IPStart", "IPEnd") %in% names(df))) {
-    cat("Infectious period inputs need column for case, IP start and IP end, but some or all of this data is missing so IP will not be included\n", file = log, append = T)
+    cat("Infectious period inputs need column for case, IP start and IP end, but some or all of this data is missing so IP will not be included\r\n", file = log, append = T)
     df=NA
   }
   return(df)
@@ -292,7 +292,7 @@ getIPEpiLinks <- function(res, cutoff, removeAfter) {
 ##progress = progress bar for R Shiny interface (NA if not running through interface)
 latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter = F, progress = NA, log = defaultLogName) {
   ##set up log
-  cat("LATTE analysis\n", file = log)
+  cat("LATTE analysis\r\n", file = log)
   
   ###clean up headers
   loc = fixCaseName(loc)
@@ -316,14 +316,14 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   #   if(any(is.na(ip$IPStart) | is.na(ip$IPEnd))) {
   #     cat("The following cases in the IP table have a missing IP start or end so will have no IP in analysis: ", file = log, append = T)
   #     cat(as.character(ip$Case[is.na(ip$IPStart) | is.na(ip$IPEnd)]), file = log, append = T)
-  #     cat("\n", file = log, append = T)
+  #     cat("\r\n", file = log, append = T)
   #   }
   #   ip = ip[!is.na(ip$IPStart),]
   #   ip = ip[!is.na(ip$IPEnd),]
   #   if(any(ip$IPStart >= ip$IPEnd)) {
   #     cat("The following cases in the IP table have an IP end date before the start date so will have no IP in analysis: ", file = log, append = T)
   #     cat(as.character(ip$Case[ip$IPStart > ip$IPEnd]), file = log, append = T)
-  #     cat("\n", file = log, append = T)
+  #     cat("\r\n", file = log, append = T)
   #     ip = ip[ip$IPStart < ip$IPEnd,]
   #   }
   #   if(nrow(ip)==0) {
@@ -337,8 +337,8 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
     cat("The following rows in the location table have invalid confidence values and will be set to uncertain: ", file = log, append = T)
     # cat(loc[loc$Confidence!="certain" & loc$Confidence!="uncertain",], file = log, append = T)
     cat(row.names(loc)[loc$Confidence!="certain" & loc$Confidence!="uncertain"], file = log, append = T)
-    cat("\n", file = log, append = T)
-    cat("\tValid confidence values are: certain, uncertain\n", file = log, append = T)
+    cat("\r\n", file = log, append = T)
+    cat("\tValid confidence values are: certain, uncertain\r\n", file = log, append = T)
     loc$Confidence[loc$Confidence!="certain" & loc$Confidence!="uncertain"] = "uncertain"
   }
   
@@ -347,7 +347,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
     cat("The following rows in the location table have invalid dates and will be removed from analysis: ", file = log, append = T)
     # cat(loc[is.na(loc$Start) | is.na(loc$End),], file = log, append = T)
     cat(row.names(loc)[is.na(loc$Start) | is.na(loc$End)], file = log, append = T)
-    cat("\n", file = log, append = T)
+    cat("\r\n", file = log, append = T)
     loc = loc[!is.na(loc$Start) & !is.na(loc$End),]
   }
   
@@ -356,7 +356,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
     cat("The following rows in the location table have an end date before the start date and will be removed from analysis: ", file = log, append = T)
     # cat(loc[loc$Start > loc$End,], file = log, append = T)
     cat(row.names(loc)[loc$Start > loc$End], file = log, append = T)
-    cat("\n", file = log, append = T)
+    cat("\r\n", file = log, append = T)
     loc = loc[loc$Start <= loc$End,]
   }
   
@@ -374,20 +374,20 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
     if(any(!cases %in% ip$Case)) {
       cat("The following cases are in the location table but not in the IP table so will have no IP in analysis: ", file = log, append = T)
       cat(as.character(cases[!cases %in% ip$Case]), file = log, append = T)
-      cat("\n", file = log, append = T)
+      cat("\r\n", file = log, append = T)
     }
     ##test for bad IPs:
     if(any(is.na(ip$IPStart) | is.na(ip$IPEnd))) {
       cat("The following cases in the IP table have a missing IP start or end so will have no IP in analysis: ", file = log, append = T)
       cat(as.character(ip$Case[is.na(ip$IPStart) | is.na(ip$IPEnd)]), file = log, append = T)
-      cat("\n", file = log, append = T)
+      cat("\r\n", file = log, append = T)
     }
     ip = ip[!is.na(ip$IPStart),]
     ip = ip[!is.na(ip$IPEnd),]
     if(any(ip$IPStart >= ip$IPEnd)) {
       cat("The following cases in the IP table have an IP end date before the start date so will have no IP in analysis: ", file = log, append = T)
       cat(as.character(ip$Case[ip$IPStart > ip$IPEnd]), file = log, append = T)
-      cat("\n", file = log, append = T)
+      cat("\r\n", file = log, append = T)
       ip = ip[ip$IPStart < ip$IPEnd,]
     }
     if(nrow(ip)==0) {
@@ -424,7 +424,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
               while(j <= nrow(sub)) {
                 ol = getOverlap(sub$Start[i], sub$End[i], sub$Start[j], sub$End[j])
                 if(!all(is.na(ol))) {
-                  cat(paste(c, " has rows with overlapping dates in ", l, ", which have been merged\n", sep=""), file = log, append = T)
+                  cat(paste(c, " has rows with overlapping dates in ", l, ", which have been merged\r\n", sep=""), file = log, append = T)
                   rep = T
                   if(sub$Confidence[i]==sub$Confidence[j]) { #same confidence so can merge
                     sub$Start[i] = min(sub$Start[i], sub$Start[j])
@@ -523,21 +523,21 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   if(!all(is.na((res)))) {
     if(ipEpiLink) {
       if(all(is.na(ip))) {
-        cat("There are no IP epi links because there are no valid infectious periods\n", file = log, append = T)
-        # cat("Generating IP epi links, but there are no valid infectious periods, so there are no IP epi links\n", file = log, append = T)
+        cat("There are no IP epi links because there are no valid infectious periods\r\n", file = log, append = T)
+        # cat("Generating IP epi links, but there are no valid infectious periods, so there are no IP epi links\r\n", file = log, append = T)
       } else {
         cat(paste("Generating IP epi links with cutoff of ", cutoff, " days overlapping each other and an IP", 
                   ifelse(removeAfter, ". Overlaps after either IP has ended were removed from link analysis.", 
-                         ". Overlaps after either IP has ended were kept in link analysis."), "\n", sep=""), file = log, append = T)
+                         ". Overlaps after either IP has ended were kept in link analysis."), "\r\n", sep=""), file = log, append = T)
         epi = getIPEpiLinks(res, cutoff, removeAfter)
       }
     } else {
-      cat("Generating epi links with cutoff of", cutoff, "days for a definite or probable epi link\n", file = log, append = T)
+      cat("Generating epi links with cutoff of", cutoff, "days for a definite or probable epi link\r\n", file = log, append = T)
       epi = getEpiLinks(res, cutoff)
     }
   } else {
-    # cat("There are no links because no overlaps were found\n", file = log, append = T)
-    cat("No overlaps were found. As a result, there are no links.\n", file = log, append = T)
+    # cat("There are no links because no overlaps were found\r\n", file = log, append = T)
+    cat("No overlaps were found. As a result, there are no links.\r\n", file = log, append = T)
   }
   if(all(class(progress)!="logical")) {
     progress$set(value = 4)
@@ -602,10 +602,10 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
     outputExcelFiles = outputExcelFiles[outputExcelFiles != epiName]
     if(ipEpiLink & !all(is.na(ip)) & !all(is.na(res))) {
       cat(paste("No IP epi links detected with ", cutoff, " day cutoff", 
-                ifelse(removeAfter, " and removing overlaps after IP end", ""), "\n", sep=""), file = log, append = T)
+                ifelse(removeAfter, " and removing overlaps after IP end", ""), "\r\n", sep=""), file = log, append = T)
     } else if(!ipEpiLink) {
       if(!all(is.na(res))) {
-        cat(paste("No epi links detected with", cutoff, "day cutoff\n"), file = log, append = T)
+        cat(paste("No epi links detected with", cutoff, "day cutoff\r\n"), file = log, append = T)
       }
     }
   }
@@ -662,7 +662,7 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
           } else if(sub2$Confidence[r] == "uncertain") {
             lines(x=c(sub2$Start[r], sub2$End[r]), y=c(i, i), col="lightskyblue", lwd=4)
           } else {
-            cat(paste("Bad strength for plotting in row ", r, ": ", sub2$Confidence[r], "\n", sep=""), file = log, append = T)
+            cat(paste("Bad strength for plotting in row ", r, ": ", sub2$Confidence[r], "\r\n", sep=""), file = log, append = T)
             lines(x=c(sub2$Start[r], sub2$End[r]), y=c(i, i), col="gray", lwd=4)
           }
         }

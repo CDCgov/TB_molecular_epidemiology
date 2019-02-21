@@ -64,34 +64,34 @@ cleanedCaseDataHeadersToVarNames <- function(caseData) {
 littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = snpDefaultCut, rfTable= NA, 
                        cdFromGimsRun = F, writeDist = F, appendlog = F, progress = NA) {
   log = paste(outPrefix, defaultLogName, sep="")
-  cat("LITT analysis\nSNP cutoff = ", SNPcutoff, "\n", file = log, append=appendlog)
+  cat("LITT analysis\r\nSNP cutoff = ", SNPcutoff, "\r\n", file = log, append=appendlog)
   
   ####check inputs
   if(all(is.na(caseData))) {
-    cat("A case data table is required\n", file = log, append = T)
+    cat("A case data table is required\r\n", file = log, append = T)
     stop("A case data table is required")
   }
   if(!"ID" %in% names(caseData)) {
     caseData = cleanedCaseDataHeadersToVarNames(caseData)
   }
   if(!"ID" %in% names(caseData)) {
-    cat("A case data table with one column labeled ID or STATECASNO is required.\n", file = log, append = T)
+    cat("A case data table with one column labeled ID or STATECASNO is required.\r\n", file = log, append = T)
     stop("Case data table must have an ID column.")
   }
   if("weight" %in% caseData$ID) {
-    cat("Case ID cannot be weight; this row has been removed from case data table.\n", file = log, append = T)
+    cat("Case ID cannot be weight; this row has been removed from case data table.\r\n", file = log, append = T)
     caseData = caseData[caseData$ID!="weight",]
   }
   if(nrow(caseData) < 2) {
     cat("LITT requires at least two cases, but there ", ifelse(nrow(caseData)==1, "is ", "are "),
-        nrow(caseData), ifelse(nrow(caseData)==1, "case", "cases"), "\n", file = log, append = T)
+        nrow(caseData), ifelse(nrow(caseData)==1, "case", "cases"), "\r\n", file = log, append = T)
     stop("LITT requires at least two cases, but there are ", nrow(caseData))
   }
   
   ###check IP start present
   caseData = fixIPnames(caseData, log)
   if(!"IPStart" %in% names(caseData) || !"IPEnd" %in% names(caseData)) {
-    cat("The case data table must contain columns called IPStart and IPEnd, which indicate infectious period start and end for each case\n", 
+    cat("The case data table must contain columns called IPStart and IPEnd, which indicate infectious period start and end for each case\r\n", 
         file = log, append = T)
     stop("Infectious period (columns named IPStart and IPEnd) is required in case data table")
   }
@@ -112,13 +112,13 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
       if(any(!rfTable$variable %in% names(caseData))) { #extra variables not in case data table
         miss = !rfTable$variable %in% names(caseData)
         cat("The following variables are in the risk factor table but not in the case data table, so will not be used in analysis: ",
-            paste(rfTable$variable[miss], collapse=", "), "\n", file = log, append = T)
+            paste(rfTable$variable[miss], collapse=", "), "\r\n", file = log, append = T)
         rfTable = rfTable[!miss,]
       }
       if(any(!names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable)) & !cdFromGimsRun) {
         miss = !names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable)
         cat("There are extra columns in the case data table, which will be removed: ",
-            paste(names(caseData)[miss], collapse=", "), "\n", file = log, append = T)
+            paste(names(caseData)[miss], collapse=", "), "\r\n", file = log, append = T)
       }
       ##set up print table (weight 0)
       rfTable = rfTable[!is.na(rfTable$weight),]
@@ -157,7 +157,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   
   ###list of cases = cases in caseData
   cases = caseData$ID
-  cat(paste("Number of cases:", length(cases), "\n"), file = log, append = T)
+  cat(paste("Number of cases:", length(cases), "\r\n"), file = log, append = T)
   
   ####set up epi
   if(!all(is.na(epi))) {

@@ -36,7 +36,7 @@ epiLinkScore <- function(case1, case2, epi, log) {
   } else if(stren == "possible") {
     return(2)
   } else {
-    cat(paste("Bad epi link strength:", case1, case2, stren, "\nThis will be treated as no epi link.\n"), file = log, append = T)
+    cat(paste("Bad epi link strength:", case1, case2, stren, "\r\nThis will be treated as no epi link.\r\n"), file = log, append = T)
     return(noEpiScore)
   }
 }
@@ -94,12 +94,12 @@ fixEpiNames <- function(epi, log) {
       names(epi)[tolower(names(epi))=="stcaseno1"] = "case1"
     } else if(sum(c1) > 1) {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
-      cat(paste("\nHowever, more than one column for first case was found in epi link table:", paste(names(epi)[c1], collapse = ", ")),
-          ".\nPlease label one column case1.\n", file = log, append = T)
+      cat(paste("\r\nHowever, more than one column for first case was found in epi link table:", paste(names(epi)[c1], collapse = ", ")),
+          ".\r\nPlease label one column case1.\r\n", file = log, append = T)
       stop("Please label one column case1 in epi link table.")
     } else {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
-      cat("\nColumn for first case in epi link table not found. Please label one column case1.\n", file = log, append = T)
+      cat("\r\nColumn for first case in epi link table not found. Please label one column case1.\r\n", file = log, append = T)
       stop("Column for first case in epi link table not found. Please label one column case1.")
     }
     ##case2
@@ -113,13 +113,13 @@ fixEpiNames <- function(epi, log) {
       names(epi)[tolower(names(epi))=="stcaseno2"] = "case2"
     } else if(sum(c1) > 1) {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
-      cat(paste("\nHowever, more than one column for second case in was found in epi link table:", paste(names(epi)[c1], collapse = ", ")),
-          ".\nPlease label one column case2.\n", file = log, append = T)
+      cat(paste("\r\nHowever, more than one column for second case in was found in epi link table:", paste(names(epi)[c1], collapse = ", ")),
+          ".\r\nPlease label one column case2.\r\n", file = log, append = T)
       stop("Please label one column case2 in epi link table.")
     } else {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
-      cat("\nColumn for second case in epi link table not found. Please label one column case2.\n", file = log, append = T)
-      stop("Column for second case in epi link table not found\n Please label one column case2.")
+      cat("\r\nColumn for second case in epi link table not found. Please label one column case2.\r\n", file = log, append = T)
+      stop("Column for second case in epi link table not found\r\n Please label one column case2.")
     }
     ##strength
     c1 = grepl("strength", names(epi), ignore.case = T)
@@ -129,13 +129,13 @@ fixEpiNames <- function(epi, log) {
       names(epi)[tolower(names(epi))=="strength"] = "strength"
     } else if(sum(c1) > 1) {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
-      cat(paste("\nHowever, more than one column forepi link strength was found in epi link table:", 
+      cat(paste("\r\nHowever, more than one column forepi link strength was found in epi link table:", 
                 paste(names(epi)[c1], collapse = ", ")),
-          "\nPlease label one column \"strength\".\nAll epi links strengths will be set to probable.\n", file = log, append = T)
+          "\r\nPlease label one column \"strength\".\r\nAll epi links strengths will be set to probable.\r\n", file = log, append = T)
       epi$strength = "probable"
     } else {
       cat("Epi table should have the following columns: ", paste(epicolnames, collapse=", "), file = log, append = T)
-      cat("\nColumn for epi link strength (strength) in epi link table not found.\nAll epi links strengths will be set to probable.\n", file = log, append = T)
+      cat("\r\nColumn for epi link strength (strength) in epi link table not found.\r\nAll epi links strengths will be set to probable.\r\n", file = log, append = T)
       epi$strength = "probable"
     }
     epi$strength = tolower(epi$strength)
@@ -149,28 +149,28 @@ fixEpiNames <- function(epi, log) {
     } else {
       c1 = grepl("location", names(epi), ignore.case = T) #for compatibility with LATTE outputs
       if(sum(c1) == 1) {
-        cat("Location column will be used as label.\n", file = log, append = T)
+        cat("Location column will be used as label.\r\n", file = log, append = T)
         names(epi)[c1] = "label"
       } else if(sum(tolower(names(epi))=="location") == 1) {
-        cat("Location column will be used as label.\n", file = log, append = T)
+        cat("Location column will be used as label.\r\n", file = log, append = T)
         names(epi)[tolower(names(epi))=="location"] = "label"
       } else if(sum(c1) > 1) {
         epi$label=""
         cat(paste("More than one column for epi link label in epi link table:", paste(names(epi)[c1], collapse = ", "), 
-                  "\n"), file = log, append = T)
-        cat("To have labels, please name one column \"label\".\n", file = log, append = T)
+                  "\r\n"), file = log, append = T)
+        cat("To have labels, please name one column \"label\".\r\n", file = log, append = T)
       } else {
         epi$label = ""
-        cat("Column for epi link label in epi link table not found. To have labels, please name one column \"label\".\n", 
+        cat("Column for epi link label in epi link table not found. To have labels, please name one column \"label\".\r\n", 
             file = log, append = T)
-        cat("No labels will be used in this run.\n", file = log, append = T)
+        cat("No labels will be used in this run.\r\n", file = log, append = T)
       }
     }
     ##if SNP distance already present, remove with warning
     if(any(!names(epi) %in% c("case1", "case2", "strength", "label"))) {
       cat(paste("There are extra columns in the epi table, which will be removed:",
                 paste(names(epi)[!names(epi) %in% c("case1", "case2", "strength", "label")], collapse = ", "), 
-                "\n"), file = log, append = T)
+                "\r\n"), file = log, append = T)
     }
     epi = epi[,names(epi) %in% epicolnames] #remove extra columns (needed for rbind with TB GIMS data)
     epi$case1 = as.character(epi$case1)
@@ -193,14 +193,14 @@ fixIPnames <- function(df, log) {
       names(df)[col] = "IPStart"
     } else if(sum(col) > 1) {
       warning(paste("More than one  infectious period (IP) start:", paste(names(df)[col], collapse = ", ")),
-              "\nPlease label one column IPStart in case data table.\n User-input IP start was not used in this analysis.")
+              "\r\nPlease label one column IPStart in case data table.\r\n User-input IP start was not used in this analysis.")
       cat(paste("More than one column for infectious period (IP) start in case data table:", paste(names(df)[col], collapse = ", ")),
-          "\nPlease label one column IPStart in case data table.\n User-input IP start was not used in this analysis.\n", 
+          "\r\nPlease label one column IPStart in case data table.\r\n User-input IP start was not used in this analysis.\r\n", 
           file = log, append = T)
       return(NA)
     } else if(sum(col) < 1) {
-      warning("No infectious period (IP) start column, so user-input IP was not used in the analysis.\nPlease add a column named IPStart in case data table to have user IP in analysis.\n")
-      cat("No infectious period (IP) start column, so user-input IP was not used in the analysis.\nPlease add a column named IPStart in case data table to have user IP in analysis.\n", 
+      warning("No infectious period (IP) start column, so user-input IP was not used in the analysis.\r\nPlease add a column named IPStart in case data table to have user IP in analysis.\r\n")
+      cat("No infectious period (IP) start column, so user-input IP was not used in the analysis.\r\nPlease add a column named IPStart in case data table to have user IP in analysis.\r\n", 
           file = log, append = T)
       return(NA)
     }
@@ -212,15 +212,15 @@ fixIPnames <- function(df, log) {
       names(df)[col] = "IPEnd"
     }else if(sum(col) > 1) {
       warning(paste("More than one column for infectious period (IP) end:", paste(names(df)[col], collapse = ", ")),
-              "\nPlease label one column IPEnd in case data table.\n User-input IP end was not used in this analysis.")
+              "\r\nPlease label one column IPEnd in case data table.\r\n User-input IP end was not used in this analysis.")
       cat(paste("More than one column for infectious period (IP) end:", paste(names(df)[col], collapse = ", ")),
-          "\nPlease label one column IPEnd in case data table.\n User-input IP end was not used in this analysis.\n", 
+          "\r\nPlease label one column IPEnd in case data table.\r\n User-input IP end was not used in this analysis.\r\n", 
           file = log, append = T)
       df$IPEnd = NA
     } else if(sum(col) < 1) {
-      cat("No infectious period (IP) end column, so user-input IP end was not used in the analysis.\nPlease add a column named IPEnd to case data table to use IP end in analysis.\n", 
+      cat("No infectious period (IP) end column, so user-input IP end was not used in the analysis.\r\nPlease add a column named IPEnd to case data table to use IP end in analysis.\r\n", 
           file = log, append = T)
-      warning("No infectious period (IP) end column, so user-input IP end was not used in the analysis.\nPlease add a column named IPEnd to case data table to use IP end in analysis.\n")
+      warning("No infectious period (IP) end column, so user-input IP end was not used in the analysis.\r\nPlease add a column named IPEnd to case data table to use IP end in analysis.\r\n")
       df$IPEnd = NA
     }
     
@@ -251,14 +251,14 @@ fixRfTable <- function(df, log) {
     names(df)[col] = "variable"
   } else if(sum(col) > 1) {
     warning(paste("More than one column for risk factor variable name in risk factor table:", paste(names(df)[col], collapse = ", ")),
-            "\nPlease label one column in risk factor table variable.\n Risk factors were not used in this analysis.")
+            "\r\nPlease label one column in risk factor table variable.\r\n Risk factors were not used in this analysis.")
     cat(paste("More than one column for risk factor variable name:", paste(names(df)[col], collapse = ", ")),
-        "\nPlease label one column variable in risk factor table.\n Risk factors were not used in this analysis.\n", 
+        "\r\nPlease label one column variable in risk factor table.\r\n Risk factors were not used in this analysis.\r\n", 
         file = log, append = T)
     return(NA)
   } else if(sum(col) < 1) {
-    warning("No risk factor variable column in risk factor table, so risk factors were not used in the analysis.\nPlease add a column named variable in the risk factor table to have risk factors in analysis.\n")
-    cat("No risk factor variable column in risk factor table, so risk factors were not used in the analysis.\nPlease add a column named variable in the risk factor table to have risk factors in analysis.\n", 
+    warning("No risk factor variable column in risk factor table, so risk factors were not used in the analysis.\r\nPlease add a column named variable in the risk factor table to have risk factors in analysis.\r\n")
+    cat("No risk factor variable column in risk factor table, so risk factors were not used in the analysis.\r\nPlease add a column named variable in the risk factor table to have risk factors in analysis.\r\n", 
         file = log, append = T)
     return(NA)
   }
@@ -268,11 +268,11 @@ fixRfTable <- function(df, log) {
     names(df)[col] = "weight"
   } else if(sum(col) > 1) {
     cat(paste("More than one column for risk factor weight:", paste(names(df)[col], collapse = ", ")),
-        "\nRisk factors were given equal weights in this analysis. To use weights, label one column weight in risk factor table.\n", 
+        "\r\nRisk factors were given equal weights in this analysis. To use weights, label one column weight in risk factor table.\r\n", 
         file = log, append = T)
     df = df[,!col]
   } else if(sum(col) < 1) {
-    cat("No risk factor weight column in risk factor table, so risk factors were given equal weights in this analysis. To use weights, label one column weight in risk factor table.\n",
+    cat("No risk factor weight column in risk factor table, so risk factors were given equal weights in this analysis. To use weights, label one column weight in risk factor table.\r\n",
         file = log, append = T)
   }
   
@@ -286,7 +286,7 @@ fixRfTable <- function(df, log) {
     df$weight = as.numeric(as.character(df$weight))
     if(any(is.na(df$weight))) {
       cat("Risk factor weights must have a positive numeric value to be included in analysis. The following risk factors will be ignored: ",
-          paste(df$variable[is.na(df$weight)], collapse=", "), "\n",
+          paste(df$variable[is.na(df$weight)], collapse=", "), "\r\n",
           file = log, append = T)
     }
     df = df[!is.na(df$weight),] #remove variables missing weight
@@ -567,7 +567,7 @@ writeTopRankedTransmissionTable <- function(littResults, outPrefix, stcasenolab 
                     stcasenolab = stcasenolab)
     return(T)
   } else {
-    cat("There were no cases with a potential source that passed all filters.\nTop ranked transmission table and heatmap file not generated..\n", file = log, append = T)
+    cat("There were no cases with a potential source that passed all filters.\r\nTop ranked transmission table and heatmap file not generated.\r\n", file = log, append = T)
     return(F)
   }
 }
@@ -586,7 +586,7 @@ writeEpiTable <- function(littResults, outPrefix, stcasenolab = F, log) {
                     stcasenolab = stcasenolab)
     return(T)
   } else {
-    cat("No epi links found; no epi link table will be generated.\n", file = log, append = T)
+    cat("No epi links found; no epi link table will be generated.\r\n", file = log, append = T)
     return(F)
   }
 }
@@ -648,24 +648,24 @@ cleanEpi <- function(epi, cases, log) {
     if(any(is.na(epi$strength) | epi$strength == "")) {
       r = which(is.na(epi$strength) | epi$strength == "")
       cat(paste("These rows are missing an epi link strength and have been set to probable:",
-                paste(r, collapse = ", "), "\n"), file = log, append = T)
+                paste(r, collapse = ", "), "\r\n"), file = log, append = T)
       for(z in r) {
-        cat("\n", file = log, append = T)
+        cat("\r\n", file = log, append = T)
         cat(paste(epi[z,], collapse="\t"), file = log, append = T)
       }
-      cat("\n", file = log, append = T)
+      cat("\r\n", file = log, append = T)
       epi$strength[r] = "probable"
     }
     if(any(epi$strength != "definite" & epi$strength != "probable" & epi$strength != "possible", na.rm = T)) {
       r = which(epi$strength != "definite" & epi$strength != "probable" & epi$strength != "possible")
       cat(paste("These rows have an invalid epi link strength and have been set to probable:",
-                paste(r, collapse = ", "), "\n"), file = log, append = T)
+                paste(r, collapse = ", "), "\r\n"), file = log, append = T)
       cat(paste(names(epi), collapse ="\t"), file = log, append = T)
       for(z in r) {
-        cat("\n", file = log, append = T)
+        cat("\r\n", file = log, append = T)
         cat(paste(epi[z,], collapse="\t"), file = log, append = T)
       }
-      cat("\n", file = log, append = T)
+      cat("\r\n", file = log, append = T)
       epi$strength[r] = "probable"
     }
     
@@ -704,7 +704,7 @@ cleanEpi <- function(epi, cases, log) {
       }
     }
     if(numDup != 0) {
-      cat(paste("There were", numDup, "duplicated epi links, which were removed.\n"), file = log, append = T)
+      cat(paste("There were", numDup, "duplicated epi links, which were removed.\r\n"), file = log, append = T)
     }
   }
   return(epi)
@@ -741,22 +741,22 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
   ####check case data inputs
   if(!all(expectedcolnames %in% names(caseData))) {
     cat(paste("Case data table expects the following columns:", paste(expectedcolnames, collapse=", ")), file = log, append = T)
-    cat(paste("\nHowever, these required columns are missing required columns in case data table: ", 
+    cat(paste("\r\nHowever, these required columns are missing required columns in case data table: ", 
               paste(expectedcolnames[!expectedcolnames %in% names(caseData)], collapse = ", "), 
-              ". Analysis was stopped. See documentation for more details.\n"), file = log, append = T)
+              ". Analysis was stopped. See documentation for more details.\r\n"), file = log, append = T)
     stop(paste("Missing required columns in caseData:", paste(expectedcolnames[!expectedcolnames %in% names(caseData)], collapse = ", ")))
   }
   caseData$IPStart = convertToDate(caseData$IPStart)
   caseData$IPEnd = convertToDate(caseData$IPEnd)
   caseData = caseData[caseData$ID!="weight",] #do not include weight (which will be in addlRiskFactor)
   if(any(is.na(caseData$IPStart))) {
-    cat(paste("IP start is required, but is missing for:", paste(caseData$ID[is.na(caseData$IPStart)], collapse = ","), "\n"), 
+    cat(paste("IP start is required, but is missing for:", paste(caseData$ID[is.na(caseData$IPStart)], collapse = ","), "\r\n"), 
         file = log, append = T)
-    cat("These cases have been removed from the analysis\n", file = log, append = T)
+    cat("These cases have been removed from the analysis\r\n", file = log, append = T)
   }
   if(nrow(caseData) < 2) {
     cat("LITT requires at least two cases, but there are ", nrow(caseData), 
-        ". Analysis has been stopped\n", file = log, append = T)
+        ". Analysis has been stopped\r\n", file = log, append = T)
     stop("LITT requires at least two cases, but there are ", nrow(caseData))
   }
   cases = caseData$ID
@@ -780,7 +780,7 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
   bad = is.na(caseData$Pediatric) | !caseData$Pediatric %in% c("Y", "N")
   if(any(bad)) {
     cat(paste("Pediatric results are missing from the following cases, which will be assumed to be adult:", 
-              paste(caseData$ID[bad], collapse = ","), "\n"), file = log, append = T)
+              paste(caseData$ID[bad], collapse = ","), "\r\n"), file = log, append = T)
     caseData$Pediatric[bad] = "N"
   }
   
@@ -791,7 +791,7 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
   bad = is.na(caseData$ExtrapulmonaryOnly) | !caseData$ExtrapulmonaryOnly %in% c("Y", "N")
   if(any(bad)) {
     cat(paste("Extrapulmonary only results are missing from the following cases, which will be assumed to be pulmonary:", 
-              paste(caseData$ID[bad], collapse = ","), "\n"), file = log, append = T)
+              paste(caseData$ID[bad], collapse = ","), "\r\n"), file = log, append = T)
     caseData$ExtrapulmonaryOnly[bad] = "N"
   }
   
@@ -817,7 +817,7 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
   if(nrow(epi) > 0) {
     epi$SNPdistance = getSNPDistance(epi, dist) 
   }
-  cat(paste("Number of epi links:", nrow(epi)), "\n", file = log, append = T)
+  cat(paste("Number of epi links:", nrow(epi)), "\r\n", file = log, append = T)
   
   ####set up risk factor weights
   weights = NA
@@ -825,8 +825,8 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
     addlRiskFactor = addlRiskFactor[addlRiskFactor$ID %in% c(cases, "weight"),]
     addlRiskFactor[] = lapply(addlRiskFactor, as.character)
     if(any(!cases %in% addlRiskFactor$ID)) {
-      cat("These cases have no risk factor values, so will be treated as N for all risk factors:\n", file = log, append = T)
-      cat(paste(cases[!cases %in% addlRiskFactor$ID], collapse = ","), "\n", file = log, append = T)
+      cat("These cases have no risk factor values, so will be treated as N for all risk factors:\r\n", file = log, append = T)
+      cat(paste(cases[!cases %in% addlRiskFactor$ID], collapse = ","), "\r\n", file = log, append = T)
     }
     ##if any NA values, set to N
     for(c in 1:ncol(addlRiskFactor)) {
@@ -843,9 +843,9 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
         for(c in 1:ncol(addlRiskFactor)) {
           if(length(unique(addlRiskFactor[addlRiskFactor$ID==i,c])) != 1) {
             warning(paste("additional risk factor has multiple values for", i, "in column", c, 
-                          "\nThe value in the first row containing", i, "will be used."))
+                          "\r\nThe value in the first row containing", i, "will be used."))
             cat(paste("additional risk factor has multiple values for", i, "in column", c, 
-                      "\nThe value in the first row containing", i, "will be used.\n"), file = log, append = T)
+                      "\r\nThe value in the first row containing", i, "will be used.\r\n"), file = log, append = T)
           }
         }
       }
@@ -866,9 +866,9 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
         if(any(is.na(userWeight) | userWeight <= 0) & !all(is.na(userWeight))) { #remove missing or negative weights, unless all are missing
           miss = is.na(userWeight) | (!is.na(userWeight) & userWeight <= 0) #missing or negative weight
           cat(paste("Risk factor weight is missing or negative for: ", 
-                    paste(names(addlRiskFactor)[-1][miss], collapse = ", "), "\n", sep=""), file = log, append = T)
+                    paste(names(addlRiskFactor)[-1][miss], collapse = ", "), "\r\n", sep=""), file = log, append = T)
           cat(paste(ifelse(sum(miss)==1, " This risk factor has", " These risk factors have"), 
-                    " been removed from analysis.\n", sep=""), file = log, append = T)
+                    " been removed from analysis.\r\n", sep=""), file = log, append = T)
           addlRiskFactor = addlRiskFactor[,c(T, !is.na(userWeight) & userWeight > 0)]
         }
       }
@@ -901,9 +901,9 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
   }
   
   if(all(is.na(rfWeights))) {
-    cat("Number of risk factors: 0\n", file = log, append = T)
+    cat("Number of risk factors: 0\r\n", file = log, append = T)
   } else {
-    cat("Number of risk factors: ", nrow(rfWeights), "\n", file = log, append = T)
+    cat("Number of risk factors: ", nrow(rfWeights), "\r\n", file = log, append = T)
   }
   
   ##which cases to update progress bar; note that it includes 1, so will update in first loop to account for setup

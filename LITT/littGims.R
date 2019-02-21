@@ -9,7 +9,7 @@ gimsPtFiles = list.files(gimsPtGenoFolder)
 gimsPtFiles = gimsPtFiles[grepl("gims_patient_[0-9]*.sas7bdat", gimsPtFiles)]
 fileinfo = file.info(paste(gimsPtGenoFolder, gimsPtFiles, sep=""))
 gimsPtName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
-cat(paste("GIMS patient file: ", gimsPtName, "\n"))
+cat(paste("GIMS patient file: ", gimsPtName, "\r\n"))
 gimsPt = read_sas(gimsPtName)
 gimsPtName = sub(gimsPtGenoFolder, "", gimsPtName, fixed=T)
 
@@ -19,7 +19,7 @@ gimsExportFiles = list.files(gimsExportFolder)
 gimsAllFiles = gimsExportFiles[grepl("^gims_export_[0-9]*.sas7bdat$", gimsExportFiles)]
 fileinfo = file.info(paste(gimsExportFolder, gimsAllFiles, sep=""))
 gimsAllName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
-cat(paste("GIMS export file:", gimsAllName, "\n"))
+cat(paste("GIMS export file:", gimsAllName, "\r\n"))
 gimsAll = read_sas(gimsAllName)
 gimsAll = merge(gimsAll,
                 data.frame(STCASENO=gimsPt$Stcaseno,
@@ -33,7 +33,7 @@ gimsPtFiles = list.files(gimsPtGenoFolder)
 gimsGenoFiles = gimsPtFiles[grepl("gims_genotype_[0-9]*.sas7bdat", gimsPtFiles)]
 fileinfo = file.info(paste(gimsPtGenoFolder, gimsGenoFiles, sep=""))
 gimsGenoName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
-cat(paste("GIMS genotyping file:", gimsGenoName, "\n"))
+cat(paste("GIMS genotyping file:", gimsGenoName, "\r\n"))
 gimsGeno = read_sas(gimsGenoName)
 gimsGenoName = sub(gimsPtGenoFolder, "", gimsGenoName, fixed=T)
 
@@ -78,13 +78,13 @@ fixSxOnsetNames <- function(df, log) {
       names(df)[col] = "sxOnset"
     } else if(sum(col) > 1) {
       warning(paste("More than one column for symptom onset:", paste(names(df)[col], collapse = ", ")),
-              "\nPlease label one column sxOnset.\n Symptom onset was not used in this analysis.")
+              "\r\nPlease label one column sxOnset.\r\n Symptom onset was not used in this analysis.")
       cat(paste("More than one column for symptom onset:", paste(names(df)[col], collapse = ", ")),
-          "\nPlease label one column sxOnset.\n Symptom onset was not used in this analysis.\n", 
+          "\r\nPlease label one column sxOnset.\r\n Symptom onset was not used in this analysis.\r\n", 
           file = log, append = T)
       return(NA)
     } else if(sum(col) < 1) {
-      cat("No symptom onset column, so symptom onset was not used in the analysis.\nPlease add a column named symptom onset or sxOnset to use symptom onset in analysis.\n", 
+      cat("No symptom onset column, so symptom onset was not used in the analysis.\r\nPlease add a column named symptom onset or sxOnset to use symptom onset in analysis.\r\n", 
           file = log, append = T)
       return(NA)
     }
@@ -207,7 +207,7 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
   } else if(endsWith(fileName, ".csv")) {
     mat = as.matrix(read.table(fileName, sep=",", header = T, row.names = 1))
   } else {
-    cat("Distance matrix should be in a text, Excel or CSV file format\n", file = log, append = T)
+    cat("Distance matrix should be in a text, Excel or CSV file format\r\n", file = log, append = T)
     return(NA)
   }
   colnames(mat) = sub("^X", "", colnames(mat))
@@ -228,10 +228,10 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
       if(!sid[i] %in% gimsAll$STCASENO) { #is accession number
         id = unique(gimsGeno$StCaseNo[gimsGeno$accessionnumber==acc[i]])
         if(length(id) == 0 || id == "NA" || is.na(id)) {
-          cat(paste("No state case number for", acc[i], "\n"), file = log, append = T)
+          cat(paste("No state case number for", acc[i], "\r\n"), file = log, append = T)
           sid[i] = NA
         } else if(length(id) > 1) {
-          cat(paste("Multiple state case numbers for", acc[i], "\n"), file = log, append = T)
+          cat(paste("Multiple state case numbers for", acc[i], "\r\n"), file = log, append = T)
           sid[i] = NA
         } else {
           sid[i] = id
@@ -261,7 +261,7 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
           warning(dacc[i-1], " and ", dacc[i], " have different SNP distances but are the same sample; ", 
                   dacc[i-1], " will be used")
           cat(dacc[i-1], " and ", dacc[i], " have different SNP distances but are the same sample; ", 
-              dacc[i-1], " will be used for analysis\n", file = log, append = T)
+              dacc[i-1], " will be used for analysis\r\n", file = log, append = T)
         }
       }
       mat = mat[!acc %in% dacc[2:length(dacc)],!acc %in% dacc[2:length(dacc)]]
@@ -289,10 +289,10 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
 littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTable = NA, gimsRiskFactor = NA, 
                      writeDate = F, writeDist = F, appendlog=F, SNPcutoff = snpDefaultCut, progress = NA) {
   log = paste(outPrefix, defaultLogName, sep="")
-  cat("LITT analysis with TB GIMS\nSNP cutoff = ", SNPcutoff, "\n", file = log, append=appendlog)
-  cat(paste("GIMS patient file: ", gimsPtName, "\n"), file = log, append = T)
-  cat(paste("GIMS export file:", gimsAllName, "\n"), file = log, append = T)
-  cat(paste("GIMS genotyping file:", gimsGenoName, "\n"), file = log, append = T)
+  cat("LITT analysis with TB GIMS\r\nSNP cutoff = ", SNPcutoff, "\r\n", file = log, append=appendlog)
+  cat(paste("GIMS patient file: ", gimsPtName, "\r\n"), file = log, append = T)
+  cat(paste("GIMS export file:", gimsAllName, "\r\n"), file = log, append = T)
+  cat(paste("GIMS genotyping file:", gimsGenoName, "\r\n"), file = log, append = T)
   
   ####check inputs
   ##fix field names
@@ -325,13 +325,13 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
       if(any(!rfTable$variable %in% names(caseData))) { #extra variables not in case data table
         miss = !rfTable$variable %in% names(caseData)
         cat("The following variables are in the risk factor table but not in the case data table, so will not be used in analysis: ",
-            paste(rfTable$variable[miss], collapse=", "), "\n", file = log, append = T)
+            paste(rfTable$variable[miss], collapse=", "), "\r\n", file = log, append = T)
         rfTable = rfTable[!miss,]
       }
       if(any(!names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable))) {
         miss = !names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable)
         cat("There are extra columns in the case data table, which will be removed: ",
-            paste(names(caseData)[miss], collapse=", "), "\n", file = log, append = T)
+            paste(names(caseData)[miss], collapse=", "), "\r\n", file = log, append = T)
       }
       ##set up print table (weight 0)
       rfTable = rfTable[!is.na(rfTable$weight),]
@@ -378,15 +378,15 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   if(!all(is.na(cases))) {
     if(any(!(cases %in% gimsAll$STCASENO))) {
       cat(paste("TB GIMS is missing the following cases, which will be removed from the analysis:", 
-                paste(cases[!(cases %in% gimsAll$STCASENO)], collapse = ", "), "\n"), file = log, append = T)
+                paste(cases[!(cases %in% gimsAll$STCASENO)], collapse = ", "), "\r\n"), file = log, append = T)
       cases = cases[cases %in% gimsAll$STCASENO]
     }
   }
   if(all(is.na(cases)) || length(cases) < 2) { #no cases to analyze
-    cat("There must be at least 2 cases with state case numbers in TB GIMS. Analysis has been stopped.\n", file = log, append = T)
-    stop("There must be at least 2 cases with state case numbers in TB GIMS.\n")
+    cat("There must be at least 2 cases with state case numbers in TB GIMS. Analysis has been stopped.\r\n", file = log, append = T)
+    stop("There must be at least 2 cases with state case numbers in TB GIMS.\r\n")
   }
-  cat(paste("Number of cases:", length(cases), "\n"), file = log, append = T)
+  cat(paste("Number of cases:", length(cases), "\r\n"), file = log, append = T)
   
   gimsCases = gimsAll[gimsAll$STCASENO %in% cases,]
   
@@ -458,30 +458,30 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
     ##check to see if IP start is after earliest date (and therefore incorrect)
     if(any(dates$IPStart > dates$earliestDate %m-% months(1), na.rm = T)) {
       r = which(dates$IPStart > dates$earliestDate %m-% months(1))
-      cat("The following isolates have an infectious period start later than 1 month prior to the earliest date; 3 months prior to the earliest date will be used instead:\n", 
+      cat("The following isolates have an infectious period start later than 1 month prior to the earliest date; 3 months prior to the earliest date will be used instead:\r\n", 
           file = log, append = T)
       cat(paste(names(dates), collapse ="\t"), file = log, append = T)
       for(z in r) {
-        cat("\n", dates[z,1], file = log, append = T)
+        cat("\r\n", dates[z,1], file = log, append = T)
         for(c in 2:ncol(dates)) {
           cat(paste0("\t", as.character(dates[z,c])), file = log, append = T)
         }
       }
-      cat("\n\n", file = log, append = T)
+      cat("\r\n\r\n", file = log, append = T)
       dates$IPStart[r] = as.Date(NA)
     }
     if(any(dates$IPEnd < dates$RXDATE, na.rm = T)) {
       r = which(dates$IPEnd < dates$RXDATE & !is.na(dates$RXDATE))
-      cat("The following isolates have an infectious period end earlier than the treatment start date; 2 weeks after the RXDATE will be used instead:\n", 
+      cat("The following isolates have an infectious period end earlier than the treatment start date; 2 weeks after the RXDATE will be used instead:\r\n", 
           file = log, append = T)
       cat(paste(names(dates), collapse ="\t"), file = log, append = T)
       for(z in r) {
-        cat("\n", dates[z,1], file = log, append = T)
+        cat("\r\n", dates[z,1], file = log, append = T)
         for(c in 2:ncol(dates)) {
           cat(paste0("\t", as.character(dates[z,c])), file = log, append = T)
         }
       }
-      cat("\n\n", file = log, append = T)
+      cat("\r\n\r\n", file = log, append = T)
       dates$IPEnd[r] = as.Date(NA)
     }
     dates$IPStart[is.na(dates$IPStart)] = dates$earliestDate[is.na(dates$IPStart)] %m-% months(3)
