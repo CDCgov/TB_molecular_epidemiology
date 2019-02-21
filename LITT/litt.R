@@ -13,10 +13,10 @@ library(xlsx) #for Excel writing functions (not used directly by LITT)
 timeScore <- function(sourceID, dates, targetDate) {
   if(dates$IPStart[dates$ID==sourceID] >= targetDate) { #IP start after target date
     return(2)
-  } else if(is.na(dates$IPEnd[dates$ID==sourceID])) {
+  } else if(is.na(dates$IPEnd[dates$ID==sourceID])) {#use IP start if no IP end available
     return(ifelse(time_length(difftime(targetDate, dates$IPStart[dates$ID==sourceID]), "years") < 2,
                   0, 1))
-  } else { #use IP start if no IP end available
+  } else { 
     return(ifelse(time_length(difftime(targetDate, dates$IPEnd[dates$ID==sourceID]), "years") < 2,
                   0, 1))
   }
@@ -717,7 +717,7 @@ optionalcolnames = "UserDateData" #optional columns in case data table
 ##output base names
 defaultLogName = "LITT_log.txt"
 epiFileName = "LITT_Calculated_Epi_Data.xlsx"
-txFileName = "LITT_Top_Ranked_Transmission_Network.xlsx"
+txFileName = "LITT_Top_Rank_Potential_Source.xlsx"
 caseFileName = "LITT_Calculated_Case_Data.xlsx"
 psFileName = "LITT_All_Potential_Sources.xlsx"
 dateFileName = "LITT_Calculated_Date_Data.xlsx"

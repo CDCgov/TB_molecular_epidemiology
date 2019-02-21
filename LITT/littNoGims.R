@@ -144,11 +144,13 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
     if(!all(is.na(rfTable))) {
       gims = gims[,!names(gims) %in% rfTable$variable]
     }
-    if(all(is.na(printVars))) {
-      printVars = gims
-    } else {
-      gims = gims[,!names(gims) %in% names(printVars)[names(printVars)!="ID"]]
-      printVars = merge(gims, printVars, by="ID")
+    if(!class(gims)=="character") { #there were not extra columns so gims ends up being character vector of ID
+      if(all(is.na(printVars))) {
+        printVars = gims
+      } else {
+        gims = gims[,!names(gims) %in% names(printVars)[names(printVars)!="ID"]]
+        printVars = merge(gims, printVars, by="ID")
+      }
     }
   }
   caseData=caseData[,names(caseData) %in% c(expectedcolnames, optionalcolnames)]
