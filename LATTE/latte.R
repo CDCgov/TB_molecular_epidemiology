@@ -172,7 +172,7 @@ writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHea
       if(!is.na(df[r,c])) {
         if(as.character(df[r,c])!="") {
           if(all(grepl("[0-9.]", strsplit(as.character(df[r,c]), "")[[1]]))) {
-            setCellValue(cells[[r+1,c]], as.numeric(df[r,c]))
+            setCellValue(cells[[r+1,c]], as.numeric(as.character(df[r,c])))
           } else {
             setCellValue(cells[[r+1,c]], df[r,c])
           }
