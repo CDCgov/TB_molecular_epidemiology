@@ -18,8 +18,9 @@ ui <- fixedPage( #fixedPage fluidPage #https://stackoverflow.com/questions/35040
     column(4, #align="center",
            h3("Input files", align="center"),
            fileInput("caseData", "Case data table (required)", accept=c(".xlsx", ".csv")),
-           checkboxInput("cdFromGimsRun",
-                         "Output extra columns from the TB GIMS version"),
+           checkboxInput("keepExtraCDcol",
+                         # "Output extra columns from the TB GIMS version"),
+                         "Output extra columns in case data table", value=T),
            br(),
            # helpText("Must include: sputum smear results, cavitation status, ",
            #          "whether a case is extrapulmonary only or pediatric, and ",
@@ -113,7 +114,7 @@ server <- function(input, output, session) {
                            epi = epi, #readShinyInputFile(input$epi),
                            SNPcutoff = input$snpCutoff,
                            rfTable = rf, #readShinyInputFile(input$rfTable),
-                           cdFromGimsRun = input$cdFromGimsRun,
+                           keepExtraCDcol = input$keepExtraCDcol,
                            writeDist = input$writeDist,
                            appendlog = T,
                            progress = progress)
@@ -162,7 +163,7 @@ server <- function(input, output, session) {
     rv$clEpi <- T
     rv$clDist <- T
     rv$clRF <- T
-    updateCheckboxInput(session, "cdFromGimsRun", value=F)
+    updateCheckboxInput(session, "keepExtraCDcol", value=T)
     updateCheckboxInput(session, "writeDist", value=F)
   })
   
@@ -207,7 +208,7 @@ server <- function(input, output, session) {
     shinyjs::hide("downloadData")
   })
   observe({
-    input$cdFromGimsRun
+    input$keepExtraCDcol
     output$message <- renderText({""})
     shinyjs::hide("downloadData")
   })

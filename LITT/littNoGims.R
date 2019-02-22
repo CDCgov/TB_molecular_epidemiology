@@ -57,12 +57,12 @@ cleanedCaseDataHeadersToVarNames <- function(caseData) {
 ##epi = data frame with columns title case1, case2, strength (strength of the epi link between cases 1 and 2), label (label for link if known) -> optional, if not given, the epi links in GIMS will be used as definite epi links
 ##SNPcutoff = eliminate source if the SNP distance from the target is greater than this cutoff
 ##rfTable = dataframe with variable (list of additional risk factors, which correspond to column names in caseData) and weight
-##cdFromGimsRun = if true, case data is from a run of LITT with TB GIMS and the user wants to keep the extra surveillance columns
+##keepExtraCDcol = if true, keep extra columns in case data, e.g. if case data is from a run of LITT with TB GIMS and the user wants to keep the extra surveillance columns (will remove number of epi links and number of times ranked 1st)
 ##writeDist = if true, write distance matrix to Excel and include in list of outputs
 ##if appendlog is true, append results to log file; otherwise overwrite (needed because may read distance matrix first)
 ##progress = progress bar for R Shiny interface (NA if not running through interface)
 littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = snpDefaultCut, rfTable= NA, 
-                       cdFromGimsRun = F, writeDist = F, appendlog = F, progress = NA) {
+                       keepExtraCDcol = F, writeDist = F, appendlog = F, progress = NA) {
   log = paste(outPrefix, defaultLogName, sep="")
   cat("LITT analysis\r\nSNP cutoff = ", SNPcutoff, "\r\n", file = log, append=appendlog)
   
@@ -115,7 +115,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
             paste(rfTable$variable[miss], collapse=", "), "\r\n", file = log, append = T)
         rfTable = rfTable[!miss,]
       }
-      if(any(!names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable)) & !cdFromGimsRun) {
+      if(any(!names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable)) & !keepExtraCDcol) {
         miss = !names(caseData) %in% c(expectedcolnames, optionalcolnames, rfTable$variable)
         cat("There are extra columns in the case data table, which will be removed: ",
             paste(names(caseData)[miss], collapse=", "), "\r\n", file = log, append = T)
@@ -137,14 +137,14 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
     }
   }
   ##if user wants to include extra surveillance columns from gims, merge with printVars
-  if(cdFromGimsRun) {
+  if(keepExtraCDcol) {
     gims = caseData[,!names(caseData) %in% 
                       c(expectedcolnames[expectedcolnames!="ID"], optionalcolnames, 
                         "Calculated.Infectious.Period.Start", "Calculated.Infectious.Period.End")]
     if(!all(is.na(rfTable))) {
       gims = gims[,!names(gims) %in% rfTable$variable]
     }
-    if(!class(gims)=="character") { #there were not extra columns so gims ends up being character vector of ID
+    if(!class(gims)=="character") { #if there were not extra columns gims ends up being character vector of ID
       if(all(is.na(printVars))) {
         printVars = gims
       } else {
