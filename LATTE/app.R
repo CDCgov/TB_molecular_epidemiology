@@ -33,10 +33,10 @@ ui <- fluidPage(
 
     fluidRow(column(12, align="center",
                     br(),
-                    actionButton("run", "Run", style='background-color:royalblue; color:white; padding:20px 40px'), #https://www.w3schools.com/css/css3_buttons.asp
+                    actionButton("clear", "Clear inputs"),
                     br(),
                     br(),
-                    actionButton("clear", "Clear inputs"))),
+                    actionButton("run", "Run", style='background-color:royalblue; color:white; padding:20px 40px'))), #https://www.w3schools.com/css/css3_buttons.asp
     fluidRow(column(12, align="center",
                     br(),
                     br(),
