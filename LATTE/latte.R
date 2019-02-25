@@ -131,6 +131,8 @@ namesForOutput <- function(df) {
   names(df)[names(df)=="OverlapCase2IP"] = "Number of days overlap in case2 IP"
   names(df)[names(df)=="IPStart"] = "IP Start"
   names(df)[names(df)=="IPEnd"] = "IP End"
+  names(df)[names(df)=="NumCert"] = "Total number of days of certain overlap"
+  names(df)[names(df)=="NumTot"] = "Total number of overlapped days"
   
   ##format dates
   for(c in 1:ncol(df)) {
@@ -213,12 +215,12 @@ getEpiLinks <-function(res, cutoff) {
       temp = data.frame(Case1 = c[1],
                         Case2 = c[2],
                         Strength = NA,
-                        Location = paste(sort(unique(sub$Location)), collapse = ","))
-      numCert = sum(sub$NumDaysOverlap[sub$Strength=="certain"])
-      numTot = sum(sub$NumDaysOverlap)
-      if(numCert >= cutoff) {
+                        Location = paste(sort(unique(sub$Location)), collapse = ","),
+                        NumCert = sum(sub$NumDaysOverlap[sub$Strength=="certain"]),
+                        NumTot = sum(sub$NumDaysOverlap))
+      if(temp$NumCert >= cutoff) {
         temp$Strength = "definite"
-      } else if(numTot >= cutoff) {
+      } else if(temp$NumTot >= cutoff) {
         temp$Strength = "probable"
       } else {
         temp$Strength = "possible"
@@ -262,6 +264,8 @@ getIPEpiLinks <- function(res, cutoff, removeAfter) {
       numCert2 = sum(sub$OverlapCase2IP[sub$Strength=="certain"], na.rm = T)
       numTot1 = sum(sub$OverlapCase1IP, na.rm = T)
       numTot2 = sum(sub$OverlapCase2IP, na.rm = T)
+      temp$NumCert = numCert1 + numCert2
+      temp$NumTot = numTot1 + numTot2
       if(numCert1 >= cutoff | numCert2 >= cutoff) {
         temp$Strength = "definite"
       } else if(numTot1 >= cutoff | numTot2 >= cutoff) {
