@@ -44,11 +44,11 @@ fixLocNames <- function(df, log) {
 fixIPnames <- function(df, log) {
   if(any(!is.na(df))) {
     ##start
-    col = grepl("ip[ ]*start", names(df), ignore.case = T) | grepl("infectious[ ]*period[ ]*start", names(df), ignore.case = T)
+    col = grepl("ip[. ]*start", names(df), ignore.case = T) | grepl("infectious[. ]*period[. ]*start", names(df), ignore.case = T)
     names(df)[col] = "IPStart"
     ##end
-    col = grepl("ip[ ]*end", names(df), ignore.case = T) | grepl("infectious[ ]*period[ ]*end", names(df), ignore.case = T) |
-      grepl("ip[ ]*stop", names(df), ignore.case = T) | grepl("infectious[ ]*period[ ]*stop", names(df), ignore.case = T)
+    col = grepl("ip[. ]*end", names(df), ignore.case = T) | grepl("infectious[. ]*period[. ]*end", names(df), ignore.case = T) |
+      grepl("ip[. ]*stop", names(df), ignore.case = T) | grepl("infectious[. ]*period[. ]*stop", names(df), ignore.case = T)
     names(df)[col] = "IPEnd"
     if(sum(names(df) == "IPStart") != 1 | sum(names(df) == "IPEnd") != 1) {
       cat("Invalid number of IP start or end columns, so IP will not be included\r\n", file = log, append = T)
@@ -377,13 +377,13 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
     ##message if missing an IP
     if(any(!cases %in% ip$Case)) {
       cat("The following cases are in the location table but not in the IP table so will have no IP in analysis: ", file = log, append = T)
-      cat(as.character(cases[!cases %in% ip$Case]), file = log, append = T)
+      cat(paste(as.character(cases[!cases %in% ip$Case]), collapse=", "), file = log, append = T)
       cat("\r\n", file = log, append = T)
     }
     ##test for bad IPs:
     if(any(is.na(ip$IPStart) | is.na(ip$IPEnd))) {
       cat("The following cases in the IP table have a missing IP start or end so will have no IP in analysis: ", file = log, append = T)
-      cat(as.character(ip$Case[is.na(ip$IPStart) | is.na(ip$IPEnd)]), file = log, append = T)
+      cat(paste(as.character(ip$Case[is.na(ip$IPStart) | is.na(ip$IPEnd)]), collapse=", "), file = log, append = T)
       cat("\r\n", file = log, append = T)
     }
     ip = ip[!is.na(ip$IPStart),]
@@ -646,10 +646,10 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
       lcases = sort(unique(sub$Case))
       y = length(lcases):1
       xrange = range(c(sub$Start, sub$End))
-      jpeg(paste(outPrefix, "LATTE_Timeline_", l, ".jpg", sep=""), width=600, height=length(lcases)*20+500)
+      jpeg(paste(outPrefix, "LATTE_Timeline_", l, ".jpg", sep=""), width=700, height=length(lcases)*15+500)
       layout(matrix(1:2, ncol=1, nrow=2), heights = c(1,.09))
-      par(mar=c(4,4,4,.3)) 
-      plot(NA, xaxt="n", yaxt="n", xlim=xrange, ylim=c(0, length(lcases)+1), xlab = "", ylab = "", main=l)
+      par(mar=c(4,8,4,.3)) 
+      plot(NA, xaxt="n", yaxt="n", xlim=xrange, ylim=c(0, length(lcases)+.5), xlab = "", ylab = "", main=l)
       axis(side=2, at=y, labels=lcases, las=1)
       xlabs=seq(xrange[1], xrange[2], length.out = 10)
       axis(side=1, at=xlabs, labels=format(xlabs, "%m/%d/%Y"))
