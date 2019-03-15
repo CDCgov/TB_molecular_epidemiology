@@ -62,6 +62,8 @@ calcSxOnset <- function(sxCases, sxOnsetDates, ipCases, ipStart) {
 ##function that takes the given data frame and corrects the state case number capitalization to be uniform across the program
 fixStcasenoName <- function(df) {
   if(any(!is.na(df))) {
+    df = df[!apply(df, 1, function(x) all(is.na(x))),
+            !apply(df, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
     names(df)[grepl("stcaseno", names(df), ignore.case = T) |
                 grepl("state[ .]*case[ .]*number", names(df), ignore.case = T)] = "STCASENO"
   }
@@ -199,13 +201,21 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
   ##read file
   if(endsWith(fileName, ".txt") || endsWith(fileName, ".tsv")) {
     mat = as.matrix(read.table(fileName, sep="\t", header = T, row.names = 1))
+    ##remove rows and columns that are all NA
+    mat = mat[!apply(mat, 1, function(x) all(is.na(x))),
+              !apply(mat, 2, function(x) all(is.na(x)))]
   } else if(endsWith(fileName, ".xls") || endsWith(fileName, ".xlsx")) {
     df = read.xlsx(fileName, sheetIndex = 1)
+    df = df[!apply(df, 1, function(x) all(is.na(x))),
+              !apply(df, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
     mat = as.matrix(df[,-1])
     row.names(mat) = df[,1]
     colnames(mat) = as.character(df[,1]) #fix the . for non character spaces
   } else if(endsWith(fileName, ".csv")) {
     mat = as.matrix(read.table(fileName, sep=",", header = T, row.names = 1))
+    ##remove rows and columns that are all NA
+    mat = mat[!apply(mat, 1, function(x) all(is.na(x))),
+              !apply(mat, 2, function(x) all(is.na(x)))]
   } else {
     cat("Distance matrix should be in a text, Excel or CSV file format\r\n", file = log, append = T)
     return(NA)
@@ -258,10 +268,10 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
       ##check the rows are the same and give a warning otherwise
       for(i in 2:length(dacc)) {
         if(!all(mat[acc==dacc[i],] == mat[acc==dacc[i-1],])) {
-          warning(dacc[i-1], " and ", dacc[i], " have different SNP distances but are the same sample; ", 
-                  dacc[i-1], " will be used")
-          cat(dacc[i-1], " and ", dacc[i], " have different SNP distances but are the same sample; ", 
-              dacc[i-1], " will be used for analysis\r\n", file = log, append = T)
+          warning(dacc[i-1], " and ", dacc[i], " have different SNP distances in ", fileName, " but are the same patient (", d, "); ", 
+                  dacc[i-1], " will be used.")
+          cat(dacc[i-1], " and ", dacc[i], " have different SNP distances in ", fileName, " but are the same patient (", d, "); ", 
+              dacc[i-1], " will be used.\r\n", file = log, append = T)
         }
       }
       mat = mat[!acc %in% dacc[2:length(dacc)],!acc %in% dacc[2:length(dacc)]]

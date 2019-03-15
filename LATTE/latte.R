@@ -18,6 +18,8 @@ fixIDName <- function(df) {
 
 ##function that takes the given data frame and corrects the column location name capitalization
 fixLocNames <- function(df, log) {
+  df = df[!apply(df, 1, function(x) all(is.na(x))),
+          !apply(df, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
   names(df)[grep("location", names(df), ignore.case = T)] = "Location"
   names(df)[grepl("start", names(df), ignore.case = T) & 
               !grepl("ip", names(df), ignore.case = T)] = "Start"
@@ -40,6 +42,8 @@ fixLocNames <- function(df, log) {
 ##check for duplicates; if same isolate has two different IP dates, give warning and take the earlier
 fixIPnames <- function(df, log) {
   if(any(!is.na(df))) {
+    df = df[!apply(df, 1, function(x) all(is.na(x))),
+            !apply(df, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
     ##start
     col = grepl("ip[. ]*start", names(df), ignore.case = T) | grepl("infectious[. ]*period[. ]*start", names(df), ignore.case = T)
     names(df)[col] = "IPStart"

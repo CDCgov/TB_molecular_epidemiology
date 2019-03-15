@@ -67,6 +67,8 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   cat("LITT analysis\r\nSNP cutoff = ", SNPcutoff, "\r\n", file = log, append=appendlog)
   
   ####check inputs
+  caseData = caseData[!apply(caseData, 1, function(x) all(is.na(x))),
+                      !apply(caseData, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
   if(all(is.na(caseData))) {
     cat("A case data table is required\r\n", file = log, append = T)
     stop("A case data table is required")

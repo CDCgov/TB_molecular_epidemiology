@@ -83,6 +83,8 @@ getAddlRFUserUserWeights <- function(addlRiskFactor) {
 fixEpiNames <- function(epi, log) {
   epicolnames = c("case1", "case2", "strength", "label")
   if(any(!is.na(epi))) {
+    epi = epi[!apply(epi, 1, function(x) all(is.na(x))),
+            !apply(epi, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
     ##case1
     c1 = grepl("case1", names(epi), ignore.case = T) | grepl("source", names(epi), ignore.case = T) | 
       grepl("stcaseno1", names(epi), ignore.case = T) | grepl("id1", names(epi), ignore.case = T)
@@ -244,6 +246,8 @@ fixIPnames <- function(df, log) {
 ##df = dataframe with variable (list of additional risk factors, which correspond to column names in caseData) and weight
 ##log = where to write messages to
 fixRfTable <- function(df, log) {
+  df = df[!apply(df, 1, function(x) all(is.na(x))),
+          !apply(df, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
   ###clean up headers
   ##variable
   col = grepl("risk[ .]*factor", names(df), ignore.case = T) | grepl("variable", names(df), ignore.case = T)
