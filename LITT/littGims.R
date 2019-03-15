@@ -252,7 +252,7 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
   ##check for duplicated isolates (two isolates with same stcaseno but different accno)
   ##remove the later accession number if multiple sequences for the same case
   if(any(duplicated(sid))) {
-    dup = sid[duplicated(sid)]
+    dup = unique(sid[duplicated(sid)])
     for(d in dup) {
       dacc = sort(acc[sid==d])
       ##check the rows are the same and give a warning otherwise
