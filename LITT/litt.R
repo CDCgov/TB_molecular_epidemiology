@@ -246,8 +246,13 @@ fixIPnames <- function(df, log) {
 ##df = dataframe with variable (list of additional risk factors, which correspond to column names in caseData) and weight
 ##log = where to write messages to
 fixRfTable <- function(df, log) {
-  df = df[!apply(df, 1, function(x) all(is.na(x))),
-          !apply(df, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
+  #remove rows and columns that are all NA
+  if(any(apply(df, 1, function(x) all(is.na(x))))) {
+    df = df[!apply(df, 1, function(x) all(is.na(x))),]  
+  }
+  if(any(apply(df, 2, function(x) all(is.na(x))))) {
+    df = df[,!apply(df, 2, function(x) all(is.na(x)))]  
+  }
   ###clean up headers
   ##variable
   col = grepl("risk[ .]*factor", names(df), ignore.case = T) | grepl("variable", names(df), ignore.case = T)
@@ -539,6 +544,14 @@ writeAllSourcesTable <- function(littResults, outPrefix, stcasenolab = F) {
   ##move rank and scores first
   cat = cat[,c(1:2, 9, 7:8, 3:6, 10)]
   
+  ##check that there are filtered sources
+  filt = littResults$filteredSources
+  if(nrow(filt)==0) {
+    temp = data.frame("all cases passed the filters for all given cases", "", "", stringsAsFactors = F)
+    names(temp) = names(filt)
+    filt = temp
+  }
+  
   ##write
   fileName=paste(outPrefix, psFileName, sep="")
   wb = writeExcelTable(fileName=fileName,
@@ -550,7 +563,7 @@ writeAllSourcesTable <- function(littResults, outPrefix, stcasenolab = F) {
   wb = writeExcelTable(fileName=fileName,
                        workbook=wb,
                        sheetName = "filtered cases",
-                       df = littResults$filteredSources,
+                       df = filt,
                        stcasenolab = stcasenolab)
 }
 

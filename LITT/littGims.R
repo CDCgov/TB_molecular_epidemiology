@@ -639,199 +639,199 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   names(addlRiskFactor)[names(addlRiskFactor) == "ID"] = "STCASENO"
   
   ##if Excel spreadsheet already exists, delete file; otherwise will note generate file, and if old table is bigger, will get extra rows from old table
-outputExcelFiles = ""
-    # outputExcelFiles = paste(outPrefix, c(epiFileName, dateFileName, caseFileName, txFileName, psFileName, rfFileName, 
-  #                                       distFileName, heatmapFileName), sep="")
-  # if(any(file.exists(outputExcelFiles))) {
-  #   outputExcelFiles = outputExcelFiles[file.exists(outputExcelFiles)]
-  #   file.remove(outputExcelFiles)
-  # }
-  # 
-  # ####write results
-  # ###write out the dates
-  # write = dates
-  # if(!all(is.na(infectiousPeriod))) {
-  #   loclIP = data.frame(STCASENO = inputIP$STCASENO,
-  #                       inputIPStart = convertToDate(inputIP$IPStart),
-  #                       inputIPEnd = convertToDate(inputIP$IPEnd))
-  # } else {
-  #   loclIP = data.frame(STCASENO = write$STCASENO,
-  #                       inputIPStart = as.Date(NA),
-  #                       inputIPEnd = as.Date(NA))
-  # }
-  # write = merge(loclIP, write, by = "STCASENO", all.y=T)
-  # if(!all(is.na(sxOnset))) {
-  #   so = data.frame(STCASENO = inputSx$STCASENO,
-  #                   inputSxOnset = inputSx$sxOnset)
-  # } else {
-  #   so = data.frame(STCASENO = write$STCASENO,
-  #                   inputSxOnset = as.Date(NA))
-  # }
-  # write = merge(so, write, by="STCASENO", all.y=T)
-  # ##write dates separately
-  # if(writeDate) {
-  #   datewrite = write
-  #   for(c in 2:ncol(datewrite)) {
-  #     datewrite[,c] = format(datewrite[,c], "%m/%d/%Y")
+  outputExcelFiles = ""
+  outputExcelFiles = paste(outPrefix, c(epiFileName, dateFileName, caseFileName, txFileName, psFileName, rfFileName,
+                                        distFileName, heatmapFileName), sep="")
+  if(any(file.exists(outputExcelFiles))) {
+    outputExcelFiles = outputExcelFiles[file.exists(outputExcelFiles)]
+    file.remove(outputExcelFiles)
+  }
+
+  ####write results
+  ###write out the dates
+  write = dates
+  if(!all(is.na(infectiousPeriod))) {
+    loclIP = data.frame(STCASENO = inputIP$STCASENO,
+                        inputIPStart = convertToDate(inputIP$IPStart),
+                        inputIPEnd = convertToDate(inputIP$IPEnd))
+  } else {
+    loclIP = data.frame(STCASENO = write$STCASENO,
+                        inputIPStart = as.Date(NA),
+                        inputIPEnd = as.Date(NA))
+  }
+  write = merge(loclIP, write, by = "STCASENO", all.y=T)
+  if(!all(is.na(sxOnset))) {
+    so = data.frame(STCASENO = inputSx$STCASENO,
+                    inputSxOnset = inputSx$sxOnset)
+  } else {
+    so = data.frame(STCASENO = write$STCASENO,
+                    inputSxOnset = as.Date(NA))
+  }
+  write = merge(so, write, by="STCASENO", all.y=T)
+  ##write dates separately
+  if(writeDate) {
+    datewrite = write
+    for(c in 2:ncol(datewrite)) {
+      datewrite[,c] = format(datewrite[,c], "%m/%d/%Y")
+    }
+    writeExcelTable(fileName=paste(outPrefix, dateFileName, sep=""),
+                    sheetName = "dates",
+                    df = datewrite,
+                    stcasenolab = T,
+                    wrapHeader = T)
+  } else {
+    outputExcelFiles = outputExcelFiles[!grepl(dateFileName, outputExcelFiles)]
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 7)
+  }
+
+  ###write out other case data variables
+  ##remove all dates but earliest and IP
+  write = write[,names(write) %in% c("STCASENO", "earliestDate")]
+  ##add variables of interest (included in all output, but not in risk factors)
+  gimsVars = data.frame(STCASENO = gimsCases$STCASENO,
+                        accessionNumber = sapply(gimsCases$STCASENO, getAccessionNumber),
+                        zipcode = gimsCases$ZIPCODE,
+                        county = gimsCases$COUNTY,
+                        state = gimsCases$STATE,
+                        gender = gimsCases$SEX,
+                        RACEHISP = gimsCases$RACEHISP,
+                        age = gimsCases$AGE3)
+  write = merge(gimsVars, write, by="STCASENO")
+  write = merge(write, littCaseData, by = "STCASENO")
+  write = write[,c(which(names(write)=="STCASENO"), which(names(write)=="accessionNumber"),
+                   which(names(write)=="earliestDate"), which(names(write)=="IPStart"),
+                   which(names(write)=="IPEnd"),
+                   which(!names(write) %in% c("STCASENO", "accessionNumber", "earliestDate", "IPStart", "IPEnd")))]#do dates first
+  write$sequenceAvailable = write$STCASENO %in% colnames(dist)
+
+
+  # if(any(!is.na(gimsRiskFactor))) {
+  #   if(any(names(gimsRiskFactor)=="weight")) {
+  #     gimsRiskFactor = gimsRiskFactor[gimsRiskFactor$weight == 0,] #negative numbers indicate do not want variable in output, postive values will be in addlRiskFactor
   #   }
-  #   writeExcelTable(fileName=paste(outPrefix, dateFileName, sep=""), 
-  #                   sheetName = "dates",
-  #                   df = datewrite,
-  #                   stcasenolab = T,
-  #                   wrapHeader = T)
-  # } else {
-  #   outputExcelFiles = outputExcelFiles[!grepl(dateFileName, outputExcelFiles)] 
-  # }
-  # if(all(class(progress)!="logical")) {
-  #   progress$set(value = 7) 
-  # }
-  # 
-  # ###write out other case data variables
-  # ##remove all dates but earliest and IP
-  # write = write[,names(write) %in% c("STCASENO", "earliestDate")]
-  # ##add variables of interest (included in all output, but not in risk factors)
-  # gimsVars = data.frame(STCASENO = gimsCases$STCASENO,
-  #                       accessionNumber = sapply(gimsCases$STCASENO, getAccessionNumber),
-  #                       zipcode = gimsCases$ZIPCODE,
-  #                       county = gimsCases$COUNTY,
-  #                       state = gimsCases$STATE,
-  #                       gender = gimsCases$SEX,
-  #                       RACEHISP = gimsCases$RACEHISP,
-  #                       age = gimsCases$AGE3)
-  # write = merge(gimsVars, write, by="STCASENO")
-  # write = merge(write, littCaseData, by = "STCASENO")
-  # write = write[,c(which(names(write)=="STCASENO"), which(names(write)=="accessionNumber"),
-  #                  which(names(write)=="earliestDate"), which(names(write)=="IPStart"),
-  #                  which(names(write)=="IPEnd"), 
-  #                  which(!names(write) %in% c("STCASENO", "accessionNumber", "earliestDate", "IPStart", "IPEnd")))]#do dates first
-  # write$sequenceAvailable = write$STCASENO %in% colnames(dist)
-  # 
-  # 
-  # # if(any(!is.na(gimsRiskFactor))) {
-  # #   if(any(names(gimsRiskFactor)=="weight")) {
-  # #     gimsRiskFactor = gimsRiskFactor[gimsRiskFactor$weight == 0,] #negative numbers indicate do not want variable in output, postive values will be in addlRiskFactor
-  # #   }
-  # #   if(nrow(gimsRiskFactor)) {
-  # #     write = merge(write, gimsCases[,names(gimsCases) %in% c("STCASENO", as.character(gimsRiskFactor$variable))], by="STCASENO", all.x=T)
-  # #   }
-  # # }
-  # 
-  # if(any(!is.na(littResults$rfWeights))) {
-  #   # write[] = lapply(write, as.character) #convert to character
-  #   # write = rbind(write,
-  #   #               c("weight", sapply(names(write)[-1], function(v) {
-  #   #                 ifelse(v %in% littResults$rfWeights$variable,
-  #   #                        littResults$rfWeights$weight[littResults$rfWeights$variable==v], "")
-  #   #               })))
-  #   if(any(!is.na(gimsRiskFactor))) { #clean gims risk factor names so it will be consistent with case data table
-  #     # gRFs = littResults$rfWeights$variable %in% gimsRiskFactor$variable
-  #     # cleanNames = cleanGimsRiskFactorNames(littResults$rfWeights$variable[gRFs])
-  #     # littResults$rfWeights$variable[gRFs] = cleanNames
-  #     littResults$rfWeights$variable = cleanGimsRiskFactorNames(littResults$rfWeights$variable)
+  #   if(nrow(gimsRiskFactor)) {
+  #     write = merge(write, gimsCases[,names(gimsCases) %in% c("STCASENO", as.character(gimsRiskFactor$variable))], by="STCASENO", all.x=T)
   #   }
-  #   littResults$rfWeights$variable = gsub(".", " ", littResults$rfWeights$variable, fixed=T)
-  #   writeExcelTable(fileName=paste(outPrefix, rfFileName, sep=""),
-  #                   df = littResults$rfWeights,
-  #                   filter=F)
-  #   if(all(class(progress)!="logical")) {
-  #     progress$set(value = 8) 
-  #   }
-  # } else {
-  #   outputExcelFiles = outputExcelFiles[!grepl(rfFileName, outputExcelFiles)]
   # }
-  # 
-  # if(nrow(littResults$epi)) {
-  #   write$numEpiLinks = sapply(write$STCASENO,
-  #                              function(sno) {
-  #                                return(sum(littResults$epi$case1==sno | littResults$epi$case2==sno))
-  #                              })
-  # } else {
-  #   write$numEpiLinks = 0
+
+  if(any(!is.na(littResults$rfWeights))) {
+    # write[] = lapply(write, as.character) #convert to character
+    # write = rbind(write,
+    #               c("weight", sapply(names(write)[-1], function(v) {
+    #                 ifelse(v %in% littResults$rfWeights$variable,
+    #                        littResults$rfWeights$weight[littResults$rfWeights$variable==v], "")
+    #               })))
+    if(any(!is.na(gimsRiskFactor))) { #clean gims risk factor names so it will be consistent with case data table
+      # gRFs = littResults$rfWeights$variable %in% gimsRiskFactor$variable
+      # cleanNames = cleanGimsRiskFactorNames(littResults$rfWeights$variable[gRFs])
+      # littResults$rfWeights$variable[gRFs] = cleanNames
+      littResults$rfWeights$variable = cleanGimsRiskFactorNames(littResults$rfWeights$variable)
+    }
+    littResults$rfWeights$variable = gsub(".", " ", littResults$rfWeights$variable, fixed=T)
+    writeExcelTable(fileName=paste(outPrefix, rfFileName, sep=""),
+                    df = littResults$rfWeights,
+                    filter=F)
+    if(all(class(progress)!="logical")) {
+      progress$set(value = 8)
+    }
+  } else {
+    outputExcelFiles = outputExcelFiles[!grepl(rfFileName, outputExcelFiles)]
+  }
+
+  if(nrow(littResults$epi)) {
+    write$numEpiLinks = sapply(write$STCASENO,
+                               function(sno) {
+                                 return(sum(littResults$epi$case1==sno | littResults$epi$case2==sno))
+                               })
+  } else {
+    write$numEpiLinks = 0
+  }
+  if(nrow(littResults$topRanked)) {
+    write$numTimesIsRank1 = sapply(write$STCASENO,
+                                   function(sno) {
+                                     return(sum(littResults$topRanked$source==sno))
+                                   })
+    write$numPotSourcesRanked1 = sapply(write$STCASENO,
+                                        function(sno) {
+                                          return(sum(littResults$topRanked$target==sno))
+                                        })
+  } else {
+    write$numTimesIsRank1 = 0
+    write$numPotSourcesRanked1 = 0
+  }
+  if(nrow(littResults$allPotentialSources)) {
+    write$totNumPotSources = sapply(write$STCASENO,
+                                    function(sno) {
+                                      return(sum(littResults$allPotentialSources$target==sno))
+                                    })
+  } else {
+    write$totNumPotSources = 0
+  }
+  # if(any(write$STCASENO=="weight")) {
+  #   write[write$STCASENO=="weight", names(write) %in% c("numEpiLinks", "numTimesIsRank1", "numPotSourcesRanked1", "totNumPotSources", "sequenceAvailable")] = NA #do not give numbers for weight
   # }
-  # if(nrow(littResults$topRanked)) {
-  #   write$numTimesIsRank1 = sapply(write$STCASENO, 
-  #                                  function(sno) {
-  #                                    return(sum(littResults$topRanked$source==sno))
-  #                                  })
-  #   write$numPotSourcesRanked1 = sapply(write$STCASENO, 
-  #                                       function(sno) {
-  #                                         return(sum(littResults$topRanked$target==sno))
-  #                                       })
-  # } else {
-  #   write$numTimesIsRank1 = 0
-  #   write$numPotSourcesRanked1 = 0
-  # }
-  # if(nrow(littResults$allPotentialSources)) {
-  #   write$totNumPotSources = sapply(write$STCASENO, 
-  #                                   function(sno) {
-  #                                     return(sum(littResults$allPotentialSources$target==sno))
-  #                                   })
-  # } else {
-  #   write$totNumPotSources = 0
-  # }
-  # # if(any(write$STCASENO=="weight")) {
-  # #   write[write$STCASENO=="weight", names(write) %in% c("numEpiLinks", "numTimesIsRank1", "numPotSourcesRanked1", "totNumPotSources", "sequenceAvailable")] = NA #do not give numbers for weight
-  # # }
-  # 
-  # ###add risk factors and weights
-  # if(any(!is.na(addlRiskFactor))) {
-  #   addlRiskFactor = addlRiskFactor[addlRiskFactor$STCASENO != "weight",]
-  #   write = merge(write, addlRiskFactor, by="STCASENO", all.x=T)
-  # }
-  # if(any(!is.na(printVars))) {
-  #   write = merge(write, printVars, by="STCASENO", all.x=T)
-  # }
-  # 
-  # ###write case data
-  # write = write[order(as.character(write$STCASENO)),] #without as.character, order will be weird because factors are out of order
-  # cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
-  # if(all(class(progress)!="logical")) {
-  #   progress$set(value = 9) #skip 8 unless have risk factors
-  # }
-  # 
-  # ###write epi links
-  # w = writeEpiTable(littResults, outPrefix, stcasenolab = T, log = log)
-  # if(!w) { #table not written, so do not include in output list
-  #   outputExcelFiles = outputExcelFiles[!grepl(epiFileName, outputExcelFiles)]
-  # }
-  # if(all(class(progress)!="logical")) {
-  #   progress$set(value = 10)
-  # }
-  # 
-  # ###write distance matrix if writeDist is true
-  # if(!all(is.na(dist)) & writeDist) {
-  #   writeDistTable(dist, outPrefix)
-  # } else {
-  #   outputExcelFiles = outputExcelFiles[!grepl(distFileName, outputExcelFiles)] 
-  # }
-  # 
-  # ###clean up and output transmission network
-  # w = writeTopRankedTransmissionTable(littResults, outPrefix, stcasenolab = T, log = log)
-  # if(!w) { #table not written, so do not include in output list
-  #   outputExcelFiles = outputExcelFiles[!grepl(txFileName, outputExcelFiles)]
-  # }
-  # if(all(class(progress)!="logical")) {
-  #   progress$set(value = 11)
-  # }
-  # 
-  # ###get categorical labels and combine source matrix and reason filtered into one Excel spreadsheet
-  # writeAllSourcesTable(littResults, outPrefix, stcasenolab = T)
-  # if(all(class(progress)!="logical")) {
-  #   progress$set(value = 12)
-  # }
-  # 
-  # ###generate heatmap if any cases are ranked
-  # if(nrow(littResults$topRanked)) {
-  #   littHeatmap(outPrefix = outPrefix, all = littResults$allPotentialSources)
-  # } else {
-  #   outputExcelFiles = outputExcelFiles[!grepl(heatmapFileName, outputExcelFiles)]
-  # }
-  # if(all(class(progress)!="logical")) {
-  #   progress$set(value = 13)
-  # }
-  # 
-  # write.table(littResults$summary, paste(outPrefix, "PotentialSources.txt", sep=""),
-  #             row.names = F, col.names = T, quote = F, sep = "\t") ##for consistency in other validation work
+
+  ###add risk factors and weights
+  if(any(!is.na(addlRiskFactor))) {
+    addlRiskFactor = addlRiskFactor[addlRiskFactor$STCASENO != "weight",]
+    write = merge(write, addlRiskFactor, by="STCASENO", all.x=T)
+  }
+  if(any(!is.na(printVars))) {
+    write = merge(write, printVars, by="STCASENO", all.x=T)
+  }
+
+  ###write case data
+  write = write[order(as.character(write$STCASENO)),] #without as.character, order will be weird because factors are out of order
+  cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 9) #skip 8 unless have risk factors
+  }
+
+  ###write epi links
+  w = writeEpiTable(littResults, outPrefix, stcasenolab = T, log = log)
+  if(!w) { #table not written, so do not include in output list
+    outputExcelFiles = outputExcelFiles[!grepl(epiFileName, outputExcelFiles)]
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 10)
+  }
+
+  ###write distance matrix if writeDist is true
+  if(!all(is.na(dist)) & writeDist) {
+    writeDistTable(dist, outPrefix)
+  } else {
+    outputExcelFiles = outputExcelFiles[!grepl(distFileName, outputExcelFiles)]
+  }
+
+  ###clean up and output transmission network
+  w = writeTopRankedTransmissionTable(littResults, outPrefix, stcasenolab = T, log = log)
+  if(!w) { #table not written, so do not include in output list
+    outputExcelFiles = outputExcelFiles[!grepl(txFileName, outputExcelFiles)]
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 11)
+  }
+
+  ###get categorical labels and combine source matrix and reason filtered into one Excel spreadsheet
+  writeAllSourcesTable(littResults, outPrefix, stcasenolab = T)
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 12)
+  }
+
+  ###generate heatmap if any cases are ranked
+  if(nrow(littResults$topRanked)) {
+    littHeatmap(outPrefix = outPrefix, all = littResults$allPotentialSources)
+  } else {
+    outputExcelFiles = outputExcelFiles[!grepl(heatmapFileName, outputExcelFiles)]
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 13)
+  }
+
+  write.table(littResults$summary, paste(outPrefix, "PotentialSources.txt", sep=""),
+              row.names = F, col.names = T, quote = F, sep = "\t") ##for consistency in other validation work
   littResults$outputFiles = c(log, outputExcelFiles)
   return(littResults)
 }
