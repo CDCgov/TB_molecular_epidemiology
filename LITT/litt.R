@@ -371,6 +371,7 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   names(df)[names(df)=="earliestDate"] = "Calculated Earliest Date"
   names(df)[names(df)=="IPStart"] = "Calculated Infectious Period Start"
   names(df)[names(df)=="IPEnd"] = "Calculated Infectious Period End"
+  names(df)[names(df)=="IAE"] = "Calculated Infection Acquisition End"
   # names(df)[names(df)=="infRate"] = "Infectious Category"
   names(df)[names(df)=="SPSMEAR"] = "Sputum Smear (SPSMEAR)"
   names(df)[names(df)=="XRAYCAV"] = "Evidence of Cavity by X-Ray (XRAYCAV)"
@@ -727,6 +728,24 @@ cleanEpi <- function(epi, cases, log) {
   return(epi)
 }
 
+##for the given data frame df, return a dataframe where the IP start date has been moved into a separate column (IAE for infection acquisition end) for pediatric and extrapulmonary cases
+splitPedEPDates <- function(df) {
+  df$IAE = as.Date(NA)
+  ##for pediatric cases, set IAE to IP start
+  df$IAE[df$Pediatric=="Y"] = df$IPStart[df$Pediatric=="Y"]
+  ##for extrapulmonary only cases, set IAE to IP start
+  df$IAE[df$ExtrapulmonaryOnly=="Y"] = df$IPStart[df$ExtrapulmonaryOnly=="Y"]
+  ##set IP to NA for pediatric and extrapul
+  df$IPStart[df$Pediatric=="Y"] = as.Date(NA)
+  df$IPEnd[df$Pediatric=="Y"] = as.Date(NA)
+  df$IPStart[df$ExtrapulmonaryOnly=="Y"] = as.Date(NA)
+  df$IPEnd[df$ExtrapulmonaryOnly=="Y"] = as.Date(NA)
+  ##move IAE to be the column after IP end
+  c = which(names(df)=="IPEnd")
+  df = df[,c(1:c,ncol(df),(c+1):(ncol(df)-1))]
+  return(df)
+}
+
 snpDefaultCut = 5
 expectedcolnames = c("ID", "XRAYCAV", "SPSMEAR", "ExtrapulmonaryOnly", "Pediatric", "IPStart", "IPEnd") #expected columns in case data
 optionalcolnames = "UserDateData" #optional columns in case data table
@@ -770,6 +789,7 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
     cat(paste("IP start is required, but is missing for:", paste(caseData$ID[is.na(caseData$IPStart)], collapse = ","), "\r\n"), 
         file = log, append = T)
     cat("These cases have been removed from the analysis\r\n", file = log, append = T)
+    caseData = caseData[!is.na(caseData$IPStart),]
   }
   if(nrow(caseData) < 2) {
     cat("LITT requires at least two cases, but there are ", nrow(caseData), 
@@ -1047,7 +1067,7 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
         allFilt = rbind(allFilt,
                         data.frame(target=target,
                                    filteredCase=sources[i], 
-                                   reasonFiltered=paste("given case earliest date - source IP start =",
+                                   reasonFiltered=paste("given case IP start - source IP start =",
                                                         round(time_length(difftime(tDate, sIPstart), "months"), digits=2),
                                                         "months with", timeCut, "month cutoff")))
         sources = sources[-i]

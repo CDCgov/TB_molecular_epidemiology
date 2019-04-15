@@ -12,8 +12,7 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
   ##format date/zip columns
   caseOut$IPStart = format(caseOut$IPStart, format="%m/%d/%Y")
   caseOut$IPEnd = format(caseOut$IPEnd, format="%m/%d/%Y")
-  
-  # names(caseOut) = gsub(".", " ", names(caseOut), fixed=T) #clean up risk factors
+  caseOut$IAE = format(caseOut$IAE, format="%m/%d/%Y")
   
   writeExcelTable(fileName=paste(outPrefix, caseFileName, sep=""),
                   sheetName = "case data",
@@ -238,7 +237,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   
   ###write case table
   write = write[order(as.character(write$ID)),] #without as.character, order will be weird because factors are out of order
-  cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
+  cleanCaseOutput(caseOut=splitPedEPDates(write), outPrefix=outPrefix)
   
   if(all(class(progress)!="logical")) {
     progress$set(value = 8) #skip 7 unless have rfs
@@ -286,5 +285,6 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   }
   
   littResults$outputFiles = c(log, outputExcelFiles)
+  littResults$caseData = write
   return(littResults)
 }

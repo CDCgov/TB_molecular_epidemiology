@@ -181,8 +181,7 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
   caseOut$earliestDate = format(caseOut$earliestDate, format="%m/%d/%Y")
   caseOut$IPStart = format(caseOut$IPStart, format="%m/%d/%Y")
   caseOut$IPEnd = format(caseOut$IPEnd, format="%m/%d/%Y")
-  
-  # names(caseOut) = gsub(".", " ", names(caseOut), fixed=T) #clean up risk factors
+  caseOut$IAE = format(caseOut$IAE, format="%m/%d/%Y")
   
   writeExcelTable(fileName=paste(outPrefix, caseFileName, sep=""),
                   sheetName = "case data",
@@ -638,6 +637,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   names(littCaseData)[names(littCaseData) == "ID"] = "STCASENO"
   names(addlRiskFactor)[names(addlRiskFactor) == "ID"] = "STCASENO"
   
+  ####write results
   ##if Excel spreadsheet already exists, delete file; otherwise will note generate file, and if old table is bigger, will get extra rows from old table
   outputExcelFiles = ""
   outputExcelFiles = paste(outPrefix, c(epiFileName, dateFileName, caseFileName, txFileName, psFileName, rfFileName,
@@ -784,7 +784,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
 
   ###write case data
   write = write[order(as.character(write$STCASENO)),] #without as.character, order will be weird because factors are out of order
-  cleanCaseOutput(caseOut=write, outPrefix=outPrefix)
+  cleanCaseOutput(caseOut=splitPedEPDates(write), outPrefix=outPrefix)
   if(all(class(progress)!="logical")) {
     progress$set(value = 9) #skip 8 unless have risk factors
   }
@@ -833,5 +833,6 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   write.table(littResults$summary, paste(outPrefix, "PotentialSources.txt", sep=""),
               row.names = F, col.names = T, quote = F, sep = "\t") ##for consistency in other validation work
   littResults$outputFiles = c(log, outputExcelFiles)
+  littResults$caseData = write
   return(littResults)
 }

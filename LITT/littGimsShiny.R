@@ -159,7 +159,7 @@ server <- function(input, output, session) {
                          gimsRiskFactor = gimsRF,
                          writeDate = input$writeDate,
                          writeDist = input$writeDist,
-                         appendlog = F,
+                         appendlog = T,
                          progress = progress)
       outfiles <<- littres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
@@ -215,7 +215,7 @@ server <- function(input, output, session) {
     updateCheckboxInput(session, "BNmat", value=T)
     updateCheckboxInput(session, "writeDist", value=T)
     updateCheckboxInput(session, "writeDate", value=F)
-    updateTextInput(session,"caseListManual",value="") 
+    updateTextInput(session, inputID = "caseListManual", value="") 
   })
   
   ##if any inputs change, hide download button and remove output message
