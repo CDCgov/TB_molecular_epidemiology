@@ -471,8 +471,9 @@ cleanGimsRiskFactorNames <- function(names) {
 ##snpRate = if true, SNP column is SNP rating, otherwise is SNP distance
 ##save = if true, save the workbook
 ##filter = if true, add a filter
+##gcLines = if true, add a line between given cases
 writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHeader=F, stcasenolab = F, snpRate = F, 
-                          save = T, filter = T) {
+                          save = T, filter = T, gcLines = F) {
   df = cleanHeaderForOutput(df, stcasenolab = stcasenolab, snpRate = snpRate)
   if(class(workbook)!="jobjRef") {
     workbook = createWorkbook()
@@ -521,6 +522,18 @@ writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHea
   if(filter) {
     addAutoFilter(sheet = sheet, cellRange =paste("A1:", lastcol$getReference(), sep=""))
   }
+  ##add lines between given cases
+  if(gcLines & nrow(df) > 1) {
+    for(r in 1:(nrow(df)-1)) {
+      if(df$`Given Case`[r] != df$`Given Case`[r+1]) {
+        for(c in 1:ncol(df)) {
+          setCellStyle(cells[[r+1,c]], CellStyle(workbook) + Border(position="BOTTOM"))
+        }
+        gc = df$`Given Case`[r]
+      } 
+    }
+  }
+  ##save workbook
   if(save) {
     saveWorkbook(workbook, fileName)
   }
@@ -560,12 +573,14 @@ writeAllSourcesTable <- function(littResults, outPrefix, stcasenolab = F) {
                        df = cat,
                        stcasenolab = stcasenolab,
                        snpRate = T,
-                       save = F)
+                       save = F,
+                       gcLines = T)
   wb = writeExcelTable(fileName=fileName,
                        workbook=wb,
                        sheetName = "filtered cases",
                        df = filt,
-                       stcasenolab = stcasenolab)
+                       stcasenolab = stcasenolab,
+                       gcLines = T)
 }
 
 ##for the given set of litt results (littResults, which is returned from LITT)
