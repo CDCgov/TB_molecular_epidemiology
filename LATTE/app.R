@@ -1,3 +1,5 @@
+###LATTE Shiny interface
+
 library(shiny)
 library(shinyjs)
 

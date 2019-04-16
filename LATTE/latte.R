@@ -532,7 +532,8 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
 ##for the given loc and ip tables, draw a timeline of dates of stay and IPs, one figure per location
 ###only include cases at the location
 ###only include times at the location (don't show IP if not on plot)
-timelineFig <- function(outPrefix, loc, ip) {
+###if certLegOnly is true, only show the dark blue in the legend as "time" without certainty (for simplified presentations)
+timelineFig <- function(outPrefix, loc, ip, certLegOnly=F) {
   for(l in unique(loc$Location)) {
     sub = loc[loc$Location==l,]
     lcases = sort(unique(sub$ID))
@@ -569,15 +570,25 @@ timelineFig <- function(outPrefix, loc, ip) {
         }
       }
     }
-    ##add legend
+    ##add legend (only include the strengths in the table)
     par(mar=c(.1,4,.1,.3))
     plot(NA, xaxt="n", yaxt="n", bty="n", xlim=c(0,1), ylim=c(0,1), xlab="", ylab="")
-    legend("center", 
-           horiz=T,
-           legend=c("Certain time in location", "Uncertain time in location", "Infectious period"),
-           col=c("blue", "lightskyblue", "red"),
-           lwd=2,
-           bty="n")
+    if(certLegOnly) {
+      legend("center", 
+             horiz=T,
+             legend=c("Time in location", "Infectious period"),
+             col=c("blue", "red"),
+             lwd=2,
+             bty="n",
+             cex=1.3)
+    } else {
+      legend("center", 
+             horiz=T,
+             legend=c("Certain time in location", "Uncertain time in location", "Infectious period"),
+             col=c("blue", "lightskyblue", "red"),
+             lwd=2,
+             bty="n")
+    }
     dev.off()
   }
 }
