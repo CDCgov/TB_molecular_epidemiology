@@ -202,7 +202,7 @@ fixIPnames <- function(df, log) {
       return(NA)
     } else if(sum(col) < 1) {
       warning("No infectious period (IP) start column, so user-input IP was not used in the analysis.\r\nPlease add a column named IPStart in case data table to have user IP in analysis.\r\n")
-      cat("No infectious period (IP) start column, so user-input IP was not used in the analysis.\r\nPlease add a column named IPStart in case data table to have user IP in analysis.\r\n", 
+      cat("No infectious period (IP) start column, so user-input IP was not used in the analysis.\r\nPlease add a column named IPStart in case data table and make sure that it contains dates to have user IP in analysis.\r\n", 
           file = log, append = T)
       return(NA)
     }
@@ -222,7 +222,7 @@ fixIPnames <- function(df, log) {
     } else if(sum(col) < 1) {
       cat("No infectious period (IP) end column, so user-input IP end was not used in the analysis.\r\nPlease add a column named IPEnd to case data table to use IP end in analysis.\r\n", 
           file = log, append = T)
-      warning("No infectious period (IP) end column, so user-input IP end was not used in the analysis.\r\nPlease add a column named IPEnd to case data table to use IP end in analysis.\r\n")
+      warning("No infectious period (IP) end column, so user-input IP end was not used in the analysis.\r\nPlease add a column named IPEnd to case data table and make sure it has dates to use IP end in analysis.\r\n")
       df$IPEnd = NA
     }
     
@@ -239,6 +239,8 @@ fixIPnames <- function(df, log) {
       }
     }
   }
+  df$IPStart = convertToDate(df$IPStart)
+  df$IPEnd = convertToDate(df$IPEnd)
   return(df)
 }
 
@@ -305,6 +307,66 @@ fixRfTable <- function(df, log) {
   ##variable names to match R modifying column names
   df$variable = make.names(df$variable)
   return(df)
+}
+
+##for the given data frame, which contains case data, check to see if infectection acquisition end for ped and extrapulm is present
+##return data frame with IAE column name correct formatted and converted to date
+fixIAE <- function(caseData, log) {
+  col = names(caseData)=="IAE" | grepl("infection[ .]*acquisition[ .]*end", names(caseData), ignore.case = T)
+  if(sum(col) == 1) {
+    names(caseData)[col] = "IAE"
+    caseData$IAE = convertToDate(caseData$IAE)
+  } else if(sum(col) > 1) {
+    warning(paste("More than one column for infection acquisition end (IAE):", paste(names(caseData)[col], collapse = ", ")),
+            "\r\nPlease label one column infection acquisitin end in case data table.\r\n User-input IAE was not used in this analysis.")
+    cat(paste("More than one column for infection acquisition end (IAE):", paste(names(caseData)[col], collapse = ", ")),
+        "\r\nPlease label one column infection acquisitin end in case data table.\r\n User-input IAE was not used in this analysis.\r\n", 
+        file = log, append = T)
+    caseData = caseData[,names(caseData)!="IAE"]
+  } 
+  return(caseData)
+}
+
+##for the given data frame, which contains case data, check to see if infectection acquisition end for ped and extrapulm is present
+##if present, merge with IP start and delete so it can be used by LITT algorithm
+##return table
+mergeIAEtoIPstart <- function(caseData, log) {
+  caseData = fixIAE(caseData, log)
+  if("IAE" %in% names(caseData)) {
+    if("Pediatric" %in% names(caseData) & "ExtrapulmonaryOnly" %in% names(caseData)) {
+      ##only use IAE for pediatric and extrapulm cases
+      caseData$IPStart[!is.na(caseData$Pediatric) & caseData$Pediatric=="Y"] = caseData$IAE[!is.na(caseData$Pediatric) & caseData$Pediatric=="Y"]
+      caseData$IPEnd[!is.na(caseData$Pediatric) & caseData$Pediatric=="Y"] = as.Date(NA)
+      caseData$IPStart[!is.na(caseData$ExtrapulmonaryOnly) & caseData$ExtrapulmonaryOnly=="Y"] = caseData$IAE[!is.na(caseData$ExtrapulmonaryOnly) & caseData$ExtrapulmonaryOnly=="Y"]
+      caseData$IPEnd[!is.na(caseData$ExtrapulmonaryOnly) & caseData$ExtrapulmonaryOnly=="Y"] = as.Date(NA)
+      ##for other cases, use IP start but message if IP start later than IAE; if only IAE, IP start is 3 months before IAE
+      for(r in 1:nrow(caseData)) {
+        if(!is.na(caseData$Pediatric[r]) & caseData$Pediatric[r]!="N" & 
+           !is.na(caseData$ExtrapulmonaryOnly[r]) & caseData$ExtrapulmonaryOnly[r] != "N") {
+          if(!is.na(caseData$IPStart[r]) & !is.na(caseData$IAE[r])) {
+            if(caseData$IAE[r] < caseData$IPStart[r]) {
+              cat(paste("Infection acquisition end should be after IP start but is before IP start for ", caseData$ID[r],
+                        ". IP start will be used but user should check date calculations.", sep=""), 
+                  file = log, append = T)
+            } else if(is.na(caseData$IPStart[r]) & !is.na(caseData$IAE[r])) {
+              caseData$IPStart[r] = caseData$IAE[r] %m-% months(3)
+            }
+          }
+        }
+      }
+      ##remove IAE from case data
+      caseData = caseData[,names(caseData) != "IAE"]
+    } else if(!"Pediatric" %in% names(caseData)) {
+      stop("Case data table must have a column named Pediatric that indicates whether the case is < 10 years old")
+      cat("Case data table must have a column named Pediatric that indicates whether the case is < 10 years old.",
+          file = log, append = T)
+    } else {
+      stop("Case data table must have a column named ExtrapulmonaryOnly that indicates whether the case only had extrapulmonary TB")
+      cat("Case data table must have a column named ExtrapulmonaryOnly that indicates whether the case only had extrapulmonary TB.",
+          file = log, append = T)
+    }
+  }
+  return(caseData)
 }
 
 ##remove first X from names if they are supposed to start with a number (e.g. column names of distance matrix)
@@ -497,7 +559,7 @@ writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHea
       if(!is.na(df[r,c])) {
         if(as.character(df[r,c])!="") {
           if(all(grepl("[0-9.]", strsplit(as.character(df[r,c]), "")[[1]]))) {
-            setCellValue(cells[[r+1,c]], as.numeric(df[r,c]))
+            setCellValue(cells[[r+1,c]], as.numeric(as.character(df[r,c])))
           } else {
             setCellValue(cells[[r+1,c]], df[r,c])
           }
@@ -831,7 +893,7 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
   caseData$Pediatric = as.character(caseData$Pediatric)
   bad = is.na(caseData$Pediatric) | !caseData$Pediatric %in% c("Y", "N")
   if(any(bad)) {
-    cat(paste("Pediatric results are missing from the following cases, which will be assumed to be adult:", 
+    cat(paste("Pediatric results are missing from the following cases, which will be assumed to be adult:",
               paste(caseData$ID[bad], collapse = ","), "\r\n"), file = log, append = T)
     caseData$Pediatric[bad] = "N"
   }
@@ -1316,5 +1378,6 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
               topRanked = allTx, 
               summary=results, 
               epi = epi,
-              rfWeights = rfWeights))
+              rfWeights = rfWeights,
+              caseData = caseData))
 }

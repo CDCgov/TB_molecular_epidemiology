@@ -21,8 +21,9 @@ fileinfo = file.info(paste(gimsExportFolder, gimsAllFiles, sep=""))
 gimsAllName = row.names(fileinfo)[fileinfo$ctime==max(fileinfo$ctime)] #ctime = creation time
 cat(paste("GIMS export file:", gimsAllName, "\r\n"))
 gimsAll = read_sas(gimsAllName)
+names(gimsPt) = tolower(names(gimsPt)) #sometimes is Stcaseno, sometimes stcaseno
 gimsAll = merge(gimsAll,
-                data.frame(STCASENO=gimsPt$Stcaseno,
+                data.frame(STCASENO=gimsPt$stcaseno,
                            sp_coll_date=gimsPt$sp_coll_date),
                 by="STCASENO",
                 all = T)
@@ -309,7 +310,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   epi = fixEpiNames(epi, log)
   colnames(dist) = removeXFromNames(colnames(dist))
   
-  ##split
+  ###split
   sxOnset = fixSxOnsetNames(caseData, log) #data frame with columns titled stcaseno (state case number) and sxOnset (symptom onset or earliest diagnostic finding) -> optional ideal input
   if("sxOnset" %in% names(sxOnset)) {
     sxOnset = sxOnset[,names(sxOnset) %in% c("STCASENO", "sxOnset")]
@@ -321,6 +322,14 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
     names(infectiousPeriod)[names(infectiousPeriod)=="ID"] = "STCASENO"
     infectiousPeriod = infectiousPeriod[,names(infectiousPeriod) %in% c("STCASENO", "IPStart", "IPEnd")]
   }
+  iae = fixIAE(caseData) #for printing
+  if("IAE" %in% names(iae)) {
+    names(iae)[names(iae)=="ID"] = "STCASENO"
+    iae = iae[,c("STCASENO", "IAE")]
+  } else {
+    iae=NA
+  }
+  
   ####split out additional risk factors
   addlRiskFactor=NA #data frame with first column titled stcaseno (state case number) and remaining columns represent additional variables with Y or N for additional risk variables (ex Y or N for whether the case was in a homeless shelter) -> optional
   # if(!all(names(caseData) %in% c("STCASENO", "sxOnset", "IPStart", "IPEnd"))) { #have RFs
@@ -448,11 +457,53 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
     dates$sxOnset = as.Date(NA)
   }
   
+  # ##update earliest date with infection acquisition end if available
+  # if(!all(is.na(iae))) {
+  #   iae3 = iae
+  #   iae3$IAE = iae$IAE %m+% months(3) #because 3 months will be subtracted if it is the earliest date
+  #   dates = merge(dates, iae3, by = "STCASENO", all.x=T)
+  # }
+  ##merge infectious acqusition end with infectious period if available
+  # if(!all(is.na(iae))) {
+  #   iae = iae[iae$STCASENO %in% cases,]
+  #   iae$STCASENO = as.character(iae$STCASENO)
+  #   infectiousPeriod$STCASENO = as.character(infectiousPeriod$STCASENO)
+  #   if(all(is.na(infectiousPeriod))) {
+  #     infectiousPeriod = iae
+  #     names(infectiousPeriod)[2] = "IPStart"
+  #     infectiousPeriod$IPEnd = as.Date(NA)
+  #   } else {
+  #     for(r in 1:nrow(iae)) {
+  #       if(!iae$STCASENO[r] %in% infectiousPeriod$STCASENO) { #have IAE but not in IP
+  #         infectiousPeriod = rbind(infectiousPeriod,
+  #                                  data.frame(STCASENO = iae$STCASENO[r],
+  #                                             IPStart = iae$IAE[r],
+  #                                             IPEnd = as.Date(NA)))
+  #       } else if(!is.na(iae$IAE[r])) { #set IPStart to min of IAE and IP start
+  #         ips = infectiousPeriod$IPStart[infectiousPeriod$STCASENO==iae$STCASENO[r]]
+  #         if(!is.na(ips) & ips != iae$IAE[r]) {
+  #           cat(paste0("Infectious period start and infection acquisition end were both provided for ", iae$STCASENO[r], 
+  #               ", but they are not the same. The earlier of the two dates will be used as IP Start.\r\n"), file = log, append = T)
+  #         }
+  #         infectiousPeriod$IPStart[infectiousPeriod$STCASENO==iae$STCASENO[r]] = min(iae$IAE[r],ips, na.rm = T)
+  #       }
+  #     }
+  #   }
+  # }
+  ##merge IP and infection acquisition window if needed
+  if(!all(is.na(iae))) {
+    temp = merge(littCaseData, iae, by="STCASENO")
+    if(!all(is.na(infectiousPeriod))) {
+      temp = merge(temp, infectiousPeriod, by= "STCASENO")
+    }
+    infectiousPeriod = mergeIAEtoIPstart(temp, log)
+    infectiousPeriod = infectiousPeriod[,c("STCASENO", "IPStart", "IPEnd")]
+  }
+  
   ##if infectious period start is provided but symptom onset is missing, define symptom onset as IP start + 3 months
   if((all(is.na(sxOnset)) | any(is.na(dates$sxOnset))) & #missing symptom onset dates
      any(!is.na(infectiousPeriod))) { #but have IP start
     infectiousPeriod = infectiousPeriod[infectiousPeriod$STCASENO %in% cases,]
-    inputIP = infectiousPeriod
     dates$sxOnset = calcSxOnset(dates$STCASENO, dates$sxOnset, infectiousPeriod$STCASENO, infectiousPeriod$IPStart)
   }
   dates$earliestDate = convertToDate(apply(dates[,-1], 1, min, na.rm=T))
@@ -506,9 +557,9 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   }
   
   littCaseData = merge(littCaseData, dates[,names(dates) %in% c("STCASENO", "IPStart", "IPEnd")], by="STCASENO", all = T)
-  if(any(!is.na(infectiousPeriod))) {
-    infectiousPeriod$IPStart = convertToDate(infectiousPeriod$IPStart)
-  }
+  # if(any(!is.na(infectiousPeriod))) {
+  #   infectiousPeriod$IPStart = convertToDate(infectiousPeriod$IPStart)
+  # }
   littCaseData$UserDateData = sapply(littCaseData$STCASENO, caseInInputs, sxOnset, infectiousPeriod)
   
   if(all(class(progress)!="logical")) {
@@ -634,6 +685,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   names(addlRiskFactor)[names(addlRiskFactor) == "STCASENO"] = "ID"
   littResults = litt(caseData = littCaseData, epi = epi, dist = dist, SNPcutoff = SNPcutoff, addlRiskFactor = addlRiskFactor,
                      progress = progress, log = log)
+  littCaseData = littResults$caseData
   names(littCaseData)[names(littCaseData) == "ID"] = "STCASENO"
   names(addlRiskFactor)[names(addlRiskFactor) == "ID"] = "STCASENO"
   

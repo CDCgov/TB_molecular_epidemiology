@@ -68,6 +68,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   ####check inputs
   caseData = caseData[!apply(caseData, 1, function(x) all(is.na(x))),
                       !apply(caseData, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
+  names(caseData) = paste0(toupper(substring(names(caseData),1,1)), substring(names(caseData), 2)) #make sure have correct capitalization (e.g. Pediatric, not pediatric)
   if(all(is.na(caseData))) {
     cat("A case data table is required\r\n", file = log, append = T)
     stop("A case data table is required")
@@ -92,13 +93,16 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   ###check IP start present
   caseData = fixIPnames(caseData, log)
   if(!"IPStart" %in% names(caseData) || !"IPEnd" %in% names(caseData)) {
-    cat("The case data table must contain columns called IPStart and IPEnd, which indicate infectious period start and end for each case\r\n", 
+    cat("The case data table must contain columns called IPStart and IPEnd, with dates, which indicate infectious period start and end for each case.\r\n", 
         file = log, append = T)
-    stop("Infectious period (columns named IPStart and IPEnd) is required in case data table")
+    stop("Infectious period (columns named IPStart and IPEnd) is required in case data table.")
   }
   caseData$IPStart = convertToDate(caseData$IPStart)
   caseData$IPEnd = convertToDate(caseData$IPEnd)
-
+  
+  ###merge IP and infection acquisition window if needed
+  caseData = mergeIAEtoIPstart(caseData, log)
+  
   ####split out additional risk factors
   # addlRiskFactor=NA 
   # if(!all(names(caseData) %in% c(expectedcolnames, optionalcolnames))) { #have RFs
@@ -110,6 +114,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   if(!all(is.na(rfTable))) {
     rfTable = fixRfTable(rfTable, log)
     if(!all(is.na(rfTable))) {
+      rfTable$variable = paste0(toupper(substring(rfTable$variable,1,1)), substring(rfTable$variable, 2)) #capitalized the first letter in case data table
       if(any(!rfTable$variable %in% names(caseData))) { #extra variables not in case data table
         miss = !rfTable$variable %in% names(caseData)
         cat("The following variables are in the risk factor table but not in the case data table, so will not be used in analysis: ",
@@ -177,6 +182,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   ####run litt
   littResults = litt(caseData = caseData, epi = epi, dist = dist, SNPcutoff = SNPcutoff, addlRiskFactor = addlRiskFactor,
                      progress = progress, log = log)
+  caseData = littResults$caseData
   
   ####write results
   ###if Excel spreadsheet already exists, delete file; otherwise will note generate file, and if old table is bigger, will get extra rows from old table
