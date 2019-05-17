@@ -511,7 +511,6 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   ##calculate infectious period start
   if(any(!is.na(infectiousPeriod))) {
     infectiousPeriod = infectiousPeriod[infectiousPeriod$STCASENO %in% cases,]
-    inputIP = infectiousPeriod
     dates = merge(dates, infectiousPeriod, by="STCASENO", all.x = T)
     dates$IPStart = convertToDate(dates$IPStart)
     dates$IPEnd = convertToDate(dates$IPEnd)
@@ -702,7 +701,16 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   ####write results
   ###write out the dates
   write = dates
-  if(!all(is.na(infectiousPeriod))) {
+  ##merge inputs
+  if(all(is.na(iae))) {
+    iae = data.frame(STCASENO = write$STCASENO,
+                     inputIAE = as.Date(NA))
+  } else {
+    iae = data.frame(STCASENO = iae$STCASENO,
+                     inputIAE = convertToDate(iae$IAE))
+  }
+  write = merge(iae, write, by = "STCASENO", all.y=T)
+  if(!all(is.na(inputIP))) {
     loclIP = data.frame(STCASENO = inputIP$STCASENO,
                         inputIPStart = convertToDate(inputIP$IPStart),
                         inputIPEnd = convertToDate(inputIP$IPEnd))
@@ -720,6 +728,11 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
                     inputSxOnset = as.Date(NA))
   }
   write = merge(so, write, by="STCASENO", all.y=T)
+  ##split IAE and IP
+  temp = splitPedEPDates(merge(write, littCaseData[,c("STCASENO", "ExtrapulmonaryOnly", "Pediatric")], by = "STCASENO", all=T))
+  write$IPStart = temp$IPStart
+  write$IPEnd = temp$IPEnd
+  write$IAE = temp$IAE
   ##write dates separately
   if(writeDate) {
     datewrite = write

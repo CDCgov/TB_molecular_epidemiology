@@ -464,6 +464,7 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   names(df) = cleanGimsRiskFactorNames(names(df))
   
   ##additional variables in date file
+  names(df)[names(df)=="inputIAE"] = "Input Infection Acquisition End"
   names(df)[names(df)=="inputSxOnset"] = "Input Symptom Onset Date"
   names(df)[names(df)=="inputIPStart"] = "Input Infectious Period Start"
   names(df)[names(df)=="inputIPEnd"] = "Input Infectious Period End"
@@ -819,7 +820,9 @@ splitPedEPDates <- function(df) {
   df$IPEnd[df$ExtrapulmonaryOnly=="Y"] = as.Date(NA)
   ##move IAE to be the column after IP end
   c = which(names(df)=="IPEnd")
-  df = df[,c(1:c,ncol(df),(c+1):(ncol(df)-1))]
+  if(c!=ncol(df)-1) { #otherwise already at end
+    df = df[,c(1:c,ncol(df),(c+1):(ncol(df)-1))]
+  }
   return(df)
 }
 
