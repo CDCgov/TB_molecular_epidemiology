@@ -90,6 +90,8 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
     stop("LITT requires at least two cases, but there are ", nrow(caseData))
   }
   
+  caseData = fixPresumedSource(caseData)
+  
   ###check IP start present
   caseData = fixIPnames(caseData, log)
   if(!"IPStart" %in% names(caseData) || !"IPEnd" %in% names(caseData)) {

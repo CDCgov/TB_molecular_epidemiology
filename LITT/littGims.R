@@ -307,6 +307,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   ####check inputs
   ##fix field names
   caseData = fixStcasenoName(caseData)
+  caseData = fixPresumedSource(caseData)
   epi = fixEpiNames(epi, log)
   colnames(dist) = removeXFromNames(colnames(dist))
   
@@ -365,7 +366,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
       }
     }
   }
-  caseData=caseData[,names(caseData) %in% c(expectedcolnames, optionalcolnames)]
+  caseData=caseData[,names(caseData) %in% c(expectedcolnames, optionalcolnames, "STCASENO")]
   
   ####get list of cases
   if(all(is.na(cases))) {
@@ -560,6 +561,13 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   #   infectiousPeriod$IPStart = convertToDate(infectiousPeriod$IPStart)
   # }
   littCaseData$UserDateData = sapply(littCaseData$STCASENO, caseInInputs, sxOnset, infectiousPeriod)
+  if("Presumed.Source" %in% names(caseData)) {
+    if("Presumed.Source.Strength" %in% names(caseData)) {
+      littCaseData = merge(littCaseData, caseData[, c("STCASENO", "Presumed.Source", "Presumed.Source.Strength")], all.x = T)
+    } else {
+      littCaseData = merge(littCaseData, caseData[, c("STCASENO", "Presumed.Source")], all.x = T)
+    }
+  }
   
   if(all(class(progress)!="logical")) {
     progress$set(value = 0)

@@ -327,6 +327,21 @@ fixIAE <- function(caseData, log) {
   return(caseData)
 }
 
+##for the given data frame, which contains case data, get presumed source columns to correct format
+fixPresumedSource <- function(caseData) {
+  col = grepl("presumed[ .]*source$", names(caseData), ignore.case = T)
+  if(sum(col)==1) {
+    names(caseData)[col] = "Presumed.Source"
+    caseData$Presumed.Source = as.character(caseData$Presumed.Source)
+  }
+  col = grepl("presumed[ .]*source[ .]*strength", names(caseData), ignore.case = T)
+  if(sum(col)==1) {
+    names(caseData)[col] = "Presumed.Source.Strength"
+    caseData$Presumed.Source.Strength = as.character(caseData$Presumed.Source.Strength)
+  }
+  return(caseData)
+}
+
 ##for the given data frame, which contains case data, check to see if infectection acquisition end for ped and extrapulm is present
 ##if present, merge with IP start and delete so it can be used by LITT algorithm
 ##return table
@@ -445,6 +460,8 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   names(df)[names(df)=="numTimesIsRank1"] = "Number of Times is Ranked 1st in Potential Source List"
   names(df)[names(df)=="numPotSourcesRanked1"] = "Number of Potential Sources Tied for Rank 1"
   names(df)[names(df)=="totNumPotSources"] = "Total Number of Potential Sources"
+  names(df)[names(df)=="Presumed.Source"] = "Investigation Presumed Source"
+  names(df)[names(df)=="Presumed.Source.Strength"] = "Investigation Presumed Source Strength"
   
   ##variables in possible GIMS risk factors
   # names(df)[names(df)=="HOMELESS"] = "GIMS Homeless"# Within Past Year"
@@ -828,7 +845,7 @@ splitPedEPDates <- function(df) {
 
 snpDefaultCut = 5
 expectedcolnames = c("ID", "XRAYCAV", "SPSMEAR", "ExtrapulmonaryOnly", "Pediatric", "IPStart", "IPEnd") #expected columns in case data
-optionalcolnames = "UserDateData" #optional columns in case data table
+optionalcolnames = c("UserDateData", "Presumed.Source", "Presumed.Source.Strength") #optional columns in case data table
 
 ##output base names
 defaultLogName = "LITT_log.txt"
@@ -1370,6 +1387,35 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
       ncases = which(cases==target)
       if(ncases %in% updateProgress) {
         progress$set(value = 1 + which(updateProgress==ncases))
+      }
+    }
+  }
+  
+  ####add presumed sources to filter and all potential sources if available
+  if("Presumed.Source" %in% names(caseData)) {
+    tx = caseData[!is.na(caseData$Presumed.Source) & caseData$Presumed.Source!="",]
+    allSources$Presumed.Source = ""
+    allFilt$Presumed.Source = ""
+    allSources$target = as.character(allSources$target)
+    allSources$source = as.character(allSources$source)
+    allFilt$target = as.character(allFilt$target)
+    allFilt$filteredCase = as.character(allFilt$filteredCase)
+    for(r in 1:nrow(tx)) {
+      if(!is.na(tx$Presumed.Source[r])) {
+        sources = strsplit(tx$Presumed.Source[r], split=",")[[1]]
+        if("Presumed.Source.Strength" %in% names(tx)) { 
+          stren = strsplit(tx$Presumed.Source.Strength[r], split=",")[[1]]
+          if(length(stren) != length(sources)) { #incorrect number of strengths
+            stren = rep(NA, length(sources))
+          }
+        } else {
+          stren = rep(NA, length(sources))
+        }
+        for(j in 1:length(sources)) {
+          label = ifelse(is.na(stren[j]), "presumed source", paste(stren[j], "presumed source"))
+          allSources$Presumed.Source[allSources$target==tx$ID[r] & allSources$source==sources[j]] = label
+          allFilt$Presumed.Source[allFilt$target==tx$ID[r] & allFilt$filteredCase==sources[j]] = label
+        }
       }
     }
   }
