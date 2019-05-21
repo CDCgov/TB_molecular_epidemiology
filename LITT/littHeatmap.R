@@ -105,6 +105,7 @@ littHeatmap <- function(outPrefix, all) {
   orange = col + Fill(foregroundColor = rgb(red=255, green=119, blue=78, maxColorValue = 255))# CellStyle(workbook, fill = Fill(foregroundColor = rgb(red=255, green=119, blue=78, maxColorValue = 255))) 
   yellow = col + Fill(foregroundColor = rgb(red=255, green=239, blue=156, maxColorValue = 255))#CellStyle(workbook, fill = Fill(foregroundColor = rgb(red=255, green=239, blue=156, maxColorValue = 255)))
   white = col + Fill(foregroundColor = "white") + Border(position="BOTTOM")
+  
   ##get color for sequenced pair
   getSeqColor<-function(score) {
     if(score <= 1) {

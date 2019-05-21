@@ -428,6 +428,36 @@ getScoreCategories <- function(cat) {
   return(cat)
 }
 
+##adds a score category column containing the likelihood category for the final score to the given data frame df
+getLikelihoodCategory <- function(df) {
+  if(nrow(df)) {
+    df$scoreCategory = NA
+    wowgs = grepl("scoreW.*WGS", names(df)) #used different names for without WGS score in different dataframes
+    for(r in 1:nrow(df)) {
+      if(!is.na(df$score[r])) {
+        if(df$score[r] <= 1) {
+          df$scoreCategory[r] = "highest likelihood"
+        } else if(df$score[r] > 1 & df$score[r] <= 3) {
+          df$scoreCategory[r] = "lower likelihood"
+        } else if(df$score[r] > 3 & df$score[r] <= 8) { #with rounding could get a score of 8
+          df$scoreCategory[r] = "lowest likelihood"
+        }
+      } else if(!is.na(df[r, wowgs])) {
+        if(df[r, wowgs] <= 1) {
+          df$scoreCategory[r] = "highest likelihood"
+        } else if(df[r, wowgs] > 1 & df[r, wowgs] <= 2) {
+          df$scoreCategory[r] = "lower likelihood"
+        } else if(df[r, wowgs] > 2 & df[r, wowgs] <= 5) { #with rounding could get a score of 5
+          df$scoreCategory[r] = "lowest likelihood"
+        }
+      } #otherwise was "no potential sources" so leave blank
+    }
+  } else {
+    df = cbind(df, data.frame(scoreCategory=vector()))
+  }
+  return(df)
+}
+
 ##function that makes the header of the given data frame df nice for output
 ##use this function to be consistent between tables and avoid issues of changing variable order
 ##df = data frame to clean names of 
@@ -504,6 +534,7 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   names(df)[names(df)=="source"] = "Potential Source"
   names(df)[names(df)=="score"] = "Score"
   names(df)[names(df)=="scoreWithoutWGS" | names(df)=="scoreWoWGS"] = "Without SNP Score"
+  names(df)[names(df)=="scoreCategory"] = "Score Category"
   
   ##additional variables in all potential sources
   names(df)[names(df)=="infRate"] = "Infectious Rating" 
@@ -1419,6 +1450,10 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
       }
     }
   }
+  
+  ####add score likelihood category
+  allSources = getLikelihoodCategory(allSources)
+  allTx = getLikelihoodCategory(allTx)
   
   ####return results
   results = results[order(results$target),]
