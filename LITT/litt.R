@@ -667,7 +667,14 @@ writeAllSourcesTable <- function(littResults, outPrefix, stcasenolab = F) {
   cat$infRate = ifelse(is.na(allSources$infRate), NA, paste(allSources$infRate, " (", cat$infRate, ")", sep=""))
   cat$epiRate = ifelse(is.na(allSources$epiRate), NA, paste(allSources$epiRate, " (", cat$epiRate, ")", sep=""))
   ##move rank and scores first
-  cat = cat[,c(1:2, 9, 7:8, 3:6, 10)]
+  # cat = cat[,c(1:2, 9, 7:8, 11, 3:6, 10, 12)]
+  cols = c("target", "source", "rank", "score", "scoreWithoutWGS", "scoreCategory", "snpDistance",    
+           "infRate", "timeRate", "epiRate", "Presumed.Source", "label" )
+  cols = cols[cols %in% names(cat)] #"Presumed.Source" is not always present
+  cat = cat[,cols]
+  if(ncol(cat)!=ncol(allSources)) {
+    warning("extra columns in writeAllSourcesTable")
+  }
   
   ##check that there are filtered sources
   filt = littResults$filteredSources
