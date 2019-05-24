@@ -436,19 +436,22 @@ getLikelihoodCategory <- function(df) {
     for(r in 1:nrow(df)) {
       if(!is.na(df$score[r])) {
         if(df$score[r] <= 1) {
-          df$scoreCategory[r] = "highest likelihood"
+          # df$scoreCategory[r] = "highest likelihood"
+          df$scoreCategory[r] = "high likelihood"
         } else if(df$score[r] > 1 & df$score[r] <= 3) {
-          df$scoreCategory[r] = "lower likelihood"
+          # df$scoreCategory[r] = "lower likelihood"
+          df$scoreCategory[r] = "medium likelihood"
         } else if(df$score[r] > 3 & df$score[r] <= 8) { #with rounding could get a score of 8
-          df$scoreCategory[r] = "lowest likelihood"
+          # df$scoreCategory[r] = "lowest likelihood"
+          df$scoreCategory[r] = "low likelihood"
         }
       } else if(!is.na(df[r, wowgs])) {
         if(df[r, wowgs] <= 1) {
-          df$scoreCategory[r] = "highest likelihood"
+          df$scoreCategory[r] = "high likelihood"
         } else if(df[r, wowgs] > 1 & df[r, wowgs] <= 2) {
-          df$scoreCategory[r] = "lower likelihood"
+          df$scoreCategory[r] = "medium likelihood"
         } else if(df[r, wowgs] > 2 & df[r, wowgs] <= 5) { #with rounding could get a score of 5
-          df$scoreCategory[r] = "lowest likelihood"
+          df$scoreCategory[r] = "low likelihood"
         }
       } #otherwise was "no potential sources" so leave blank
     }

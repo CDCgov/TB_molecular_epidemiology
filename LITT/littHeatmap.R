@@ -170,9 +170,12 @@ littHeatmap <- function(outPrefix, all) {
   setCellValue(cells[[length(cases)+5, 2]], "* indicates no SNP")
   setCellValue(cells[[length(cases)+7, 2]], "Cell color:")
   setCellValue(cells[[length(cases)+8, 2]], "Top ranked source")
-  setCellValue(cells[[length(cases)+9, 2]], "Highest likelihood")
-  setCellValue(cells[[length(cases)+10, 2]], "Lower likelihood")
-  setCellValue(cells[[length(cases)+11, 2]], "Lowest likelihood")
+  # setCellValue(cells[[length(cases)+9, 2]], "Highest likelihood")
+  # setCellValue(cells[[length(cases)+10, 2]], "Lower likelihood")
+  # setCellValue(cells[[length(cases)+11, 2]], "Lowest likelihood")
+  setCellValue(cells[[length(cases)+9, 2]], "High likelihood")
+  setCellValue(cells[[length(cases)+10, 2]], "Medium likelihood")
+  setCellValue(cells[[length(cases)+11, 2]], "Low likelihood")
   setCellValue(cells[[length(cases)+12, 2]], "Filtered (not a potential source)")
   setCellStyle(cells[[length(cases)+8, 2]], cellStyle = CellStyle(workbook, 
                                                                   border = Border(position=c("BOTTOM", "LEFT", "TOP", "RIGHT"), 
