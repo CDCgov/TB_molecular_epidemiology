@@ -735,7 +735,7 @@ writeEpiTable <- function(littResults, outPrefix, stcasenolab = F, log) {
   if(nrow(littResults$epi)) {
     epiOut = littResults$epi
     writeExcelTable(fileName=paste(outPrefix, epiFileName, sep=""),
-                    sheetName="Epi links",
+                    sheetName="epi links",
                     df = epiOut,
                     stcasenolab = stcasenolab)
     return(T)

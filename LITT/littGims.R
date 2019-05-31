@@ -237,11 +237,11 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
     if(sid[i]!="MRCA") {
       if(!sid[i] %in% gimsAll$STCASENO) { #is accession number
         id = unique(gimsGeno$StCaseNo[gimsGeno$accessionnumber==acc[i]])
-        if(length(id) == 0 || id == "NA" || is.na(id)) {
-          cat(paste("No state case number for", acc[i], "\r\n"), file = log, append = T)
+        if(length(id) == 0 || id == "NA" || is.na(id) || id == "") {
+          cat(paste("No state case number for", acc[i], "so it will be excluded.\r\n"), file = log, append = T)
           sid[i] = NA
         } else if(length(id) > 1) {
-          cat(paste("Multiple state case numbers for", acc[i], "\r\n"), file = log, append = T)
+          cat(paste("Multiple state case numbers for", acc[i], "so it will be excluded.\r\n"), file = log, append = T)
           sid[i] = NA
         } else {
           sid[i] = id
