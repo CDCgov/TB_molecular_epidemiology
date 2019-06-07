@@ -62,6 +62,21 @@ formatDistanceMatrixWithoutStno <- function(fileName, log, appendlog=T) { #forme
   ##read file
   if(endsWith(fileName, ".txt") || endsWith(fileName, ".tsv")) {
     mat = as.matrix(read.table(fileName, sep="\t", header = T, row.names = 1))
+    ##Bionumerics does not provide the column headers
+    if(ncol(mat)==1) { #bionumerics seems to tab separate the first name then space separate the rest; does not generate columns for the upper triangle and so will get error if more columns than column names
+      df = as.matrix(read.table(fileName, sep="\t", header = F, row.names = 1))
+      mat = matrix(nrow = nrow(df), ncol = nrow(df), NA)
+      for(r in 1:nrow(df)) {
+        snps = as.numeric(as.character(strsplit(trimws(df[r,]), "\\s+")[[1]]))
+        for(c in 1:length(snps)) {
+          mat[r,c] = snps[c]
+        }
+      }
+      row.names(mat) = row.names(df)
+    } else if(make.names(row.names(mat))[1] != colnames(mat)[1]) {
+      mat = as.matrix(read.table(fileName, sep="", header = F, row.names = 1))
+    }
+    colnames(mat) = row.names(mat) #fix the . for non character spaces
   } else if(endsWith(fileName, ".xls") || endsWith(fileName, ".xlsx")) {
     df = read.xlsx(fileName, sheetIndex = 1)
     mat = as.matrix(df[,-1])
@@ -69,11 +84,23 @@ formatDistanceMatrixWithoutStno <- function(fileName, log, appendlog=T) { #forme
     colnames(mat) = as.character(df[,1]) #fix the . for non character spaces
   } else if(endsWith(fileName, ".csv")) {
     mat = as.matrix(read.table(fileName, sep=",", header = T, row.names = 1))
+    colnames(mat) = row.names(mat) #fix the . for non character spaces
   } else {
-    cat("Distance matrix should be in a text, Excel or CSV file format. SNP distances will not be used.\n\n", file = log, append = T)
+    cat("Distance matrix should be in a text, Excel or CSV file format. SNP distances will not be used.\r\n", file = log, append = T)
     return(NA)
   }
   colnames(mat) = sub("^X", "", colnames(mat))
+  
+  ##remove rows and columns that are all NA
+  mat = mat[!apply(mat, 1, function(x) all(is.na(x))),
+            !apply(mat, 2, function(x) all(is.na(x)))]
+  
+  if(nrow(mat) != ncol(mat)) {
+    cat("Distance matrix has ", nrow(mat), " rows but ", ncol(mat), 
+        " columns. It must have the same number of rows and columns containing SNP distance.\r\n", file = log, append = T)
+    stop("Distance matrix must have the same number of rows and columns containing SNP distance.")
+  }
+  
   
   ##fill in matrix if needed
   if(all(is.na(mat[upper.tri(mat)]))) {
@@ -87,19 +114,25 @@ formatDistanceMatrixWithoutStno <- function(fileName, log, appendlog=T) { #forme
   ids = rownames(mat)
   dup = duplicated(ids)
   if(any(dup)) {
-    cat("Distance matrix contains multiple distances for these IDs: ", paste(unique(ids[dup]), collapse=", "), "\n", file = log, append = T)
+    cat("Distance matrix contains multiple distances for these IDs: ", paste(unique(ids[dup]), collapse=", "), "\r\n", file = log, append = T)
     
     ##warning if any are different
     for(d in unique(ids[dup])) {
       sub = mat[rownames(mat)==d,]
       same = sapply(2:nrow(sub), function(r) {all(sub[1,]==sub[r,])})
       if(!all(same)) {
-        cat("WARNING: ", d, " is present multiple times in the distance matrix, with different distances.\n", file = log, append = T)
+        cat("WARNING: ", d, " is present multiple times in the distance matrix, with different distances.\r\n", file = log, append = T)
       }
     }
     cat("The first appearance of these cases in the matrix will be used.\n", file = log, append = T)
     
     mat = mat[!dup, !dup]
+  }
+  
+  ##stop if there are missing values
+  if(any(is.na(mat))) {
+    cat("There is missing data in the distance matrix. All of the lower triangle must be filled in.\r\n", file = log, append = T)
+    stop("Distance matrix is missing data.")
   }
   
   return(mat)

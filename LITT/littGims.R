@@ -194,6 +194,7 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
 ##for the given file, return a distance matrix that can be passed to the dist variable in LITT
 ##returns a matrix: fill in whole matrix, with row and column names the state case number and SNP distances rounded to nearest whole number
 ##the fileName is expected to point to a SNP distance matrix or lower triangle, such as from BioNumerics (include file path if not in working dir)
+##assumption: text files may be from BioNumerics and therefore may not have the column headers; all other files formats it is safe to assume will have the header
 ##log is file to write results to
 ##if appendlog is true, append results to log file; otherwise overwrite (needed because may read distance matrix first)
 formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly formatDistanceMatrix
@@ -201,9 +202,21 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
   ##read file
   if(endsWith(fileName, ".txt") || endsWith(fileName, ".tsv")) {
     mat = as.matrix(read.table(fileName, sep="\t", header = T, row.names = 1))
-    ##remove rows and columns that are all NA
-    mat = mat[!apply(mat, 1, function(x) all(is.na(x))),
-              !apply(mat, 2, function(x) all(is.na(x)))]
+    ##Bionumerics does not provide the column headers
+    if(ncol(mat)==1) { #bionumerics seems to tab separate the first name then space separate the rest; does not generate columns for the upper triangle and so will get error if more columns than column names
+      df = as.matrix(read.table(fileName, sep="\t", header = F, row.names = 1))
+      mat = matrix(nrow = nrow(df), ncol = nrow(df), NA)
+      for(r in 1:nrow(df)) {
+        snps = as.numeric(as.character(strsplit(trimws(df[r,]), "\\s+")[[1]]))
+        for(c in 1:length(snps)) {
+          mat[r,c] = snps[c]
+        }
+      }
+      row.names(mat) = row.names(df)
+    } else if(make.names(row.names(mat))[1] != colnames(mat)[1]) {
+      mat = as.matrix(read.table(fileName, sep="", header = F, row.names = 1))
+    }
+    colnames(mat) = row.names(mat) #fix the . for non character spaces
   } else if(endsWith(fileName, ".xls") || endsWith(fileName, ".xlsx")) {
     df = read.xlsx(fileName, sheetIndex = 1)
     df = df[!apply(df, 1, function(x) all(is.na(x))),
@@ -216,11 +229,22 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
     ##remove rows and columns that are all NA
     mat = mat[!apply(mat, 1, function(x) all(is.na(x))),
               !apply(mat, 2, function(x) all(is.na(x)))]
+    colnames(mat) = row.names(mat) #fix the . for non character spaces
   } else {
-    cat("Distance matrix should be in a text, Excel or CSV file format\r\n", file = log, append = T)
+    cat("Distance matrix should be in a text, Excel or CSV file format.\r\n", file = log, append = T)
     return(NA)
   }
   colnames(mat) = sub("^X", "", colnames(mat))
+  
+  ##remove rows and columns that are all NA
+  mat = mat[!apply(mat, 1, function(x) all(is.na(x))),
+            !apply(mat, 2, function(x) all(is.na(x)))]
+  
+  if(nrow(mat) != ncol(mat)) {
+    cat("Distance matrix has ", nrow(mat), " rows but ", ncol(mat), 
+        " columns. It must have the same number of rows and columns containing SNP distance.\r\n", file = log, append = T)
+    stop("Distance matrix must have the same number of rows and columns containing SNP distance.")
+  }
   
   ##fill in matrix if needed
   if(all(is.na(mat[upper.tri(mat)]))) {
@@ -278,6 +302,12 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
       sid = sid[!acc %in% dacc[2:length(dacc)]]
       acc = acc[!acc %in% dacc[2:length(dacc)]]
     }
+  }
+  
+  ##stop if there are missing values
+  if(any(is.na(mat))) {
+    cat("There is missing data in the distance matrix. All of the lower triangle must be filled in.\r\n", file = log, append = T)
+    stop("Distance matrix is missing data.")
   }
   
   return(mat)
