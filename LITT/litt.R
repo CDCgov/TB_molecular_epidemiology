@@ -507,11 +507,11 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   names(df)[names(df)=="gender"] = "Gender"
   names(df)[names(df)=="RACEHISP"] = "Race/Ethnicity of Patient (RACEHISP)" #attr(gimsAll$RACEHISP, "label")
   names(df)[names(df)=="age"] = "Age"
-  names(df)[names(df)=="earliestDate"] = "Calculated Earliest Date"
-  names(df)[names(df)=="IPStart"] = "Calculated Infectious Period Start"
-  names(df)[names(df)=="IPEnd"] = "Calculated Infectious Period End"
-  names(df)[names(df)=="IAS"] = "Calculated Infection Acquisition Start"
-  names(df)[names(df)=="IAE"] = "Calculated Infection Acquisition End"
+  names(df)[names(df)=="earliestDate"] = "Earliest Date"
+  names(df)[names(df)=="IPStart"] = "Infectious Period Start"
+  names(df)[names(df)=="IPEnd"] = "Infectious Period End"
+  names(df)[names(df)=="IAS"] = "Infection Acquisition Start"
+  names(df)[names(df)=="IAE"] = "Infection Acquisition End"
   # names(df)[names(df)=="infRate"] = "Infectious Category"
   names(df)[names(df)=="SPSMEAR"] = "Sputum Smear (SPSMEAR)"
   names(df)[names(df)=="XRAYCAV"] = "Evidence of Cavity by X-Ray (XRAYCAV)"
@@ -668,6 +668,8 @@ writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHea
   if(filter) {
     addAutoFilter(sheet = sheet, cellRange =paste("A1:", lastcol$getReference(), sep=""))
   }
+  ##freeze pane
+  createFreezePane(sheet = sheet, rowSplit = 2, colSplit = 1)
   ##add lines between given cases
   if(gcLines & nrow(df) > 1) {
     for(r in 1:(nrow(df)-1)) {
