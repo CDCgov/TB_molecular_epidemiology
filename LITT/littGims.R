@@ -179,9 +179,10 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
   
   ##format date/zip columns
   caseOut$zipcode = as.numeric(as.character(caseOut$zipcode))
-  caseOut$earliestDate = format(caseOut$earliestDate, format="%m/%d/%Y")
+  # caseOut$earliestDate = format(caseOut$earliestDate, format="%m/%d/%Y")
   caseOut$IPStart = format(caseOut$IPStart, format="%m/%d/%Y")
   caseOut$IPEnd = format(caseOut$IPEnd, format="%m/%d/%Y")
+  caseOut$IAS = format(caseOut$IAS, format="%m/%d/%Y")
   caseOut$IAE = format(caseOut$IAE, format="%m/%d/%Y")
   
   writeExcelTable(fileName=paste(outPrefix, caseFileName, sep=""),
@@ -213,9 +214,9 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
         }
       }
       row.names(mat) = row.names(df)
-    } else if(make.names(row.names(mat))[1] != colnames(mat)[1]) {
-      mat = as.matrix(read.table(fileName, sep="", header = F, row.names = 1))
-    }
+    } #else if(make.names(row.names(mat))[1] != colnames(mat)[1]) {
+      # mat = as.matrix(read.table(fileName, sep="\t", header = F, row.names = 1))
+    # }
     colnames(mat) = row.names(mat) #fix the . for non character spaces
   } else if(endsWith(fileName, ".xls") || endsWith(fileName, ".xlsx")) {
     df = read.xlsx(fileName, sheetIndex = 1)
@@ -356,7 +357,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   iae = fixIAE(caseData) #for printing
   if("IAE" %in% names(iae)) {
     names(iae)[names(iae)=="ID"] = "STCASENO"
-    iae = iae[,c("STCASENO", "IAE")]
+    iae = iae[,c("STCASENO", "IAS", "IAE")]
   } else {
     iae=NA
   }
@@ -454,10 +455,12 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
                                                                (!is.na(gimsCases$SITELARYN[gimsCases$STCASENO==s]) &
                                                                   gimsCases$SITELARYN[gimsCases$STCASENO==s]=="Y")), 
                                                            "Y", "N"))})
+  littCaseData$ExtrapulmonaryOnly[is.na(littCaseData$ExtrapulmonaryOnly)] = "N"
   littCaseData$Pediatric = sapply(littCaseData$STCASENO,
                                   function(s) {
                                     return(ifelse(gimsCases$AGE[gimsCases$STCASENO==s] < 10, "Y", "N")) #note this includes cases missing an age
                                   })
+  littCaseData$Pediatric[is.na(littCaseData$Pediatric)] = "N"
   
   ####set up dates
   ##case dates
@@ -471,6 +474,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
                            gimsCases$sp_coll_date > gimsCases$RPTDATE %m+% years(1)] = as.Date(NA)
   dates = data.frame(gimsCases$STCASENO, 
                      gimsCases$ISUSDATE, gimsCases$RXDATE, gimsCases$CNTDATE, gimsCases$RPTDATE, gimsCases$sp_coll_date,
+                     gimsCases$PEDAGE,
                      stringsAsFactors = F)
   names(dates) = sub("gimsCases.", "", names(dates))
   inputIP = infectiousPeriod #for writing
@@ -521,7 +525,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   #     }
   #   }
   # }
-  ##merge IP and infection acquisition window if needed
+  ##merge IP and infection acquisition end window if needed
   if(!all(is.na(iae))) {
     temp = merge(littCaseData, iae, by="STCASENO")
     if(!all(is.na(infectiousPeriod))) {
@@ -537,7 +541,8 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
     infectiousPeriod = infectiousPeriod[infectiousPeriod$STCASENO %in% cases,]
     dates$sxOnset = calcSxOnset(dates$STCASENO, dates$sxOnset, infectiousPeriod$STCASENO, infectiousPeriod$IPStart)
   }
-  dates$earliestDate = convertToDate(apply(dates[,-1], 1, min, na.rm=T))
+  # dates$earliestDate = convertToDate(apply(dates[,-1], 1, min, na.rm=T))
+  dates$earliestDate = convertToDate(apply(dates[,!names(dates) %in% c("STCASENO", "PEDAGE")], 1, min, na.rm=T))
   
   ##calculate infectious period start
   if(any(!is.na(infectiousPeriod))) {
@@ -586,7 +591,32 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
     }
   }
   
-  littCaseData = merge(littCaseData, dates[,names(dates) %in% c("STCASENO", "IPStart", "IPEnd")], by="STCASENO", all = T)
+  ##calculate infection acquisition start
+  dates$IAS = dates$RPTDATE %m-% months(dates$PEDAGE)
+  if(!all(is.na(iae))) { #incorporate input data if available
+    if(any(!is.na(iae$IAS))) {
+      temp = iae[!is.na(iae$IAS),]
+      for(r in 1:nrow(temp)) {
+        ped = littCaseData$Pediatric[littCaseData$STCASENO==temp$STCASENO[r]]
+        if(!is.na(ped) & ped == "Y") {
+          if(temp$IAS[r] >= dates$IAS[dates$STCASENO==temp$STCASENO[r]] %m-% months(1)) { #allow one month buffer given uncertainty in our date
+            dates$IAS[dates$STCASENO==temp$STCASENO[r]] = temp$IAS[r]
+          } else {
+            cat(paste0(as.character(temp$STCASENO[r]), " has an input infection acquisition start of ", format(temp$IAS[r], format="%m/%d/%Y"), 
+                # " but given PEDAGE and RPTDATE for this patient, ", format(dates$IAS[dates$STCASENO==temp$STCASENO[r]] %m-% months(1), format="%m/%d/%Y"),
+                # " is the earliest this date can be, so ", format(dates$IAS[dates$STCASENO==temp$STCASENO[r]], format="%m/%d/%Y"), "will be used.\r\n", 
+                " but this is before RPTDATE-PEDAGE for this patient, so that date (", format(dates$IAS[dates$STCASENO==temp$STCASENO[r]], format="%m/%d/%Y"), ") will be used instead.\r\n"), 
+                file = log, append = T)
+          }
+        } else {
+          cat(as.character(temp$STCASENO[r]), " has an input infection acquisition start, but is not pediatric; this date will be ignored.\r\n", 
+              file = log, append = T)
+        }
+      }
+    }
+  }
+  
+  littCaseData = merge(littCaseData, dates[,names(dates) %in% c("STCASENO", "IPStart", "IPEnd", "IAS")], by="STCASENO", all = T)
   # if(any(!is.na(infectiousPeriod))) {
   #   infectiousPeriod$IPStart = convertToDate(infectiousPeriod$IPStart)
   # }
@@ -738,13 +768,15 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
 
   ####write results
   ###write out the dates
-  write = dates
+  write = dates[dates$STCASENO %in% littCaseData$STCASENO,]
   ##merge inputs
   if(all(is.na(iae))) {
     iae = data.frame(STCASENO = write$STCASENO,
+                     inputIAS = as.Date(NA),
                      inputIAE = as.Date(NA))
   } else {
     iae = data.frame(STCASENO = iae$STCASENO,
+                     inputIAS = convertToDate(iae$IAS),
                      inputIAE = convertToDate(iae$IAE))
   }
   write = merge(iae, write, by = "STCASENO", all.y=T)
@@ -768,14 +800,19 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   write = merge(so, write, by="STCASENO", all.y=T)
   ##split IAE and IP
   temp = splitPedEPDates(merge(write, littCaseData[,c("STCASENO", "ExtrapulmonaryOnly", "Pediatric")], by = "STCASENO", all=T))
-  write$IPStart = temp$IPStart
-  write$IPEnd = temp$IPEnd
-  write$IAE = temp$IAE
+  write$IAE = as.Date(NA)
+  for(r in 1:nrow(write)) { #sapply won't return a date, and not always in the same order
+    write$IPStart[r] = temp$IPStart[temp$STCASENO==write$STCASENO[r]]
+    write$IPEnd[r] = temp$IPEnd[temp$STCASENO==write$STCASENO[r]]
+    write$IAE[r] = temp$IAE[temp$STCASENO==write$STCASENO[r]]
+  }
   ##write dates separately
   if(writeDate) {
     datewrite = write
     for(c in 2:ncol(datewrite)) {
-      datewrite[,c] = format(datewrite[,c], "%m/%d/%Y")
+      if(names(datewrite)[c] != "PEDAGE") {
+        datewrite[,c] = format(datewrite[,c], "%m/%d/%Y")
+      }
     }
     writeExcelTable(fileName=paste(outPrefix, dateFileName, sep=""),
                     sheetName = "dates",
@@ -791,7 +828,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
 
   ###write out other case data variables
   ##remove all dates but earliest and IP
-  write = write[,names(write) %in% c("STCASENO", "earliestDate")]
+  # write = write[,names(write) %in% c("STCASENO", "earliestDate")] 
   ##add variables of interest (included in all output, but not in risk factors)
   gimsVars = data.frame(STCASENO = gimsCases$STCASENO,
                         accessionNumber = sapply(gimsCases$STCASENO, getAccessionNumber),
@@ -801,12 +838,14 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
                         gender = gimsCases$SEX,
                         RACEHISP = gimsCases$RACEHISP,
                         age = gimsCases$AGE3)
-  write = merge(gimsVars, write, by="STCASENO")
-  write = merge(write, littCaseData, by = "STCASENO")
+  # write = merge(gimsVars, write, by="STCASENO")
+  # write = merge(write, littCaseData, by = "STCASENO", all.y=T)
+  write = merge(littCaseData, gimsVars, by = "STCASENO", all.x=T)
+  write$STCASENO = as.character(write$STCASENO)
   write = write[,c(which(names(write)=="STCASENO"), which(names(write)=="accessionNumber"),
-                   which(names(write)=="earliestDate"), which(names(write)=="IPStart"),
+                   which(names(write)=="IPStart"),
                    which(names(write)=="IPEnd"),
-                   which(!names(write) %in% c("STCASENO", "accessionNumber", "earliestDate", "IPStart", "IPEnd")))]#do dates first
+                   which(!names(write) %in% c("STCASENO", "accessionNumber", "IPStart", "IPEnd")))]#do dates first
   write$sequenceAvailable = write$STCASENO %in% colnames(dist)
 
 

@@ -73,9 +73,9 @@ formatDistanceMatrixWithoutStno <- function(fileName, log, appendlog=T) { #forme
         }
       }
       row.names(mat) = row.names(df)
-    } else if(make.names(row.names(mat))[1] != colnames(mat)[1]) {
-      mat = as.matrix(read.table(fileName, sep="", header = F, row.names = 1))
-    }
+    } # else if(make.names(row.names(mat))[1] != colnames(mat)[1]) {
+      # mat = as.matrix(read.table(fileName, sep="", header = F, row.names = 1))
+    # }
     colnames(mat) = row.names(mat) #fix the . for non character spaces
   } else if(endsWith(fileName, ".xls") || endsWith(fileName, ".xlsx")) {
     df = read.xlsx(fileName, sheetIndex = 1)

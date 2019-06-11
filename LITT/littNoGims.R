@@ -12,6 +12,7 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
   ##format date/zip columns
   caseOut$IPStart = format(caseOut$IPStart, format="%m/%d/%Y")
   caseOut$IPEnd = format(caseOut$IPEnd, format="%m/%d/%Y")
+  caseOut$IAS = format(caseOut$IAS, format="%m/%d/%Y")
   caseOut$IAE = format(caseOut$IAE, format="%m/%d/%Y")
   
   writeExcelTable(fileName=paste(outPrefix, caseFileName, sep=""),
@@ -103,7 +104,19 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   caseData$IPEnd = convertToDate(caseData$IPEnd)
   
   ###merge IP and infection acquisition window if needed
+  caseData = fixIAE(caseData)
   caseData = mergeIAEtoIPstart(caseData, log)
+  caseData = caseData[,names(caseData)!="IAE"] #remove IAE (will be added in later for printing)
+  if("IAS" %in% names(caseData)) {
+    caseData$Pediatric[is.na(caseData$Pediatric)] = "N"
+    if(any(!is.na(caseData$IAS) & caseData$Pediatric!="Y")) {
+      bad = caseData$ID[!is.na(caseData$IAS) & caseData$Pediatric!="Y"]
+      cat("The following cases have an infection acquisition start but are not pediatric: ",
+          paste(bad, collapse=", "), ". Infection acquisition start will be ignored for these cases.\r\n",
+          file = log, append = T)
+      caseData$IAS[caseData$Pediatric!="Y"] = as.Date(NA) #IAS should be missing for IAS
+    }
+  }
   
   ####split out additional risk factors
   # addlRiskFactor=NA 

@@ -309,9 +309,23 @@ fixRfTable <- function(df, log) {
   return(df)
 }
 
-##for the given data frame, which contains case data, check to see if infectection acquisition end for ped and extrapulm is present
+##for the given data frame, which contains case data, check to see if infectection acquisition end (IAE)and start for ped and extrapulm is present
 ##return data frame with IAE column name correct formatted and converted to date
 fixIAE <- function(caseData, log) {
+  ##start
+  col = names(caseData)=="IAS" | grepl("infection[ .]*acquisition[ .]*start", names(caseData), ignore.case = T)
+  if(sum(col) == 1) {
+    names(caseData)[col] = "IAS"
+    caseData$IAS = convertToDate(caseData$IAS)
+  } else if(sum(col) > 1) {
+    warning(paste("More than one column for infection acquisition start:", paste(names(caseData)[col], collapse = ", ")),
+            "\r\nPlease label one column infection acquisitin start in case data table.\r\n User-input infection acqusition start was not used in this analysis.")
+    cat(paste("More than one column for infection acquisition start:", paste(names(caseData)[col], collapse = ", ")),
+        "\r\nPlease label one column infection acquisitin end in case data table.\r\n User-input infection acqusition was not used in this analysis.\r\n", 
+        file = log, append = T)
+    caseData = caseData[,names(caseData)!="IAS"]
+  } 
+  ##end
   col = names(caseData)=="IAE" | grepl("infection[ .]*acquisition[ .]*end", names(caseData), ignore.case = T)
   if(sum(col) == 1) {
     names(caseData)[col] = "IAE"
@@ -324,6 +338,19 @@ fixIAE <- function(caseData, log) {
         file = log, append = T)
     caseData = caseData[,names(caseData)!="IAE"]
   } 
+  
+  ##if start or end is present but not both, then fill in both
+  if("IAS" %in% names(caseData) & !"IAE" %in% names (caseData)) {
+    caseData$IAE = as.Date(NA)
+  } else if(!"IAS" %in% names(caseData) & "IAE" %in% names(caseData)) {
+    caseData$IAS = as.Date(NA)
+  }
+  # if("IAS" %in% names(caseData) & "ID" %in% names(caseData)) {
+  #   caseData = caseData[,c("ID", "IAS", "IAE")] #get in the correct order
+  # } else if("IAS" %in% names(caseData) & "STCASENO" %in% names(caseData)) {
+  #   caseData = caseData[,c("STCASENO", "IAS", "IAE")] #get in the correct order
+  # }
+  
   return(caseData)
 }
 
@@ -348,37 +375,39 @@ fixPresumedSource <- function(caseData) {
 mergeIAEtoIPstart <- function(caseData, log) {
   caseData = fixIAE(caseData, log)
   if("IAE" %in% names(caseData)) {
-    if("Pediatric" %in% names(caseData) & "ExtrapulmonaryOnly" %in% names(caseData)) {
-      ##only use IAE for pediatric and extrapulm cases
-      caseData$IPStart[!is.na(caseData$Pediatric) & caseData$Pediatric=="Y"] = caseData$IAE[!is.na(caseData$Pediatric) & caseData$Pediatric=="Y"]
-      caseData$IPEnd[!is.na(caseData$Pediatric) & caseData$Pediatric=="Y"] = as.Date(NA)
-      caseData$IPStart[!is.na(caseData$ExtrapulmonaryOnly) & caseData$ExtrapulmonaryOnly=="Y"] = caseData$IAE[!is.na(caseData$ExtrapulmonaryOnly) & caseData$ExtrapulmonaryOnly=="Y"]
-      caseData$IPEnd[!is.na(caseData$ExtrapulmonaryOnly) & caseData$ExtrapulmonaryOnly=="Y"] = as.Date(NA)
-      ##for other cases, use IP start but message if IP start later than IAE; if only IAE, IP start is 3 months before IAE
-      for(r in 1:nrow(caseData)) {
-        if(!is.na(caseData$Pediatric[r]) & caseData$Pediatric[r]!="N" & 
-           !is.na(caseData$ExtrapulmonaryOnly[r]) & caseData$ExtrapulmonaryOnly[r] != "N") {
-          if(!is.na(caseData$IPStart[r]) & !is.na(caseData$IAE[r])) {
-            if(caseData$IAE[r] < caseData$IPStart[r]) {
-              cat(paste("Infection acquisition end should be after IP start but is before IP start for ", caseData$ID[r],
-                        ". IP start will be used but user should check date calculations.", sep=""), 
-                  file = log, append = T)
-            } else if(is.na(caseData$IPStart[r]) & !is.na(caseData$IAE[r])) {
-              caseData$IPStart[r] = caseData$IAE[r] %m-% months(3)
+    if(!all(is.na(caseData$IAE))) {
+      if("Pediatric" %in% names(caseData) & "ExtrapulmonaryOnly" %in% names(caseData)) {
+        ##only use IAE for pediatric and extrapulm cases
+        caseData$IPStart[!is.na(caseData$Pediatric) & caseData$Pediatric=="Y"] = caseData$IAE[!is.na(caseData$Pediatric) & caseData$Pediatric=="Y"]
+        caseData$IPEnd[!is.na(caseData$Pediatric) & caseData$Pediatric=="Y"] = as.Date(NA)
+        caseData$IPStart[!is.na(caseData$ExtrapulmonaryOnly) & caseData$ExtrapulmonaryOnly=="Y"] = caseData$IAE[!is.na(caseData$ExtrapulmonaryOnly) & caseData$ExtrapulmonaryOnly=="Y"]
+        caseData$IPEnd[!is.na(caseData$ExtrapulmonaryOnly) & caseData$ExtrapulmonaryOnly=="Y"] = as.Date(NA)
+        ##for other cases, use IP start but message if IP start later than IAE; if only IAE, IP start is 3 months before IAE
+        for(r in 1:nrow(caseData)) {
+          if(!is.na(caseData$Pediatric[r]) & caseData$Pediatric[r]!="N" & 
+             !is.na(caseData$ExtrapulmonaryOnly[r]) & caseData$ExtrapulmonaryOnly[r] != "N") {
+            if(!is.na(caseData$IPStart[r]) & !is.na(caseData$IAE[r])) {
+              if(caseData$IAE[r] < caseData$IPStart[r]) {
+                cat(paste("Infection acquisition end should be after IP start but is before IP start for ", caseData$ID[r],
+                          ". IP start will be used but user should check date calculations.", sep=""), 
+                    file = log, append = T)
+              } else if(is.na(caseData$IPStart[r]) & !is.na(caseData$IAE[r])) {
+                caseData$IPStart[r] = caseData$IAE[r] %m-% months(3)
+              }
             }
           }
         }
+        ##remove IAE from case data
+        caseData = caseData[,names(caseData) != "IAE"]
+      } else if(!"Pediatric" %in% names(caseData)) {
+        stop("Case data table must have a column named Pediatric that indicates whether the case is < 10 years old")
+        cat("Case data table must have a column named Pediatric that indicates whether the case is < 10 years old.",
+            file = log, append = T)
+      } else {
+        stop("Case data table must have a column named ExtrapulmonaryOnly that indicates whether the case only had extrapulmonary TB")
+        cat("Case data table must have a column named ExtrapulmonaryOnly that indicates whether the case only had extrapulmonary TB.",
+            file = log, append = T)
       }
-      ##remove IAE from case data
-      caseData = caseData[,names(caseData) != "IAE"]
-    } else if(!"Pediatric" %in% names(caseData)) {
-      stop("Case data table must have a column named Pediatric that indicates whether the case is < 10 years old")
-      cat("Case data table must have a column named Pediatric that indicates whether the case is < 10 years old.",
-          file = log, append = T)
-    } else {
-      stop("Case data table must have a column named ExtrapulmonaryOnly that indicates whether the case only had extrapulmonary TB")
-      cat("Case data table must have a column named ExtrapulmonaryOnly that indicates whether the case only had extrapulmonary TB.",
-          file = log, append = T)
     }
   }
   return(caseData)
@@ -481,6 +510,7 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   names(df)[names(df)=="earliestDate"] = "Calculated Earliest Date"
   names(df)[names(df)=="IPStart"] = "Calculated Infectious Period Start"
   names(df)[names(df)=="IPEnd"] = "Calculated Infectious Period End"
+  names(df)[names(df)=="IAS"] = "Calculated Infection Acquisition Start"
   names(df)[names(df)=="IAE"] = "Calculated Infection Acquisition End"
   # names(df)[names(df)=="infRate"] = "Infectious Category"
   names(df)[names(df)=="SPSMEAR"] = "Sputum Smear (SPSMEAR)"
@@ -514,6 +544,7 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   names(df) = cleanGimsRiskFactorNames(names(df))
   
   ##additional variables in date file
+  names(df)[names(df)=="inputIAS"] = "Input Infection Acquisition Start"
   names(df)[names(df)=="inputIAE"] = "Input Infection Acquisition End"
   names(df)[names(df)=="inputSxOnset"] = "Input Symptom Onset Date"
   names(df)[names(df)=="inputIPStart"] = "Input Infectious Period Start"
@@ -524,6 +555,7 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   names(df)[names(df)=="RPTDATE"] = "Report Date (RPTDATE)"
   names(df)[names(df)=="sp_coll_date"] = "Specimen Collection Date (sp_coll_date)"
   names(df)[names(df)=="sxOnset"] = "Calculated Symptom Onset Date"
+  names(df)[names(df)=="PEDAGE"] = "Age in months on report date (PEDAGE)"
   
   ##additional variables in epi link file
   names(df)[names(df)=="case1"] = "Case1"
@@ -881,12 +913,25 @@ splitPedEPDates <- function(df) {
   if(c!=ncol(df)-1) { #otherwise already at end
     df = df[,c(1:c,ncol(df),(c+1):(ncol(df)-1))]
   }
+  ##move IAS to be the column before IAE
+  e = which(names(df)=="IAE")
+  if(!"IAS" %in% names(df)) {
+    df$IAS = as.Date(NA)
+    df = df[,c(1:(e-1),ncol(df),e:(ncol(df)-1))]
+  } else {
+    s = which(names(df)=="IAS")
+    if(s > e) {
+      df = df[,c(1:(e-1),s,e:(s-1),(s+1):ncol(df))]
+    } else {
+      df = df[,c(1:(s-1),(s+1):(e-1),s,e,(e+1):ncol(df))]
+    }
+  }
   return(df)
 }
 
 snpDefaultCut = 5
 expectedcolnames = c("ID", "XRAYCAV", "SPSMEAR", "ExtrapulmonaryOnly", "Pediatric", "IPStart", "IPEnd") #expected columns in case data
-optionalcolnames = c("UserDateData", "Presumed.Source", "Presumed.Source.Strength") #optional columns in case data table
+optionalcolnames = c("UserDateData", "Presumed.Source", "Presumed.Source.Strength", "IAS", "IAE") #optional columns in case data table
 
 ##output base names
 defaultLogName = "LITT_log.txt"
@@ -926,7 +971,7 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
   if(any(is.na(caseData$IPStart))) {
     cat(paste("IP start is required, but is missing for:", paste(caseData$ID[is.na(caseData$IPStart)], collapse = ","), "\r\n"), 
         file = log, append = T)
-    cat("These cases have been removed from the analysis\r\n", file = log, append = T)
+    cat("***These cases have been removed from the analysis\r\n", file = log, append = T)
     caseData = caseData[!is.na(caseData$IPStart),]
   }
   if(nrow(caseData) < 2) {
@@ -1211,6 +1256,24 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
         sources = sources[-i]
       } else {
         i = i + 1
+      }
+    }
+    
+    if(length(sources)==0) { ##stop if no potential sources remaining
+      allSources = rbind(allSources, noSource)
+      next()
+    }
+    
+    ###for pediatric cases, if infection acquisition start (IAS) is available, filter potential sources whose IP end if before the given case's IAS
+    if("IAS" %in% names(caseData)) {
+      ias = caseData$IAS[caseData$ID==target]
+      if(!is.na(ias) && caseData$Pediatric[caseData$ID==target]=="Y") {
+        early = as.character(caseData$ID[(is.na(caseData$IPEnd) | caseData$IPEnd < ias) & caseData$ID %in% sources])
+        if(length(early) > 0) {
+          allFilt = rbind(allFilt,
+                          data.frame(target=target, filteredCase=early, reasonFiltered="IP end is before infection acquisition start (pediatric given case)"))
+        }
+        sources = sources[!sources %in% early]
       }
     }
     
