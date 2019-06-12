@@ -8,30 +8,56 @@ cleanDate <- function(dateList) {
 
 ##function that converts the given dateList to a vector of dates, allowing different date format options
 convertToDate <- function(dateList) {
-  dateList = as.character(dateList)
-  dateList[grepl("[A-Z]|[a-z]", dateList)] = NA #set anything with letters to be NA (this should include "NA")
-  ##figure out pattern (need to skip NA)
-  pattern = dateList[1]
-  index=2
-  while(is.na(pattern) || pattern == "") {
-    if(index > length(dateList)) { #everything is NA or empty string
-      return(rep(as.Date(NA), length(dateList)))
+  if(length(dateList) > 0) {
+    dateList = as.character(dateList)
+    # dateList[grepl("[A-Z]|[a-z]", dateList)] = NA #set anything with letters to be NA (this should include "NA")
+    ##figure out pattern (need to skip NA)
+    # pattern = dateList[1]
+    # index=2
+    # while(is.na(pattern) || pattern == "") {
+    #   if(index > length(dateList)) { #everything is NA or empty string
+    #     return(rep(as.Date(NA), length(dateList)))
+    #   }
+    #   pattern = dateList[index]
+    #   index=index+1
+    # }
+    # if(grepl("[0-9]+/[0-9]+/[0-9][0-9][0-9][0-9]", pattern)) {
+    #   return(cleanDate(as.Date(dateList, format = "%m/%d/%Y")))
+    # } else if(grepl("[0-9][0-9][0-9][0-9]-[0-9]+-[0-9]+", pattern)) {
+    #   return(cleanDate(as.Date(dateList, format = "%Y-%m-%d")))
+    # } else if(grepl("[0-9]+-[0-9]+-[0-9][0-9][0-9][0-9]", pattern)) {
+    #   return(cleanDate(as.Date(dateList, format = "%m-%d-%Y")))
+    # } else if(grepl("[A-Z][a-z][a-z] [0-9]+, [0-9][0-9][0-9][0-9]", pattern)) { #abbreviated month
+    #   return(cleanDate(as.Date(dateList, format = "%B %d, %Y")))
+    # } else if(grepl("[A-Z][a-z]* [0-9]+, [0-9][0-9][0-9][0-9]", pattern)) { #full month
+    #   return(cleanDate(as.Date(dateList, format = "%b %d, %Y")))
+    # } else {
+    #   stop("Invalid date format:", pattern)
+    # }
+    convertList = rep(as.Date(NA), length(dateList))
+    for(i in 1:length(dateList)) { #allow a different pattern for each item in list
+      if(!is.na(dateList[i]) && dateList[i] != "") {
+        if(grepl("[0-9]+/[0-9]+/[0-9][0-9][0-9][0-9]", dateList[i])) {
+          convertList[i] = cleanDate(as.Date(dateList[i], format = "%m/%d/%Y"))
+        } else if(grepl("[0-9][0-9][0-9][0-9]-[0-9]+-[0-9]+", dateList[i])) {
+          convertList[i] = cleanDate(as.Date(dateList[i], format = "%Y-%m-%d"))
+        } else if(grepl("[0-9]+-[0-9]+-[0-9][0-9][0-9][0-9]", dateList[i])) {
+          convertList[i] = cleanDate(as.Date(dateList[i], format = "%m-%d-%Y"))
+        } else if(grepl("[A-Z][a-z][a-z] [0-9]+, [0-9][0-9][0-9][0-9]", dateList[i])) { #abbreviated month
+          convertList[i] = cleanDate(as.Date(dateList[i], format = "%B %d, %Y"))
+        } else if(grepl("[A-Z][a-z]* [0-9]+, [0-9][0-9][0-9][0-9]", dateList[i])) { #full month
+          convertList[i] = cleanDate(as.Date(dateList[i], format = "%b %d, %Y"))
+        } else if(grepl("[0-9]+", dateList[i])) {
+          # warning("Excel to R conversion resulted in dates being converted to numbers.")
+          convertList[i] = cleanDate(as.Date(as.numeric(dateList[i]), origin="1899-12-30"))
+        } else {
+          stop("Invalid date format:", pattern)
+        }
+      }
     }
-    pattern = dateList[index]
-    index=index+1
-  }
-  if(grepl("[0-9]+/[0-9]+/[0-9][0-9][0-9][0-9]", pattern)) {
-    return(cleanDate(as.Date(dateList, format = "%m/%d/%Y")))
-  } else if(grepl("[0-9][0-9][0-9][0-9]-[0-9]+-[0-9]+", pattern)) {
-    return(cleanDate(as.Date(dateList, format = "%Y-%m-%d")))
-  } else if(grepl("[0-9]+-[0-9]+-[0-9][0-9][0-9][0-9]", pattern)) {
-    return(cleanDate(as.Date(dateList, format = "%m-%d-%Y")))
-  } else if(grepl("[A-Z][a-z][a-z] [0-9]+, [0-9][0-9][0-9][0-9]", pattern)) { #abbreviated month
-    return(cleanDate(as.Date(dateList, format = "%B %d, %Y")))
-  } else if(grepl("[A-Z][a-z]* [0-9]+, [0-9][0-9][0-9][0-9]", pattern)) { #full month
-    return(cleanDate(as.Date(dateList, format = "%b %d, %Y")))
+    return(convertList)
   } else {
-    stop("Invalid date format:", pattern)
+    return(as.Date(dateList))
   }
 }
 
