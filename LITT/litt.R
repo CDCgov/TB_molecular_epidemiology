@@ -989,7 +989,7 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
   }
   ##check user date data is T/F
   if(class(caseData$UserDateData)=="character" | class(caseData$UserDateData)=="factor") {
-    caseData$UserDateData = ifelse(caseData$UserDateData=="Y" | tolower(caseData$UserDateData)=="yes" |
+    caseData$UserDateData = ifelse(toupper(caseData$UserDateData)=="Y" | tolower(caseData$UserDateData)=="yes" |
                                      caseData$UserDateData=="T" | tolower(caseData$UserDateData)=="true", T, F)
   }
   caseData$UserDateData[is.na(caseData$UserDateData)] = F#assume not from user if mix of missing and present values
@@ -998,10 +998,12 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
   if(class(caseData$Pediatric)=="logical") {
     caseData$Pediatric = ifelse(caseData$Pediatric==T, "Y", "N")
   }
-  caseData$Pediatric = as.character(caseData$Pediatric)
+  caseData$Pediatric = toupper(as.character(caseData$Pediatric))
+  caseData$Pediatric[grepl("yes", caseData$Pediatric, ignore.case = T)] = "Y"
+  caseData$Pediatric[grepl("no", caseData$Pediatric, ignore.case = T)] = "N"
   bad = is.na(caseData$Pediatric) | !caseData$Pediatric %in% c("Y", "N")
   if(any(bad)) {
-    cat(paste("Pediatric results are missing from the following cases, which will be assumed to be adult:",
+    cat(paste("Pediatric results are missing from the following cases (must have a value of Y/N), which will be assumed to be adult:",
               paste(caseData$ID[bad], collapse = ","), "\r\n"), file = log, append = T)
     caseData$Pediatric[bad] = "N"
   }
@@ -1009,14 +1011,35 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
   if(class(caseData$ExtrapulmonaryOnly)=="logical") {
     caseData$ExtrapulmonaryOnly = ifelse(caseData$ExtrapulmonaryOnly==T, "Y", "N")
   }
-  caseData$ExtrapulmonaryOnly = as.character(caseData$ExtrapulmonaryOnly)
+  caseData$ExtrapulmonaryOnly = toupper(as.character(caseData$ExtrapulmonaryOnly))
+  caseData$ExtrapulmonaryOnly[grepl("yes", caseData$ExtrapulmonaryOnly, ignore.case = T)] = "Y"
+  caseData$ExtrapulmonaryOnly[grepl("no", caseData$ExtrapulmonaryOnly, ignore.case = T)] = "N"
   bad = is.na(caseData$ExtrapulmonaryOnly) | !caseData$ExtrapulmonaryOnly %in% c("Y", "N")
   if(any(bad)) {
-    cat(paste("Extrapulmonary only results are missing from the following cases, which will be assumed to be pulmonary:", 
+    cat(paste("Extrapulmonary only results are missing from the following cases (must have a value of Y/N), which will be assumed to be pulmonary:", 
               paste(caseData$ID[bad], collapse = ","), "\r\n"), file = log, append = T)
     caseData$ExtrapulmonaryOnly[bad] = "N"
   }
   
+  #####clean xraycav and spsmear variables
+  caseData$XRAYCAV = toupper(as.character(caseData$XRAYCAV))
+  caseData$XRAYCAV[grepl("yes", caseData$XRAYCAV, ignore.case = T)] = "Y"
+  caseData$XRAYCAV[grepl("no", caseData$XRAYCAV, ignore.case = T)] = "N"
+  bad = is.na(caseData$XRAYCAV) | !caseData$XRAYCAV %in% c("Y", "N")
+  if(any(bad)) {
+    cat(paste("XRAYCAV results are missing from the following cases (must have a value of Y/N), which will be assumed to be negative:", 
+              paste(caseData$ID[bad], collapse = ","), "\r\n"), file = log, append = T)
+    caseData$XRAYCAV[bad] = "N"
+  }
+  caseData$SPSMEAR = toupper(as.character(caseData$SPSMEAR))
+  caseData$SPSMEAR[grepl("positive", caseData$SPSMEAR, ignore.case = T)] = "POS"
+  caseData$SPSMEAR[grepl("negative", caseData$SPSMEAR, ignore.case = T)] = "NEG"
+  bad = is.na(caseData$SPSMEAR) | !caseData$SPSMEAR %in% c("Y", "N")
+  if(any(bad)) {
+    cat(paste("SPSMEAR results are missing from the following cases (must have a value of POS/NEG), which will be assumed to be negative:", 
+              paste(caseData$ID[bad], collapse = ","), "\r\n"), file = log, append = T)
+    caseData$SPSMEAR[bad] = "NEG"
+  }
   
   ####calculate infectious rating
   infRate = data.frame(ID = cases,
@@ -1046,6 +1069,13 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
   if(any(!is.na(addlRiskFactor))) {
     addlRiskFactor = addlRiskFactor[addlRiskFactor$ID %in% c(cases, "weight"),]
     addlRiskFactor[] = lapply(addlRiskFactor, as.character)
+    for(c in 1:ncol(addlRiskFactor)) {
+      if(names(addlRiskFactor)[c]!="ID") {
+        addlRiskFactor[,c] = toupper(addlRiskFactor[,c])
+        addlRiskFactor[grepl("^yes$", addlRiskFactor[,c], ignore.case = T),c] = "Y"
+        addlRiskFactor[grepl("^no$", addlRiskFactor[,c], ignore.case = T),c] = "N"
+      }
+    }
     if(any(!cases %in% addlRiskFactor$ID)) {
       cat("These cases have no risk factor values, so will be treated as N for all risk factors:\r\n", file = log, append = T)
       cat(paste(cases[!cases %in% addlRiskFactor$ID], collapse = ","), "\r\n", file = log, append = T)

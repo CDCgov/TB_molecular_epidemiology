@@ -4,9 +4,14 @@ source("litt.R")
 ##cleans up and writes case data table
 ##caseOut = case output data to format
 ##outPrefix = output prefix
-cleanCaseOutput <- function(caseOut, outPrefix) {
+##keepUserDate = if true, keep user date data column
+cleanCaseOutput <- function(caseOut, outPrefix, keepUserDate = F) {
   ###convert T/F to Y/N
-  caseOut = caseOut[,names(caseOut) != "UserDateData"] #remove user date data column since all samples will be Y
+  if(!keepUserDate) {
+    caseOut = caseOut[,names(caseOut) != "UserDateData"] #remove user date data column since all samples will be Y
+  } else {
+    caseOut$UserDateData = ifelse(caseOut$UserDateData, "Y", "N")
+  }
   caseOut$sequenceAvailable = ifelse(caseOut$sequenceAvailable, "Y", "N")
   
   ##format date/zip columns
@@ -92,6 +97,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   }
   
   caseData = fixPresumedSource(caseData)
+  keepUserDate = "UserDateData" %in% names(caseData)
   
   ###check IP start present
   caseData = fixIPnames(caseData, log)
@@ -153,6 +159,13 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
         # addlRiskFactor = caseData[,names(caseData) %in% c("ID", rfTable$variable)]
         addlRiskFactor = caseData[,c("ID", rfTable$variable)]
         addlRiskFactor[] = lapply(addlRiskFactor, as.character)
+        for(c in 1:ncol(addlRiskFactor)) {
+          if(names(addlRiskFactor)[c]!="ID") {
+            addlRiskFactor[,c] = toupper(addlRiskFactor[,c])
+            addlRiskFactor[grepl("^yes$", addlRiskFactor[,c], ignore.case = T),c] = "Y"
+            addlRiskFactor[grepl("^no$", addlRiskFactor[,c], ignore.case = T),c] = "N"
+          }
+        }
         addlRiskFactor = rbind(addlRiskFactor, c("weight", rfTable$weight))
       }
     }
@@ -258,7 +271,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   
   ###write case table
   write = write[order(as.character(write$ID)),] #without as.character, order will be weird because factors are out of order
-  cleanCaseOutput(caseOut=splitPedEPDates(write), outPrefix=outPrefix)
+  cleanCaseOutput(caseOut=splitPedEPDates(write), outPrefix=outPrefix, keepUserDate = keepUserDate)
   
   if(all(class(progress)!="logical")) {
     progress$set(value = 8) #skip 7 unless have rfs

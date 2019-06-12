@@ -393,6 +393,13 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
       if(nrow(rfTable) > 0) {
         addlRiskFactor = caseData[,names(caseData) %in% c("ID", "STCASENO", rfTable$variable)]
         addlRiskFactor[] = lapply(addlRiskFactor, as.character)
+        for(c in 1:ncol(addlRiskFactor)) {
+          if(names(addlRiskFactor)[c]!="ID") {
+            addlRiskFactor[,c] = toupper(addlRiskFactor[,c])
+            addlRiskFactor[grepl("^yes$", addlRiskFactor[,c], ignore.case = T),c] = "Y"
+            addlRiskFactor[grepl("^no$", addlRiskFactor[,c], ignore.case = T),c] = "N"
+          }
+        }
         addlRiskFactor = rbind(addlRiskFactor, c("weight", rfTable$weight))
       }
     }
@@ -840,13 +847,14 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
                         age = gimsCases$AGE3)
   # write = merge(gimsVars, write, by="STCASENO")
   # write = merge(write, littCaseData, by = "STCASENO", all.y=T)
+  littCaseData$sequenceAvailable = littCaseData$STCASENO %in% colnames(dist)
   write = merge(littCaseData, gimsVars, by = "STCASENO", all.x=T)
   write$STCASENO = as.character(write$STCASENO)
   write = write[,c(which(names(write)=="STCASENO"), which(names(write)=="accessionNumber"),
                    which(names(write)=="IPStart"),
                    which(names(write)=="IPEnd"),
                    which(!names(write) %in% c("STCASENO", "accessionNumber", "IPStart", "IPEnd")))]#do dates first
-  write$sequenceAvailable = write$STCASENO %in% colnames(dist)
+  # write$sequenceAvailable = write$STCASENO %in% colnames(dist)
 
 
   # if(any(!is.na(gimsRiskFactor))) {
