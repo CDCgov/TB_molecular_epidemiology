@@ -377,7 +377,7 @@ mergeIAEtoIPstart <- function(caseData, log) {
   if("IAE" %in% names(caseData)) {
     if(!all(is.na(caseData$IAE))) {
       if("Pediatric" %in% names(caseData) & "ExtrapulmonaryOnly" %in% names(caseData)) {
-        ##only use IAE for pediatric and extrapulm cases
+        ##for pediatric and extrapulm cases, if IAE column is present, use that value (even if it is missing and IP start is not)
         caseData$IPStart[!is.na(caseData$Pediatric) & caseData$Pediatric=="Y"] = caseData$IAE[!is.na(caseData$Pediatric) & caseData$Pediatric=="Y"]
         caseData$IPEnd[!is.na(caseData$Pediatric) & caseData$Pediatric=="Y"] = as.Date(NA)
         caseData$IPStart[!is.na(caseData$ExtrapulmonaryOnly) & caseData$ExtrapulmonaryOnly=="Y"] = caseData$IAE[!is.na(caseData$ExtrapulmonaryOnly) & caseData$ExtrapulmonaryOnly=="Y"]
@@ -1296,14 +1296,14 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
       next()
     }
     
-    ###for pediatric cases, if infection acquisition start (IAS) is available, filter potential sources whose IP end if before the given case's IAS
+    ###if infection acquisition start (IAS) is available, filter potential sources whose IP end if before the given case's IAS
     if("IAS" %in% names(caseData)) {
       ias = caseData$IAS[caseData$ID==target]
-      if(!is.na(ias) && caseData$Pediatric[caseData$ID==target]=="Y") {
+      if(!is.na(ias)) {
         early = as.character(caseData$ID[(is.na(caseData$IPEnd) | caseData$IPEnd < ias) & caseData$ID %in% sources])
         if(length(early) > 0) {
           allFilt = rbind(allFilt,
-                          data.frame(target=target, filteredCase=early, reasonFiltered="IP end is before infection acquisition start (pediatric given case)"))
+                          data.frame(target=target, filteredCase=early, reasonFiltered="IP end is before infection acquisition start"))
         }
         sources = sources[!sources %in% early]
       }

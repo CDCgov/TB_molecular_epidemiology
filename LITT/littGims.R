@@ -616,8 +616,9 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
                 file = log, append = T)
           }
         } else {
-          cat(as.character(temp$STCASENO[r]), " has an input infection acquisition start, but is not pediatric; this date will be ignored.\r\n", 
-              file = log, append = T)
+        #   cat(as.character(temp$STCASENO[r]), " has an input infection acquisition start, but is not pediatric; this date will be ignored.\r\n", 
+        #       file = log, append = T)
+          dates$IAS[dates$STCASENO==temp$STCASENO[r]] = temp$IAS[r]
         }
       }
     }
