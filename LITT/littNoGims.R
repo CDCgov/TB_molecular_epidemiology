@@ -39,9 +39,11 @@ formatLittGimsCaseTable <- function(prefix) {
 ##rfs = column names of risk factors to keep
 cleanedCaseDataHeadersToVarNames <- function(caseData) {
   ##fix names
-  names(caseData)[tolower(names(caseData))=="stcaseno"] = "ID"
-  names(caseData)[names(caseData)=="State.Case.Number"] = "ID"
-  names(caseData)[names(caseData)=="Case.ID"] = "ID"
+  names(caseData)[names(caseData)=="Case.ID" | names(caseData)=="Case ID"] = "ID"
+  if(!"ID" %in% names(caseData)) {
+    names(caseData)[tolower(names(caseData))=="stcaseno"] = "ID"
+    names(caseData)[names(caseData)=="State.Case.Number"] = "ID"
+  }
   names(caseData)[names(caseData)=="Evidence.of.Cavity.by.X.Ray..XRAYCAV."] = "XRAYCAV"
   names(caseData)[names(caseData)=="Sputum.Smear..SPSMEAR."] = "SPSMEAR" #make.names(spName)
   names(caseData)[names(caseData)=="Extrapulmonary.Only"] = "ExtrapulmonaryOnly"
