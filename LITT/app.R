@@ -17,7 +17,8 @@ ui <- fixedPage( #fixedPage fluidPage #https://stackoverflow.com/questions/35040
   fluidRow(
     column(4, #align="center",
            h3("Input files", align="center"),
-           fileInput("caseData", "Case data table (required)", accept=c(".xlsx", ".csv")),
+           p("Warning: do not upload personally identifiable information (PII)", style="color:red;text-align:center"),
+           fileInput("caseData", "Case data table", accept=c(".xlsx", ".csv")),
            checkboxInput("keepExtraCDcol",
                          # "Output extra columns from the TB GIMS version"),
                          "Output extra columns in case data table", value=T),
