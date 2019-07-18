@@ -642,7 +642,9 @@ writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHea
     for(c in 1:ncol(df)) {
       if(!is.na(df[r,c])) {
         if(as.character(df[r,c])!="") {
-          if(all(grepl("[0-9.]", strsplit(as.character(df[r,c]), "")[[1]]))) {
+          if(class(df[,c])=="Date") {
+            setCellValue(cells[[r+1,c]], format(df[r,c], format="%m/%d/%Y"))
+          } else if(all(grepl("[0-9.]", strsplit(as.character(df[r,c]), "")[[1]]))) {
             setCellValue(cells[[r+1,c]], as.numeric(as.character(df[r,c])))
           } else {
             setCellValue(cells[[r+1,c]], df[r,c])
