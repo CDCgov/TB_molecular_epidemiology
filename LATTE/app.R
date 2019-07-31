@@ -15,6 +15,7 @@ ui <- fluidPage(
     column(2),
     column(4,
            h3("Set up inputs"),
+           p("Warning: do not upload personally identifiable information (PII)", style="color:red;text-align:center"),
            fileInput("locTab", "Table of dates in locations (required)", accept=c(".xlsx", ".csv")),
            fileInput("ipTab", "Table of infectious periods", accept=c(".xlsx", ".csv")),
            br(),
