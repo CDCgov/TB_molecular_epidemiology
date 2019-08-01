@@ -2,6 +2,7 @@
 
 library(shiny)
 library(shinyjs)
+library(zip)
 
 source("latte.R")
 
@@ -120,7 +121,7 @@ server <- function(input, output, session) {
       outfiles = sub(tmpdir, "", outfiles, fixed=T)
       currdir = getwd()
       setwd(tmpdir)
-      zip(zipfile = fname, files = outfiles)
+      zipr(zipfile = fname, files = outfiles)
       if(file.exists(paste0(fname, ".zip"))) {
         file.rename(paste0(fname, ".zip"), fname)
       }
