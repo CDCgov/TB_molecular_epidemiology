@@ -23,7 +23,8 @@ cleanCaseOutput <- function(caseOut, outPrefix, keepUserDate = F) {
   writeExcelTable(fileName=paste(outPrefix, caseFileName, sep=""),
                   sheetName = "case data",
                   df = caseOut,
-                  wrapHeader=T)
+                  wrapHeader=T,
+                  gims = F)
 }
 
 ##function that takes in the outputs of the TB GIMS version and formats it for running the no GIMS version

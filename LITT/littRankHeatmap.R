@@ -5,14 +5,14 @@ library(xlsx)
 ##all = all potential sources table from LITT
 ##save = if true save the Excel spreadsheet (don't save if adding another tab)
 ##workbook to write sheet to; if NA, then create a new workbook
-littScoreHeatmap <- function(outPrefix = "", all, save = T, workbook = NA) {
+littRankHeatmap <- function(outPrefix, all, save = T, workbook = NA) {
   ##fix names (was developed for the all potential sources output Excel file)
   all = cleanHeaderForOutput(all)
   names(all) = make.names(names(all))
 
   cases = rev(as.character(sort(unique(all$Given.Case))))
   
-  ##score matrix
+  ##score matrix (for colors)
   seq = matrix(NA, nrow=length(cases), ncol=length(cases))
   row.names(seq) = cases
   colnames(seq) = cases
@@ -62,7 +62,7 @@ littScoreHeatmap <- function(outPrefix = "", all, save = T, workbook = NA) {
   if(class(workbook)!="jobjRef") {
     workbook = createWorkbook(type="xlsx")
   }
-  sheetName = "score heatmap"
+  sheetName = "rank heatmap"
   ###set up sheet
   # workbook = createWorkbook(type="xlsx")
   sheet = createSheet(workbook, sheetName)
@@ -97,10 +97,10 @@ littScoreHeatmap <- function(outPrefix = "", all, save = T, workbook = NA) {
     setCellStyle(cells[[2+r, 2]], bord)
     ##scores
     for(c in 1:ncol(rank)) {
-      if(!is.na(seq[r,c])) {
-        setCellValue(cells[[2+r, 2+c]], as.numeric(seq[r,c]))
-      } else if(!is.na(nonseq[r,c])) {
-        setCellValue(cells[[2+r, 2+c]], paste(nonseq[r,c], "*", sep=""))
+      if(!is.na(rank[r,c]) & grepl("*", rank[r,c], fixed = T)) {
+        setCellValue(cells[[2+r, 2+c]], rank[r,c])
+      } else if(!is.na(rank[r,c])) {
+        setCellValue(cells[[2+r, 2+c]], as.numeric(rank[r,c]))
       }
     }
   }
@@ -166,13 +166,12 @@ littScoreHeatmap <- function(outPrefix = "", all, save = T, workbook = NA) {
     }
   }
   
-  
   ###legend at bottom
   setCellValue(cells[[2, 2]], "Legend below")
   setCellStyle(cells[[2,2]], cellStyle = CellStyle(workbook, alignment = Alignment(horizontal = "ALIGN_CENTER", vertical = "VERTICAL_CENTER")))
   setCellValue(cells[[length(cases)+4, 1]], "Legend:")
   setCellStyle(cells[[length(cases)+4, 1]], cellStyle = CellStyle(wb=workbook, font=Font(workbook, isBold = T)))
-  setCellValue(cells[[length(cases)+4, 2]], "Numbers indicate score")
+  setCellValue(cells[[length(cases)+4, 2]], "Numbers indicate rank")
   setCellValue(cells[[length(cases)+5, 2]], "* indicates no SNP")
   setCellValue(cells[[length(cases)+7, 2]], "Cell color:")
   setCellValue(cells[[length(cases)+8, 2]], "Top ranked source")

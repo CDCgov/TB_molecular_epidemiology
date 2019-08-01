@@ -189,7 +189,8 @@ cleanCaseOutput <- function(caseOut, outPrefix) {
                   sheetName = "case data",
                   df = caseOut,
                   wrapHeader = T, 
-                  stcasenolab = T)
+                  stcasenolab = T,
+                  gims = T)
 }
 
 ##for the given file, return a distance matrix that can be passed to the dist variable in LITT

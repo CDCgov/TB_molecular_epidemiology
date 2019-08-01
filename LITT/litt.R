@@ -2,7 +2,8 @@
 ##for each case, produces a ranked list of potential sources
 
 source("../sharedFunctions.R")
-source("littHeatmap.R")
+source("littScoreHeatmap.R")
+source("littRankHeatmap.R")
 library(lubridate) #for adding months
 library(xlsx) #for Excel writing functions (not used directly by LITT)
 
@@ -495,18 +496,21 @@ getLikelihoodCategory <- function(df) {
 ##df = data frame to clean names of 
 ##snpRate = if true, snpDistance is a rating, otherwise it is just SNP distance
 ##stcasenolab = if true, ID column is named state case number, otherwise is ID
+##gims = if true, rename TB GIMS variables
 ##returns data frame with cleaned names
-cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
+cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F, gims = F) {
   ##variables in case line list
   names(df)[names(df)=="STCASENO"] = "State Case Number"
   names(df)[names(df)=="ID"] = ifelse(stcasenolab, "State Case Number", "Case ID")
   names(df)[names(df)=="accessionNumber"] = "Accession Number"
-  names(df)[names(df)=="zipcode"] = "ZIP Code"
-  names(df)[names(df)=="county"] = "County"
-  names(df)[names(df)=="state"] = "State"
-  names(df)[names(df)=="gender"] = "Gender"
-  names(df)[names(df)=="RACEHISP"] = "Race/Ethnicity of Patient (RACEHISP)" #attr(gimsAll$RACEHISP, "label")
-  names(df)[names(df)=="age"] = "Age"
+  if(gims) {
+    names(df)[names(df)=="zipcode"] = "ZIP Code"
+    names(df)[names(df)=="county"] = "County"
+    names(df)[names(df)=="state"] = "State"
+    names(df)[names(df)=="gender"] = "Gender"
+    names(df)[names(df)=="RACEHISP"] = "Race/Ethnicity of Patient (RACEHISP)" #attr(gimsAll$RACEHISP, "label")
+    names(df)[names(df)=="age"] = "Age"
+  }
   names(df)[names(df)=="earliestDate"] = "Earliest Date"
   names(df)[names(df)=="IPStart"] = "Infectious Period Start"
   names(df)[names(df)=="IPEnd"] = "Infectious Period End"
@@ -527,21 +531,23 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F) {
   names(df)[names(df)=="Presumed.Source.Strength"] = "Investigation Presumed Source Strength"
   
   ##variables in possible GIMS risk factors
-  # names(df)[names(df)=="HOMELESS"] = "GIMS Homeless"# Within Past Year"
-  # names(df)[names(df)=="HIVSTAT"] = "GIMS HIV Status"
-  # names(df)[names(df)=="CORRINST"] = "GIMS Correctional Facility Resident"
-  # names(df)[names(df)=="LONGTERM"] = "GIMS Long-Term Care Facility Resident"
-  # names(df)[names(df)=="IDU"] = "GIMS Injecting Drug Use"
-  # names(df)[names(df)=="NONIDU"] = "GIMS Non-Injecting Drug Use"
-  # names(df)[names(df)=="ALCOHOL"] = "GIMS Alcohol"
-  # names(df)[names(df)=="OCCUHCW"] = "GIMS Health Care Worker"
-  # names(df)[names(df)=="OCCUCORR"] = "GIMS Correctional Facility Employee"
-  # names(df)[names(df)=="RISKTNF"] = "GIMS TNF alpha Antagonist Therapy"
-  # names(df)[names(df)=="RISKORGAN"] = "GIMS Post-Organ Transplant"
-  # names(df)[names(df)=="RISKDIAB"] = "GIMS Diabetes Mellitus"
-  # names(df)[names(df)=="RISKRENAL"] = "GIMS End-Stage Renal Disease"
-  # names(df)[names(df)=="RISKIMMUNO"] = "GIMS Immunosuppression Not HIV/AIDS"
-  names(df) = cleanGimsRiskFactorNames(names(df))
+  if(gims) {
+  #   names(df)[names(df)=="HOMELESS"] = "GIMS Homeless"# Within Past Year"
+  #   names(df)[names(df)=="HIVSTAT"] = "GIMS HIV Status"
+  #   names(df)[names(df)=="CORRINST"] = "GIMS Correctional Facility Resident"
+  #   names(df)[names(df)=="LONGTERM"] = "GIMS Long-Term Care Facility Resident"
+  #   names(df)[names(df)=="IDU"] = "GIMS Injecting Drug Use"
+  #   names(df)[names(df)=="NONIDU"] = "GIMS Non-Injecting Drug Use"
+  #   names(df)[names(df)=="ALCOHOL"] = "GIMS Alcohol"
+  #   names(df)[names(df)=="OCCUHCW"] = "GIMS Health Care Worker"
+  #   names(df)[names(df)=="OCCUCORR"] = "GIMS Correctional Facility Employee"
+  #   names(df)[names(df)=="RISKTNF"] = "GIMS TNF alpha Antagonist Therapy"
+  #   names(df)[names(df)=="RISKORGAN"] = "GIMS Post-Organ Transplant"
+  #   names(df)[names(df)=="RISKDIAB"] = "GIMS Diabetes Mellitus"
+  #   names(df)[names(df)=="RISKRENAL"] = "GIMS End-Stage Renal Disease"
+  #   names(df)[names(df)=="RISKIMMUNO"] = "GIMS Immunosuppression Not HIV/AIDS"
+    names(df) = cleanGimsRiskFactorNames(names(df))
+  }
   
   ##additional variables in date file
   names(df)[names(df)=="inputIAS"] = "Input Infection Acquisition Start"
@@ -618,9 +624,10 @@ cleanGimsRiskFactorNames <- function(names) {
 ##save = if true, save the workbook
 ##filter = if true, add a filter
 ##gcLines = if true, add a line between given cases
+##gims = if true, rename gims variables
 writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHeader=F, stcasenolab = F, snpRate = F, 
-                          save = T, filter = T, gcLines = F) {
-  df = cleanHeaderForOutput(df, stcasenolab = stcasenolab, snpRate = snpRate)
+                          save = T, filter = T, gcLines = F, gims=F) {
+  df = cleanHeaderForOutput(df, stcasenolab = stcasenolab, snpRate = snpRate, gims=gims)
   if(class(workbook)!="jobjRef") {
     workbook = createWorkbook()
   }
@@ -738,6 +745,13 @@ writeAllSourcesTable <- function(littResults, outPrefix, stcasenolab = F) {
                        df = filt,
                        stcasenolab = stcasenolab,
                        gcLines = T)
+}
+
+##outPrefix is the prefix for the output Excel spreadsheet
+##all = all potential sources table from LITT
+littHeatmap <- function(outPrefix, all) {
+  wb = littScoreHeatmap(outPrefix = outPrefix, all = all, save=F)
+  wb = littRankHeatmap(outPrefix = outPrefix, all = all, save = T, workbook = wb)
 }
 
 ##for the given set of litt results (littResults, which is returned from LITT)
