@@ -172,7 +172,7 @@ littRankHeatmap <- function(outPrefix, all, save = T, workbook = NA) {
   setCellValue(cells[[length(cases)+4, 1]], "Legend:")
   setCellStyle(cells[[length(cases)+4, 1]], cellStyle = CellStyle(wb=workbook, font=Font(workbook, isBold = T)))
   setCellValue(cells[[length(cases)+4, 2]], "Numbers indicate rank")
-  setCellValue(cells[[length(cases)+5, 2]], "* indicates no SNP")
+  setCellValue(cells[[length(cases)+5, 2]], "* indicates no SNP data used for ranking")
   setCellValue(cells[[length(cases)+7, 2]], "Cell color:")
   setCellValue(cells[[length(cases)+8, 2]], "Top ranked source")
   # setCellValue(cells[[length(cases)+9, 2]], "Highest likelihood")
@@ -195,7 +195,7 @@ littRankHeatmap <- function(outPrefix, all, save = T, workbook = NA) {
   autoSizeColumn(sheet, 1:num)
   createFreezePane(sheet, rowSplit = 3, colSplit = 3)
   ###add additional score information
-  setCellValue(cells[[length(cases)+9, 3]], "Score or without SNP score of 0-1")
+  setCellValue(cells[[length(cases)+9, 3]], "Score of 0-1 with or without SNPs")
   setCellValue(cells[[length(cases)+10, 3]], "Score of 2-3 or without SNP score of 2")
   setCellValue(cells[[length(cases)+11, 3]], "Score of 4-7 or without SNP score of 3-4")
   # saveWorkbook(workbook, fileName)
