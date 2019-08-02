@@ -67,6 +67,7 @@ fixStcasenoName <- function(df) {
             !apply(df, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
     names(df)[grepl("stcaseno", names(df), ignore.case = T) |
                 grepl("state[ .]*case[ .]*number", names(df), ignore.case = T)] = "STCASENO"
+    df$STCASENO = removeWhitespacePeriods(df$STCASENO)
   }
   return(df)
 }
@@ -237,6 +238,8 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
     return(NA)
   }
   colnames(mat) = sub("^X", "", colnames(mat))
+  colnames(mat) = removeWhitespacePeriods(colnames(mat))
+  row.names(mat) = removeWhitespacePeriods(row.names(mat))
   
   ##remove rows and columns that are all NA
   mat = mat[!apply(mat, 1, function(x) all(is.na(x))),
@@ -338,6 +341,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   
   ####check inputs
   ##fix field names
+  names(caseData) = removeWhitespacePeriods(names(caseData))
   caseData = fixStcasenoName(caseData)
   caseData = fixPresumedSource(caseData)
   epi = fixEpiNames(epi, log)
@@ -680,12 +684,13 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   ##   "RISKTNF", "RISKORGAN", "RISKDIAB", "RISKRENAL", "RISKIMMUNO"); add AnyCorr
   if(any(!is.na(gimsRiskFactor))) {
     names(gimsRiskFactor) = tolower(names(gimsRiskFactor))
+    names(gimsRiskFactor) = removeWhitespacePeriods(names(gimsRiskFactor))
     if(!any(names(gimsRiskFactor)=="variable")) {
       cat("To use GIMS variables as risk factor, input table must have a column labeled \"variable\" that contains a list of the GIMS variables to use. Input table does not contain this column so GIMS variables will not be used.", 
           file = log, append = T)
       warning("To use GIMS variables as risk factor, input table must have a column labeled \"variable\" that contains a list of the GIMS variables to use. Input table does not contain this column so GIMS variables will not be used.")
     } else {
-      gimsRiskFactor$variable = as.character(gimsRiskFactor$variable)
+      gimsRiskFactor$variable = removeWhitespacePeriods(as.character(gimsRiskFactor$variable))
       if("AnyCorr" %in% gimsRiskFactor$variable) {
         gimsCases$AnyCorr = ""
       }

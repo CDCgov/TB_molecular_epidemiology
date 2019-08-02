@@ -45,8 +45,10 @@ cleanedCaseDataHeadersToVarNames <- function(caseData) {
     names(caseData)[tolower(names(caseData))=="stcaseno"] = "ID"
     names(caseData)[names(caseData)=="State.Case.Number"] = "ID"
   }
-  names(caseData)[names(caseData)=="Evidence.of.Cavity.by.X.Ray..XRAYCAV."] = "XRAYCAV"
-  names(caseData)[names(caseData)=="Sputum.Smear..SPSMEAR."] = "SPSMEAR" #make.names(spName)
+  # names(caseData)[names(caseData)=="Evidence.of.Cavity.by.X.Ray..XRAYCAV."] = "XRAYCAV"
+  # names(caseData)[names(caseData)=="Sputum.Smear..SPSMEAR."] = "SPSMEAR" #make.names(spName)
+  names(caseData)[grepl("XRAYCAV", names(caseData))] = "XRAYCAV"
+  names(caseData)[grepl("SPSMEAR", names(caseData))] = "SPSMEAR" #make.names(spName)
   names(caseData)[names(caseData)=="Extrapulmonary.Only"] = "ExtrapulmonaryOnly"
   names(caseData)[names(caseData)=="User.Input.Date.Data.Available"] = "UserDateData"
   ##remove previously calculated LITT summary
@@ -78,6 +80,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
   caseData = caseData[!apply(caseData, 1, function(x) all(is.na(x))),
                       !apply(caseData, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
   names(caseData) = paste0(toupper(substring(names(caseData),1,1)), substring(names(caseData), 2)) #make sure have correct capitalization (e.g. Pediatric, not pediatric)
+  names(caseData) = removeWhitespacePeriods(names(caseData))
   if(all(is.na(caseData))) {
     cat("A case data table is required\r\n", file = log, append = T)
     stop("A case data table is required")
@@ -98,6 +101,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
         nrow(caseData), ifelse(nrow(caseData)==1, "case", "cases"), "\r\n", file = log, append = T)
     stop("LITT requires at least two cases, but there are ", nrow(caseData))
   }
+  caseData$ID = removeWhitespacePeriods(caseData$ID)
   
   caseData = fixPresumedSource(caseData)
   keepUserDate = "UserDateData" %in% names(caseData)

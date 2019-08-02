@@ -116,6 +116,8 @@ formatDistanceMatrixWithoutStno <- function(fileName, log, appendlog=T) { #forme
     return(NA)
   }
   colnames(mat) = sub("^X", "", colnames(mat))
+  colnames(mat) = removeWhitespacePeriods(colnames(mat))
+  row.names(mat) = removeWhitespacePeriods(row.names(mat))
   
   ##remove rows and columns that are all NA
   mat = mat[!apply(mat, 1, function(x) all(is.na(x))),

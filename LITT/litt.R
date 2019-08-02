@@ -82,6 +82,7 @@ getAddlRFUserUserWeights <- function(addlRiskFactor) {
 
 ##for the given epi data, make sure the columns are correctly named
 fixEpiNames <- function(epi, log) {
+  names(epi) = removeWhitespacePeriods(names(epi))
   epicolnames = c("case1", "case2", "strength", "label")
   if(any(!is.na(epi))) {
     epi = epi[!apply(epi, 1, function(x) all(is.na(x))),
@@ -176,8 +177,8 @@ fixEpiNames <- function(epi, log) {
                 "\r\n"), file = log, append = T)
     }
     epi = epi[,names(epi) %in% epicolnames] #remove extra columns (needed for rbind with TB GIMS data)
-    epi$case1 = as.character(epi$case1)
-    epi$case2 = as.character(epi$case2)
+    epi$case1 = removeWhitespacePeriods(as.character(epi$case1))
+    epi$case2 = removeWhitespacePeriods(as.character(epi$case2))
     epi$strength = as.character(epi$strength)
     if("label" %in% names(epi)) {
       epi$label = as.character(epi$label)
@@ -249,6 +250,7 @@ fixIPnames <- function(df, log) {
 ##df = dataframe with variable (list of additional risk factors, which correspond to column names in caseData) and weight
 ##log = where to write messages to
 fixRfTable <- function(df, log) {
+  names(df) = removeWhitespacePeriods(names(df))
   #remove rows and columns that are all NA
   if(any(apply(df, 1, function(x) all(is.na(x))))) {
     df = df[!apply(df, 1, function(x) all(is.na(x))),]  
@@ -307,6 +309,7 @@ fixRfTable <- function(df, log) {
   
   ##variable names to match R modifying column names
   df$variable = make.names(df$variable)
+  df$variable = removeWhitespacePeriods(df$variable)
   return(df)
 }
 
@@ -412,6 +415,17 @@ mergeIAEtoIPstart <- function(caseData, log) {
     }
   }
   return(caseData)
+}
+
+##removes whitespace and extra periods from whitespace to avoid issues of names not matching due to extra spaces around variables
+removeWhitespacePeriods <- function(vec) {
+  ##periods
+  vec = gsub("^\\.+", "", vec)
+  vec = gsub("\\.+$", "", vec)
+  ##whitespace (do second because assume if have whitespace this is not a header and the periods are intentional)
+  vec = gsub("^\\s+", "", vec)
+  vec = gsub("\\s+$", "", vec)
+  return(vec)
 }
 
 ##remove first X from names if they are supposed to start with a number (e.g. column names of distance matrix)
