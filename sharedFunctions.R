@@ -51,7 +51,7 @@ convertToDate <- function(dateList) {
           # warning("Excel to R conversion resulted in dates being converted to numbers.")
           convertList[i] = cleanDate(as.Date(as.numeric(dateList[i]), origin="1899-12-30"))
         } else {
-          stop("Invalid date format:", pattern)
+          stop("Invalid date format:", dateList[i])
         }
       }
     }

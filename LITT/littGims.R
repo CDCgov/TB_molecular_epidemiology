@@ -607,7 +607,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   dates$IAS = dates$RPTDATE %m-% months(dates$PEDAGE)
   if(!all(is.na(iae))) { #incorporate input data if available
     if(any(!is.na(iae$IAS))) {
-      temp = iae[!is.na(iae$IAS),]
+      temp = iae[!is.na(iae$IAS) & iae$STCASENO %in% cases,]
       for(r in 1:nrow(temp)) {
         ped = littCaseData$Pediatric[littCaseData$STCASENO==temp$STCASENO[r]]
         if(!is.na(ped) & ped == "Y") {
