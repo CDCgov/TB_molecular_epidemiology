@@ -77,7 +77,7 @@ fixStcasenoName <- function(df) {
 ##check for duplicates; if same isolate has two different sx onset dates, give warning and take the earlier
 fixSxOnsetNames <- function(df, log) {
   if(any(!is.na(df))) {
-    col = grepl("sx[ ]*onset", names(df), ignore.case = T) | grepl("symptom[ ]*onset", names(df), ignore.case = T)
+    col = grepl("sx[ .]*onset", names(df), ignore.case = T) | grepl("symptom[ .]*onset", names(df), ignore.case = T)
     if(sum(col) == 1) {
       names(df)[col] = "sxOnset"
     } else if(sum(col) > 1) {
