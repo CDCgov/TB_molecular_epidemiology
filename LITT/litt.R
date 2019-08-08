@@ -1064,6 +1064,8 @@ litt <- function(caseData, epi=NA, dist=NA, SNPcutoff = snpDefaultCut, addlRiskF
   caseData$SPSMEAR = toupper(as.character(caseData$SPSMEAR))
   caseData$SPSMEAR[grepl("positive", caseData$SPSMEAR, ignore.case = T)] = "POS"
   caseData$SPSMEAR[grepl("negative", caseData$SPSMEAR, ignore.case = T)] = "NEG"
+  caseData$SPSMEAR[grepl("^p$", caseData$SPSMEAR, ignore.case = T)] = "POS"
+  caseData$SPSMEAR[grepl("^n$", caseData$SPSMEAR, ignore.case = T)] = "NEG"
   bad = is.na(caseData$SPSMEAR) | !caseData$SPSMEAR %in% c("POS", "NEG")
   if(any(bad)) {
     cat(paste("SPSMEAR results are missing from the following cases (must have a value of POS/NEG), which will be assumed to be negative:", 
