@@ -78,6 +78,18 @@ getSNPDistance <- function(epi, dist) {
   return(snp)
 }
 
+
+##removes whitespace and extra periods from whitespace to avoid issues of names not matching due to extra spaces around variables
+removeWhitespacePeriods <- function(vec) {
+  ##periods
+  vec = gsub("^\\.+", "", vec)
+  vec = gsub("\\.+$", "", vec)
+  ##whitespace (do second because assume if have whitespace this is not a header and the periods are intentional)
+  vec = gsub("^\\s+", "", vec)
+  vec = gsub("\\s+$", "", vec)
+  return(vec)
+}
+
 ##for the given file, return a distance matrix that has filled in the upper triangle and rounded to the nearest whole number
 ##compared to LITT version, does not de-duplicate or convert to state case number
 ##returns a matrix: fill in whole matrix, with row and column names the state case number and SNP distances rounded to nearest whole number

@@ -417,17 +417,6 @@ mergeIAEtoIPstart <- function(caseData, log) {
   return(caseData)
 }
 
-##removes whitespace and extra periods from whitespace to avoid issues of names not matching due to extra spaces around variables
-removeWhitespacePeriods <- function(vec) {
-  ##periods
-  vec = gsub("^\\.+", "", vec)
-  vec = gsub("\\.+$", "", vec)
-  ##whitespace (do second because assume if have whitespace this is not a header and the periods are intentional)
-  vec = gsub("^\\s+", "", vec)
-  vec = gsub("\\s+$", "", vec)
-  return(vec)
-}
-
 ##remove first X from names if they are supposed to start with a number (e.g. column names of distance matrix)
 removeXFromNames <- function(names) {
   fix = grepl("^X[0-9]", names)
