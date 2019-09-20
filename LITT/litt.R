@@ -360,12 +360,12 @@ fixIAE <- function(caseData, log) {
 
 ##for the given data frame, which contains case data, get presumed source columns to correct format
 fixPresumedSource <- function(caseData) {
-  col = grepl("presumed[ .]*source$", names(caseData), ignore.case = T)
+  col = grepl("presumed[ .]*source$", names(caseData), ignore.case = T) #note that we should now expect investigation presumed source
   if(sum(col)==1) {
     names(caseData)[col] = "Presumed.Source"
     caseData$Presumed.Source = as.character(caseData$Presumed.Source)
   }
-  col = grepl("presumed[ .]*source[ .]*strength", names(caseData), ignore.case = T)
+  col = grepl("presumed[ .]*source[ .]*strength", names(caseData), ignore.case = T)#note that we should now expect investigation presumed source strength
   if(sum(col)==1) {
     names(caseData)[col] = "Presumed.Source.Strength"
     caseData$Presumed.Source.Strength = as.character(caseData$Presumed.Source.Strength)
@@ -520,8 +520,8 @@ cleanHeaderForOutput <- function(df, snpRate = F, stcasenolab = F, gims = F) {
   names(df)[names(df)=="IAS"] = "Infection Acquisition Start"
   names(df)[names(df)=="IAE"] = "Infection Acquisition End"
   # names(df)[names(df)=="infRate"] = "Infectious Category"
-  names(df)[names(df)=="SPSMEAR"] = "Sputum Smear (SPSMEAR)"
-  names(df)[names(df)=="XRAYCAV"] = "Evidence of Cavity by X-Ray (XRAYCAV)"
+  # names(df)[names(df)=="SPSMEAR"] = "Sputum Smear (SPSMEAR)"
+  # names(df)[names(df)=="XRAYCAV"] = "Evidence of Cavity by X-Ray (XRAYCAV)"
   names(df)[names(df)=="UserDateData"] = "User Input Date Data Available"
   names(df)[names(df)=="sequenceAvailable"] = "Sequence Available In Analysis"
   names(df)[names(df)=="pediatric"] = "Pediatric"

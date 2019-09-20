@@ -45,8 +45,6 @@ cleanedCaseDataHeadersToVarNames <- function(caseData) {
     names(caseData)[tolower(names(caseData))=="stcaseno"] = "ID"
     names(caseData)[names(caseData)=="State.Case.Number"] = "ID"
   }
-  # names(caseData)[names(caseData)=="Evidence.of.Cavity.by.X.Ray..XRAYCAV."] = "XRAYCAV"
-  # names(caseData)[names(caseData)=="Sputum.Smear..SPSMEAR."] = "SPSMEAR" #make.names(spName)
   names(caseData)[grepl("XRAYCAV", names(caseData))] = "XRAYCAV"
   names(caseData)[grepl("SPSMEAR", names(caseData))] = "SPSMEAR" #make.names(spName)
   names(caseData)[names(caseData)=="Extrapulmonary.Only"] = "ExtrapulmonaryOnly"
@@ -240,6 +238,7 @@ littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = sn
     #               })))
     littResults$rfWeights$variable = gsub(".", " ", littResults$rfWeights$variable, fixed=T)
     writeExcelTable(fileName=paste(outPrefix, rfFileName, sep=""),
+                    sheetName = "RFweights",
                     df = littResults$rfWeights,
                     filter=F)
     if(all(class(progress)!="logical")) {

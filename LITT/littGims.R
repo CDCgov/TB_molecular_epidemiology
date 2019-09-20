@@ -888,6 +888,7 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
     }
     littResults$rfWeights$variable = gsub(".", " ", littResults$rfWeights$variable, fixed=T)
     writeExcelTable(fileName=paste(outPrefix, rfFileName, sep=""),
+                    sheetName = "RFweights",
                     df = littResults$rfWeights,
                     filter=F)
     if(all(class(progress)!="logical")) {
