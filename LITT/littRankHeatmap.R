@@ -196,8 +196,8 @@ littRankHeatmap <- function(outPrefix, all, save = T, workbook = NA) {
   createFreezePane(sheet, rowSplit = 3, colSplit = 3)
   ###add additional score information
   setCellValue(cells[[length(cases)+9, 3]], "Score of 0-1 with or without SNPs")
-  setCellValue(cells[[length(cases)+10, 3]], "Score of 2-3 or without SNP score of 2")
-  setCellValue(cells[[length(cases)+11, 3]], "Score of 4-7 or without SNP score of 3-4")
+  setCellValue(cells[[length(cases)+10, 3]], "Score of >1-3 or without SNP score of >1-2")
+  setCellValue(cells[[length(cases)+11, 3]], "Score of >3-8 or without SNP score of >2-5")
   # saveWorkbook(workbook, fileName)
   if(save) {
     fileName = paste(outPrefix, heatmapFileName, sep="")
