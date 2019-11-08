@@ -36,7 +36,7 @@ ui <- fixedPage( #fixedPage fluidPage #https://stackoverflow.com/questions/35040
     column(4, #align="center",
            h3("Set up", align="center"),
            textInput("prefix", "Name prefix for output files"),#, width="90%"),
-           sliderInput("snpCutoff", "SNP cutoff", min=0, max=10, value=5, step=1, round=T)),
+           sliderInput("snpCutoff", "SNP cutoff", min=0, max=7, value=5, step=1, round=T)),
     column(4,
            h3("Advanced options", align="center"),
            fileInput("rfTable", "Table of risk factor weights", accept=c(".xlsx", ".csv")),
