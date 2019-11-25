@@ -72,7 +72,7 @@ cleanedCaseDataHeadersToVarNames <- function(caseData) {
 littNoGims <- function(outPrefix = "", caseData, dist=NA, epi=NA, SNPcutoff = snpDefaultCut, rfTable= NA, 
                        keepExtraCDcol = F, writeDist = F, appendlog = F, progress = NA) {
   log = paste(outPrefix, defaultLogName, sep="")
-  cat("LITT analysis\r\nSNP cutoff = ", SNPcutoff, "\r\n", file = log, append=appendlog)
+  cat("LITT analysis\r\nSNP cutoff: ", SNPcutoff, "\r\n", file = log, append=appendlog)
   
   ####check inputs
   caseData = caseData[!apply(caseData, 1, function(x) all(is.na(x))),

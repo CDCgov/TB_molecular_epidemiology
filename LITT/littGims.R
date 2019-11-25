@@ -334,7 +334,7 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
 littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTable = NA, gimsRiskFactor = NA, 
                      writeDate = F, writeDist = F, appendlog=F, SNPcutoff = snpDefaultCut, progress = NA) {
   log = paste(outPrefix, defaultLogName, sep="")
-  cat("LITT analysis with TB GIMS\r\nSNP cutoff = ", SNPcutoff, "\r\n", file = log, append=appendlog)
+  cat("LITT analysis with TB GIMS\r\nSNP cutoff: ", SNPcutoff, "\r\n", file = log, append=appendlog)
   cat(paste("GIMS patient file: ", gimsPtName, "\r\n"), file = log, append = T)
   cat(paste("GIMS export file:", gimsAllName, "\r\n"), file = log, append = T)
   cat(paste("GIMS genotyping file:", gimsGenoName, "\r\n"), file = log, append = T)
