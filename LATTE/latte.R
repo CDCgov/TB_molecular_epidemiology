@@ -18,9 +18,10 @@ fixIDName <- function(df) {
 
 ##function that takes the given data frame and corrects the column location name capitalization
 fixLocNames <- function(df, log) {
+  names(df) = removeWhitespacePeriods(names(df))
   df = df[!apply(df, 1, function(x) all(is.na(x))),
           !apply(df, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
-  names(df)[grep("location", names(df), ignore.case = T)] = "Location"
+  names(df)[grep("^location$", names(df), ignore.case = T)] = "Location"
   names(df)[grepl("start", names(df), ignore.case = T) & 
               !grepl("ip", names(df), ignore.case = T)] = "Start"
   names(df)[(grepl("end", names(df), ignore.case = T) | grepl("stop", names(df), ignore.case = T)) &
@@ -42,6 +43,7 @@ fixLocNames <- function(df, log) {
 ##check for duplicates; if same isolate has two different IP dates, give warning and take the earlier
 fixIPnames <- function(df, log) {
   if(any(!is.na(df))) {
+    names(df) = removeWhitespacePeriods(names(df))
     df = df[!apply(df, 1, function(x) all(is.na(x))),
             !apply(df, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
     ##start
@@ -128,12 +130,14 @@ namesForOutput <- function(df) {
   names(df)[names(df)=="NumDaysOverlap"] = "Number of overlapping days"
   names(df)[names(df)=="OverlapStart"] = "Overlap start date"
   names(df)[names(df)=="OverlapEnd"] = "Overlap end date"
-  names(df)[names(df)=="OverlapID1IP"] = "Number of days overlap in ID1 IP"
-  names(df)[names(df)=="OverlapID2IP"] = "Number of days overlap in ID2 IP"
-  names(df)[names(df)=="IPStart"] = "IP Start"
-  names(df)[names(df)=="IPEnd"] = "IP End"
+  names(df)[names(df)=="OverlapID1IP"] = "Number of days of overlap in ID1 IP" #"Number of days ID2 overlaps in ID1's IP"
+  names(df)[names(df)=="OverlapID2IP"] = "Number of days of overlap in ID2 IP"
+  names(df)[names(df)=="IPStart"] = "Infectious Period Start"
+  names(df)[names(df)=="IPEnd"] = "Infectious Period End"
   names(df)[names(df)=="NumCert"] = "Total number of days of certain overlap"
   names(df)[names(df)=="NumTot"] = "Total number of overlapped days"
+  names(df)[names(df)=="Start"] = "Location start"
+  names(df)[names(df)=="End"] = "Location end"
   
   ##format dates
   for(c in 1:ncol(df)) {
@@ -631,7 +635,8 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
     # write.table(res, sub(".xlsx", ".txt", overlapName), row.names = F, col.names = T, quote = F, sep = "\t")
     res$OverlapStart = format(res$OverlapStart, format="%m/%d/%Y")
     res$OverlapEnd = format(res$OverlapEnd, format="%m/%d/%Y")
-    writeExcelTable(df=res, fileName=overlapName, wrapHeader = T)
+    names(res)[names(res)=="Strength"] = "Confidence"
+    writeExcelTable(df=res, fileName=overlapName, wrapHeader = T, sheetName = "All Overlaps")
   } else {
     outputExcelFiles = outputExcelFiles[outputExcelFiles != overlapName]
   }
@@ -643,7 +648,7 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   if(!all(is.na(epi))) {
     # write.table(epi, sub(".xlsx", ".txt", overlapName), row.names = F, col.names = T, quote = F, sep = "\t")
     writeExcelTable(df=epi, fileName = epiName, 
-                    sheetName = paste(ifelse(ipEpiLink, "IPEpi ", "Epi "), cutoff, "DCutoff", 
+                    sheetName = paste(ifelse(ipEpiLink, "IPEpi ", "Epi "), cutoff, "D", 
                                       ifelse(ipEpiLink, ifelse(removeAfter, "", " KeepOLAfterIPend"), ""), sep=""),
                     wrapHeader = T) 
   } else {
@@ -663,7 +668,7 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   
   ###write out location table
   if(!all(is.na(loc))) {
-    writeExcelTable(df=loc, fileName=locName, wrapHeader = T)
+    writeExcelTable(df=loc, fileName=locName, wrapHeader = T, sheetName = "Location Data")
   } else {
     outputExcelFiles = outputExcelFiles[outputExcelFiles != locName]
   }
@@ -674,7 +679,7 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   
   ###write out IP table
   if(!all(is.na(ip))) {
-    writeExcelTable(df=ip, fileName=ipName, wrapHeader = T)
+    writeExcelTable(df=ip, fileName=ipName, wrapHeader = T, sheetName = "IP Data")
   } else {
     outputExcelFiles = outputExcelFiles[outputExcelFiles != ipName]
   }
