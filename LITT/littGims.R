@@ -67,6 +67,10 @@ fixStcasenoName <- function(df) {
             !apply(df, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
     names(df)[grepl("stcaseno", names(df), ignore.case = T) |
                 grepl("state[ .]*case[ .]*number", names(df), ignore.case = T)] = "STCASENO"
+    if(class(df)!="data.frame") {
+      df = as.data.frame(df)
+      names(df) = "STCASENO"
+    }
     df$STCASENO = removeWhitespacePeriods(df$STCASENO)
   }
   return(df)
@@ -331,7 +335,7 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
 ##writeDist = if true, write distance matrix to Excel and include in list of outputs
 ##if appendlog is true, append results to log file; otherwise overwrite (needed because may read distance matrix first)
 ##progress = progress bar for R Shiny interface (NA if not running through interface)
-littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTable = NA, gimsRiskFactor = NA, 
+littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData=NA, epi=NA, rfTable = NA, gimsRiskFactor = NA, 
                      writeDate = F, writeDist = F, appendlog=F, SNPcutoff = snpDefaultCut, progress = NA) {
   log = paste(outPrefix, defaultLogName, sep="")
   cat("LITT analysis with TB GIMS\r\nSNP cutoff: ", SNPcutoff, "\r\n", file = log, append=appendlog)
@@ -341,6 +345,9 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData, epi=NA, rfTabl
   
   ####check inputs
   ##fix field names
+  if(all(is.na(caseData)) & !all(is.na(cases))) {
+    caseData = data.frame(STCASENO = cases)
+  }
   names(caseData) = removeWhitespacePeriods(names(caseData))
   caseData = fixStcasenoName(caseData)
   caseData = fixPresumedSource(caseData)
