@@ -240,9 +240,9 @@ fixIPnames <- function(df, log) {
         df = df[-rows[-1],]
       }
     }
+    df$IPStart = convertToDate(df$IPStart)
+    df$IPEnd = convertToDate(df$IPEnd)
   }
-  df$IPStart = convertToDate(df$IPStart)
-  df$IPEnd = convertToDate(df$IPEnd)
   return(df)
 }
 

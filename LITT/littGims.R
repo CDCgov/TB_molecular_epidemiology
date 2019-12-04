@@ -417,12 +417,15 @@ littGims <- function(outPrefix = "", cases=NA, dist=NA, caseData=NA, epi=NA, rfT
     }
   }
   caseData=caseData[,names(caseData) %in% c(expectedcolnames, optionalcolnames, "STCASENO")]
+  if(class(caseData)!="data.frame") {
+    caseData = data.frame(STCASENO=caseData)
+  }
   
   ####get list of cases
   if(all(is.na(cases))) {
-    cases = vector()
+    cases = caseData$STCASENO #vector()
     if(any(!is.na(dist))) {
-      cases = colnames(dist)
+      cases = c(cases, colnames(dist))
     }
     if(any(!is.na(sxOnset))) {
       cases = c(cases, as.character(sxOnset$STCASENO))
