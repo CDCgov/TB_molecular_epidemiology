@@ -138,6 +138,10 @@ namesForOutput <- function(df) {
   names(df)[names(df)=="NumTot"] = "Total number of overlapped days"
   names(df)[names(df)=="Start"] = "Location start"
   names(df)[names(df)=="End"] = "Location end"
+  names(df)[names(df)=="numCertOverlap"] = "Total number of days of certain overlap with another person"
+  names(df)[names(df)=="numTotOverlap"] = "Total number of overlapped days with another person"
+  names(df)[names(df)=="numCertIPOverap"] = "Total number of days of certain overlap with another person during their IP"
+  names(df)[names(df)=="numTotIPOverlap"] = "Total number of overlapped days with another person during their IP"
   
   ##format dates
   for(c in 1:ncol(df)) {
@@ -190,7 +194,7 @@ writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHea
   ##set column widths
   if(wrapHeader) {
     cwidth = (sapply(1:ncol(df), function(c){max(nchar(as.character(df[,c]), keepNA=F))})+5)#*256 #width is 1/256 of char
-    minWidth = 10# 10*256 #minimum width for column
+    minWidth = 11# 10*256 #minimum width for column
     cwidth[cwidth < minWidth] = minWidth
     for(c in 1:length(cwidth)) {
       setColumnWidth(sheet = sheet, colIndex = c, colWidth = cwidth[c])
@@ -524,13 +528,52 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
     # cat("There are no links because no overlaps were found\r\n", file = log, append = T)
     cat("No overlaps were found. As a result, there are no links.\r\n", file = log, append = T)
   }
+  
   if(all(class(progress)!="logical")) {
     progress$set(value = 4)
+  }
+  
+  ###summarize the total overlap for each case
+  if(all(is.na(res))) {
+    tot = NA
+  } else {
+    ids = sort(unique(c(as.character(res$ID1), as.character(res$ID2))))
+    tot = data.frame(ID = ids,
+                     Locations = NA,
+                     numCertOverlap = NA,
+                     numTotOverlap = NA,
+                     numCertIPOverap = NA,
+                     numTotIPOverlap = NA,
+                     stringsAsFactors = F)
+    for(i in 1:nrow(tot)) {
+      id = tot$ID[i]
+      sub = res[res$ID1==id | res$ID2==id,]
+      tot$Locations[i] = paste(sort(unique(as.character(sub$Location))), collapse = ", ")
+      ##total overlap
+      tot$numCertOverlap[i] = sum(sub$NumDaysOverlap[sub$Strength=="certain"], na.rm = T)
+      tot$numTotOverlap[i] = sum(sub$NumDaysOverlap, na.rm = T)
+      ##overlap with IP of another person
+      sub$OverlapID1IP = as.character(sub$OverlapID1IP)
+      sub$OverlapID2IP = as.character(sub$OverlapID2IP)
+      sub$OverlapID1IP[sub$OverlapID1IP==afterIPstring | sub$OverlapID1IP==noIPstring] = 0
+      sub$OverlapID2IP[sub$OverlapID2IP==afterIPstring | sub$OverlapID2IP==noIPstring] = 0
+      sub$OverlapID1IP = as.numeric(sub$OverlapID1IP)
+      sub$OverlapID2IP = as.numeric(sub$OverlapID2IP)
+      tot$numCertIPOverap[i] = sum(c(sub$OverlapID1IP[sub$ID1!=id & sub$Strength=="certain"],
+                                     sub$OverlapID2IP[sub$ID2!=id & sub$Strength=="certain"]), na.rm = T)
+      tot$numTotIPOverlap[i] = sum(c(sub$OverlapID1IP[sub$ID1!=id],
+                                     sub$OverlapID2IP[sub$ID2!=id]), na.rm = T)
+    }
+  }
+  
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 5)
   }
   return(list(allOverlaps = res, 
               epiLinks = epi,
               location = loc,
-              ip = ip))
+              ip = ip,
+              summary = tot))
 }
 
 ##for the given loc and ip tables, draw a timeline of dates of stay and IPs, one figure per location
@@ -596,7 +639,7 @@ timelineFig <- function(outPrefix, loc, ip, certLegOnly=F) {
     dev.off()
   }
 }
- 
+
 ##run the LATTE algorithm and then produce Excel files of results and timeline figures
 ##outPrefix = prefix for output files
 ##loc = table of locations, expected columns = ID, location, start, end, confidence
@@ -614,6 +657,7 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   epi = results$epiLinks
   loc = results$location
   ip = results$ip
+  tot = results$summary
   
   ##if Excel spreadsheet already exists, delete file; otherwise will not write the new results
   overlapName = paste(outPrefix, "LATTE_All_Overlaps.xlsx", sep="")
@@ -621,13 +665,14 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
                   ifelse(ipEpiLink, ifelse(removeAfter, "", "_KeepOLAfterIPEnd"), ""), ".xlsx", sep="")
   locName = paste0(outPrefix, "LATTE_Location.xlsx")
   ipName = paste0(outPrefix, "LATTE_IP.xlsx")
+  summaryName = paste0(outPrefix, "LATTE_Summary_By_Person.xlsx")
   outputExcelFiles = c(overlapName, epiName, locName, ipName)
   if(any(file.exists(outputExcelFiles))) {
     del = outputExcelFiles[file.exists(outputExcelFiles)]
     file.remove(del)
   }
   if(all(class(progress)!="logical")) {
-    progress$set(value = 5)
+    progress$set(value = 6)
   }
   
   ###write out overlaps
@@ -685,6 +730,16 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   }
   if(all(class(progress)!="logical")) {
     progress$set(value = 11)
+  }
+  
+  ###write out person summary table
+  if(!all(is.na(tot))) {
+    writeExcelTable(df=tot, fileName=summaryName, wrapHeader = T, sheetName = "Summary By Person")
+  } else {
+    outputExcelFiles = outputExcelFiles[outputExcelFiles != summaryName]
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 12)
   }
   
   ###generate figure

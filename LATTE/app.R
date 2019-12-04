@@ -79,7 +79,7 @@ server <- function(input, output, session) {
       output$message <- renderText({paste(outputfontsizestart, "No location data; please input a location table", outputfontsizeend, sep="")})
       return(NULL)
     }
-    progress <- Progress$new(session, min=-1, max=11)
+    progress <- Progress$new(session, min=-1, max=12)
     on.exit(progress$close())
     progress$set(message = "Running LATTE")
     output$message <- renderText({paste(outputfontsizestart, "Starting analysis", outputfontsizeend, sep="")})
