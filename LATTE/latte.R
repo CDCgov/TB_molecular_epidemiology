@@ -666,7 +666,7 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   locName = paste0(outPrefix, "LATTE_Location.xlsx")
   ipName = paste0(outPrefix, "LATTE_IP.xlsx")
   summaryName = paste0(outPrefix, "LATTE_Summary_By_Person.xlsx")
-  outputExcelFiles = c(overlapName, epiName, locName, ipName)
+  outputExcelFiles = c(overlapName, epiName, locName, ipName, summaryName)
   if(any(file.exists(outputExcelFiles))) {
     del = outputExcelFiles[file.exists(outputExcelFiles)]
     file.remove(del)
