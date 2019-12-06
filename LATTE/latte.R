@@ -135,13 +135,13 @@ namesForOutput <- function(df) {
   names(df)[names(df)=="IPStart"] = "Infectious period start"
   names(df)[names(df)=="IPEnd"] = "Infectious period end"
   names(df)[names(df)=="NumCert"] = "Total number of days of certain overlap"
-  names(df)[names(df)=="NumTot"] = "Total number of overlapped days"
+  names(df)[names(df)=="NumTot"] = "Total number of days of any overlap"
   names(df)[names(df)=="Start"] = "Location start"
   names(df)[names(df)=="End"] = "Location end"
   names(df)[names(df)=="numCertOverlap"] = "Total number of days of certain overlap with another person"
-  names(df)[names(df)=="numTotOverlap"] = "Total number of overlapped days with another person"
+  names(df)[names(df)=="numTotOverlap"] = "Total number of days of any overlap with another person"
   names(df)[names(df)=="numCertIPOverap"] = "Total number of days of certain overlap with another person during their IP"
-  names(df)[names(df)=="numTotIPOverlap"] = "Total number of overlapped days with another person during their IP"
+  names(df)[names(df)=="numTotIPOverlap"] = "Total number of days of any overlap with another person during their IP"
   
   ##format dates
   for(c in 1:ncol(df)) {
