@@ -390,6 +390,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   
   ###check still have data after removing bad rows
   if(length(cases) < 2) {
+    cat(paste0("There are ", length(cases), " people to analyze. At least two people are needed.\r\n"), file = log, append = T)
     stop("There are ", length(cases), " people to analyze. At least two people are needed.")
   }
   
