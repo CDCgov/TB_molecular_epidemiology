@@ -50,7 +50,7 @@ removeWhitespace <- function(vec) {
 ##strength = strength to assign to the pair
 ##custom = if strength is "custom", custom is the table of strengths for each column in fname, otherwise is NA
 ##log = file to write messages to
-latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName) {
+latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName, progress = NA) {
   cat("LATTE analysis without time\r\n", file = log)
   ##read fname without header to keep special characters
   if(endsWith(fname, ".xlsx")) {
@@ -62,6 +62,10 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName)
   } else {
     cat("People table must be an Excel (.xlsx extension) or CSV (.csv extension) file.\r\n", file = log, append = T)
     stop("People table must be an Excel (.xlsx extension) or CSV (.csv extension) file.")
+  }
+  
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 1)
   }
   
   ##check table
@@ -105,7 +109,7 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName)
                ", which is not one of the recommended options. Recommended strengths are definite, probable, possible, none, or custom.\r\n"),
         file = log, append = T)
   }
-  cat(paste0("Using strength ", strength, ".\r\n"), file = log, append = T)
+  cat(paste0("Using strength: ", strength, ".\r\n"), file = log, append = T)
   if(strength == "none") {
     strength = ""
   } 
@@ -210,6 +214,10 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName)
     custom$strength = as.character(custom$strength)
   }
   
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 2)
+  }
+  
   ##run the pairs
   res = NA
   for(c in 1:ncol(df)) {
@@ -231,6 +239,9 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName)
         res = rbind(res, r)
       }
     }
+    if(all(class(progress)!="logical")) {
+      progress$set(value = 2 + 2*(ncol(df)/c)) #add to 4 but update on every iteration
+    }
   }
   return(list(pairs = res,
               input = df,
@@ -242,9 +253,9 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName)
 ##fname = file containing the list of people to turn into pairs
 ##strength = strength to assign to the pair
 ##custom = if strength is "custom", custom is the table of strengths for each column in fname, otherwise is NA
-latteNoTimeWithOutputs <- function(outPrefix, fname, strength, custom=NA) {
+latteNoTimeWithOutputs <- function(outPrefix, fname, strength, custom=NA, progress = NA) {
   log = paste(outPrefix, defaultNoTimeLogName, sep="")
-  result = latteNoTime(fname = fname, strength = strength, custom = custom, log = log)
+  result = latteNoTime(fname = fname, strength = strength, custom = custom, log = log, progress = progress)
   
   ##set up files
   pairName = paste0(outPrefix, "LATTE_NoTime_Links.xlsx")
@@ -263,6 +274,9 @@ latteNoTimeWithOutputs <- function(outPrefix, fname, strength, custom=NA) {
   } else {
     outputExcelFiles = outputExcelFiles[outputExcelFiles!=pairName]
   }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 5)
+  }
   
   ##write input file
   input = result$input
@@ -273,6 +287,9 @@ latteNoTimeWithOutputs <- function(outPrefix, fname, strength, custom=NA) {
   }
   names(input) = colname
   writeExcelTableNoTime(fileName = inputName, sheetName = "links", df = input, filter = F)
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 6)
+  }
   
   ##write custom file
   custom = result$custom
@@ -281,6 +298,9 @@ latteNoTimeWithOutputs <- function(outPrefix, fname, strength, custom=NA) {
     writeExcelTableNoTime(fileName = customName, sheetName = "links", df = custom, filter = F)
   } else {
     outputExcelFiles = outputExcelFiles[outputExcelFiles!=customName]
+  }
+  if(all(class(progress)!="logical")) {
+    progress$set(value = 7)
   }
   
   ##return

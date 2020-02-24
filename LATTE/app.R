@@ -5,6 +5,7 @@ library(shinyjs)
 library(zip)
 
 source("latte.R")
+source("latteNoTime.R")
 
 # Define UI ----
 ui <- fluidPage(
@@ -108,6 +109,7 @@ dash <- .Platform$file.sep #file separator
 tmpdir = tempdir() #temporary directory to write outputs
 tmpdir = paste(tmpdir, dash, sep="")
 outfiles = NA #list of output files
+notime.outfiles = NA #list of output files
 
 # Define server logic ----
 server <- function(input, output, session) {
@@ -162,6 +164,47 @@ server <- function(input, output, session) {
     })
   })
   
+  ##run LATTE without time when action button hit
+  observeEvent(input$noTimeRun, {
+    if(rv$clNTtab) {
+      tab = NA
+    } else {
+      tab = input$noTimeTab$datapath
+    }
+    if(all(is.na(tab))) {
+      output$noTimeMessage <- renderText({paste(outputfontsizestart, "No people table; please input a table of people in locations.", outputfontsizeend, sep="")})
+      return(NULL)
+    }
+    progress <- Progress$new(session, min=0, max=7)
+    on.exit(progress$close())
+    progress$set(message = "Running LATTE")
+    output$noTimeMessage <- renderText({paste(outputfontsizestart, "Starting analysis", outputfontsizeend, sep="")})
+    cutoff = ifelse(input$linkType == "ipepi", input$ipepicutoff, input$epicutoff)
+    progress$set(value=0)
+    outPrefix = paste(tmpdir, input$noTimePrefix, sep="")
+    if(rv$clNTcust) {
+      custom = NA
+    } else {
+      custom = readShinyInputFile(input$noTimeCustomStrength)
+    }
+    res = tryCatch({
+      latteres = latteNoTimeWithOutputs(outPrefix = outPrefix,
+                                        fname = tab,  
+                                        strength = input$noTimeStrength,
+                                        custom = custom,
+                                        progress = progress)
+      notime.outfiles <<- latteres$outputFiles
+      output$noTimeMessage <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
+      shinyjs::show("noTimeDownloadData")
+    }, error = function(e) {
+      notime.outfiles <<- paste(tmpdir, input$noTimePrefix, defaultNoTimeLogName, sep="")
+      output$noTimeMessage <- renderText({paste(outputfontsizestart, "Error detected:<br/>", geterrmessage(),
+                                          "<br/>Download and view log for more details.", outputfontsizeend, sep="")})
+      cat(geterrmessage(), file = notime.outfiles, append = T)
+      shinyjs::show("noTimeDownloadData")
+    })
+  })
+  
   ##zip and download outputs
   output$downloadData <- downloadHandler(
     filename = function() {
@@ -181,6 +224,24 @@ server <- function(input, output, session) {
     contentType = "application/zip"
   )
   
+  output$noTimeDownloadData <- downloadHandler(
+    filename = function() {
+      paste(input$noTimePrefix, "LATTE.zip", sep="")
+    },
+    content = function(fname) {
+      notime.outfiles = sub(tmpdir, "", notime.outfiles, fixed=T)
+      currdir = getwd()
+      setwd(tmpdir)
+      zipr(zipfile = fname, files = notime.outfiles)
+      if(file.exists(paste0(fname, ".zip"))) {
+        file.rename(paste0(fname, ".zip"), fname)
+      }
+      output$noTimeMessage <- renderText({paste(outputfontsizestart, "Download complete", outputfontsizeend, sep="")})
+      setwd(currdir)
+    },
+    contentType = "application/zip"
+  )
+  
   ##clear inputs if clear button is clicked
   observeEvent(input$clear, {
     updateTextInput(session, "prefix", value="")
@@ -190,6 +251,7 @@ server <- function(input, output, session) {
     updateCheckboxInput(session, "removeAfter", value=F)
     # updateRadioButtons(session, "linkType", selected = epi)
     reset("linkType")
+    reset("noTimeStrength")
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
     shinyjs::hide("downloadData")
