@@ -40,6 +40,7 @@ ui <- fluidPage(
                                    selected = "epi"),
                       sliderInput("epicutoff", "Overlap threshold (number of days people must overlap in a location to form a definite or probable epi link)", min=0, max=30, value=defaultCut, step=1, round=T),
                       sliderInput("ipepicutoff", "Overlap threshold (number of days people must overlap each other and an IP to form an IP epi link)", min=0, max=30, value=defaultCut, step=1, round=T),
+                      checkboxInput("ipCasesOnly", "Only include overlaps with people that have an IP (do not look for overlaps between people when neither person has an IP)", value=T),
                       checkboxInput("removeAfter", "Include re-infection (overlaps that occur after either IP end as potential IP epi links, e.g. to identify potential re-exposure during a contact investigation)")),
                # actionButton("clear", "Clear inputs")),
                column(2)),
@@ -151,6 +152,7 @@ server <- function(input, output, session) {
                                   cutoff = cutoff,
                                   ipEpiLink = input$linkType == "ipepi",
                                   removeAfter = !input$removeAfter,
+                                  ipCasesOnly = input$ipCasesOnly,
                                   progress = progress)
       outfiles <<- latteres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
@@ -249,6 +251,7 @@ server <- function(input, output, session) {
     updateSliderInput(session, "epicutoff", value=defaultCut)
     updateSliderInput(session, "ipepicutoff", value=defaultCut)
     updateCheckboxInput(session, "removeAfter", value=F)
+    updateCheckboxInput(session, "ipCasesOnly", value=T)
     # updateRadioButtons(session, "linkType", selected = epi)
     reset("linkType")
     reset("noTimeStrength")
@@ -271,6 +274,7 @@ server <- function(input, output, session) {
     updateSliderInput(session, "epicutoff", value=defaultCut)
     updateSliderInput(session, "ipepicutoff", value=defaultCut)
     updateCheckboxInput(session, "removeAfter", value=F)
+    updateCheckboxInput(session, "ipCasesOnly", value=T)
     reset("linkType")
     reset("noTimeStrength")
     output$message <- renderText({""})
@@ -333,6 +337,13 @@ server <- function(input, output, session) {
     shinyjs::hide("noTimeDownloadData")
   })
   observe({
+    input$ipCasesOnly
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+  })
+  observe({
     input$removeAfter
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
@@ -375,10 +386,12 @@ server <- function(input, output, session) {
     if(input$linkType == "ipepi") {
       shinyjs::hide("epicutoff")
       shinyjs::show("ipepicutoff")
+      shinyjs::show("ipCasesOnly")
       shinyjs::show("removeAfter")
     } else {
       shinyjs::show("epicutoff")
       shinyjs::hide("ipepicutoff")
+      shinyjs::hide("ipCasesOnly")
       shinyjs::hide("removeAfter")
     }
   })
