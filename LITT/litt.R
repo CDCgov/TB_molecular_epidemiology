@@ -902,6 +902,7 @@ cleanEpi <- function(epi, cases, log) {
           keep = dups
         }
         keep = keep[1] #if multiple pairs with same strength, keep the first in the table
+        epi$label[keep] = paste0(epi$label[dups], collapse="|")
         epi = epi[-dups[dups!=keep],]
         if(keep != r) {
           r = r + 1
