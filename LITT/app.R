@@ -17,7 +17,7 @@ ui <- fixedPage(
                                               tooltip=tooltipOptions(title="Help"),
                                               right = T,
                                               h4("Help"),
-                                              tags$style(HTML("#help{border-color: white; width:200px; text-align:left}")),
+                                              tags$style(HTML("#help{border-color: white; width:220px; text-align:left}")),
                                               actionButton("help", "User guide & training materials",
                                                            onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20training%20materials')"),
                                               actionButton("help", "Input file templates",
