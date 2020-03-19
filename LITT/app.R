@@ -1,20 +1,33 @@
 library(shiny)
 library(shinyjs)
+library(shinyWidgets)
 library(zip)
 source("littNoGims.R")
 
 # Define UI ----
-ui <- fixedPage( #fixedPage fluidPage #https://stackoverflow.com/questions/35040781/alignment-of-control-widgets-on-fluidpage-in-shiny-r?rq=1
-  titlePanel("LITT"),
-  useShinyjs(),
-  # fluidRow(
-  #   column(4, align="center",
-  #          h3("Set up")),
-  #   column(4, align="center",
-  #          h3("Input files")),
-  #   column(4, align="center",
-  #          h3("Advanced options"))
-  # ),
+ui <- fixedPage(
+  titlePanel(tagList(span("LITT",
+                          # span(actionButton('help', 'help'),
+                          span(dropdownButton(tags$style(".btn-custom {background-color: white; color: black; border-color: black;}"), #https://github.com/dreamRs/shinyWidgets/issues/126 
+                                              # circle = F,
+                                              # label = "?",
+                                              size = "sm",
+                                              status="custom",
+                                              icon = icon("question"), #https://shiny.rstudio.com/reference/shiny/0.14/icon.html
+                                              tooltip=tooltipOptions(title="Help"),
+                                              right = T,
+                                              h4("Help"),
+                                              tags$style(HTML("#help{border-color: white; width:200px; text-align:left}")),
+                                              actionButton("help", "User guide & training materials",
+                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20training%20materials')"),
+                                              actionButton("help", "Input file templates",
+                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20input%20file%20templates')"),
+                                              actionButton("help", "Training dataset 01",
+                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20training%20dataset%2001')"),
+                                              actionButton("help", "Training dataset 02",
+                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20training%20dataset%2002')")),
+                               style = "position:absolute;right:2em;"))), #https://stackoverflow.com/questions/54523349/place-actionbutton-on-right-side-of-titlepanel-in-shiny
+             windowTitle = "LITT"),
   fluidRow(
     column(4, #align="center",
            h3("Input files", align="center"),
@@ -24,11 +37,6 @@ ui <- fixedPage( #fixedPage fluidPage #https://stackoverflow.com/questions/35040
                          # "Output extra columns from the TB GIMS version"),
                          "Output extra columns in case data table", value=T),
            br(),
-           # helpText("Must include: sputum smear results, cavitation status, ",
-           #          "whether a case is extrapulmonary only or pediatric, and ",
-           #          "infectious period start and end.", 
-           #          "Any additional columns will be treated as risk factors.",
-           #          "See documentation for more details."),
            fileInput("epi", "Epi link table", accept=c(".xlsx", ".csv")),
            fileInput("distMatrix", "SNP distance matrix", accept=c(".xlsx", ".csv", ".txt")),
            checkboxInput("writeDist",
