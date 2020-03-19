@@ -22,10 +22,8 @@ ui <- fixedPage(
                                                            onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20training%20materials')"),
                                               actionButton("help", "Input file templates",
                                                            onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20input%20file%20templates')"),
-                                              actionButton("help", "Training dataset 01",
-                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20training%20dataset%2001')"),
-                                              actionButton("help", "Training dataset 02",
-                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20training%20dataset%2002')")),
+                                              actionButton("help", "Training datasets",
+                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20training%20datasets')")),
                                style = "position:absolute;right:2em;"))), #https://stackoverflow.com/questions/54523349/place-actionbutton-on-right-side-of-titlepanel-in-shiny
              windowTitle = "LITT"),
   fluidRow(
