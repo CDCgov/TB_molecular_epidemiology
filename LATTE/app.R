@@ -13,7 +13,7 @@ ui <- fluidPage(
   # titlePanel("LATTE"),
   # fluidRow(column(10, offset=2, titlePanel("LATTE"))),
   # fluidRow(column(12, align="center", titlePanel("LATTE"))),
-  fluidRow(column(10, offset=2, 
+  fluidRow(column(12, 
                   titlePanel(tagList(span("LATTE",
                                           # span(actionButton('help', 'help'),
                                           span(dropdownButton(tags$style(".btn-custom {background-color: white; color: black; border-color: black;}"), #https://github.com/dreamRs/shinyWidgets/issues/126 
@@ -33,8 +33,8 @@ ui <- fluidPage(
                                                               actionButton("help", "Training datasets",
                                                                            onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20training%20datasets')"),
                                                               actionButton("help", "Reference")),
-                                               style = "position:absolute;right:2em;")))), #https://stackoverflow.com/questions/54523349/place-actionbutton-on-right-side-of-titlepanel-in-shiny
-                  windowTitle = "LITT")),
+                                               style = "position:absolute;right:2em;"))), #https://stackoverflow.com/questions/54523349/place-actionbutton-on-right-side-of-titlepanel-in-shiny
+                  windowTitle = "LATTE"))),
   useShinyjs(),
   tabsetPanel(
     tabPanel("With Date Data",
