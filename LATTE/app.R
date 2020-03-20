@@ -2,6 +2,7 @@
 
 library(shiny)
 library(shinyjs)
+library(shinyWidgets)
 library(zip)
 
 source("latte.R")
@@ -11,10 +12,32 @@ source("latteNoTime.R")
 ui <- fluidPage(
   # titlePanel("LATTE"),
   # fluidRow(column(10, offset=2, titlePanel("LATTE"))),
-  fluidRow(column(12, align="center", titlePanel("LATTE"))),
+  # fluidRow(column(12, align="center", titlePanel("LATTE"))),
+  fluidRow(column(10, offset=2, 
+                  titlePanel(tagList(span("LATTE",
+                                          # span(actionButton('help', 'help'),
+                                          span(dropdownButton(tags$style(".btn-custom {background-color: white; color: black; border-color: black;}"), #https://github.com/dreamRs/shinyWidgets/issues/126 
+                                                              # circle = F,
+                                                              # label = "?",
+                                                              size = "sm",
+                                                              status="custom",
+                                                              icon = icon("question"), #https://shiny.rstudio.com/reference/shiny/0.14/icon.html
+                                                              tooltip=tooltipOptions(title="Help"),
+                                                              right = T,
+                                                              h4("Help"),
+                                                              tags$style(HTML("#help{border-color: white; width:260px; text-align:left}")),
+                                                              actionButton("help", "User's manual & training presentation",
+                                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20user%20manual%20and%20training%20presentation')"),
+                                                              actionButton("help", "Input file templates",
+                                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20input%20file%20templates')"),
+                                                              actionButton("help", "Training datasets",
+                                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20training%20datasets')"),
+                                                              actionButton("help", "Reference")),
+                                               style = "position:absolute;right:2em;")))), #https://stackoverflow.com/questions/54523349/place-actionbutton-on-right-side-of-titlepanel-in-shiny
+                  windowTitle = "LITT")),
   useShinyjs(),
   tabsetPanel(
-    tabPanel("With Time Data",
+    tabPanel("With Date Data",
              # fluidRow(column(1),
              #          column(11,
              #                 br(),
@@ -35,13 +58,18 @@ ui <- fluidPage(
                column(4,
                       h3("Set up link definitions"),
                       radioButtons("linkType", "Type of link",
-                                   choiceNames = list("Epi link", "IP epi link"),
+                                   choiceNames = list("Epi link (all possible overlaps)", "IP epi link (only overlaps where at least one person has an IP)"),
                                    choiceValues = list("epi", "ipepi"),
                                    selected = "epi"),
-                      sliderInput("epicutoff", "Overlap threshold (number of days people must overlap in a location to form a definite or probable epi link)", min=0, max=30, value=defaultCut, step=1, round=T),
-                      sliderInput("ipepicutoff", "Overlap threshold (number of days people must overlap each other and an IP to form an IP epi link)", min=0, max=30, value=defaultCut, step=1, round=T),
-                      checkboxInput("ipCasesOnly", "Only include overlaps with people that have an IP (do not look for overlaps between people when neither person has an IP)", value=T),
-                      checkboxInput("removeAfter", "Include re-infection (overlaps that occur after either IP end as potential IP epi links, e.g. to identify potential re-exposure during a contact investigation)")),
+                      sliderInput("epicutoff", tags$div("Overlap threshold", tags$br(), 
+                                                        tags$p("This is the number of days people must overlap in a location to form a definite or probable epi link.", style="font-size: 85%; font-weight:100;")),  
+                                  min=0, max=30, value=defaultCut, step=1, round=T),
+                      sliderInput("ipepicutoff", tags$div("Overlap threshold", tags$br(), 
+                                                          tags$p("This is the number of days people must overlap each other and an IP to form an IP epi link.", style="font-size: 85%; font-weight:100;")), 
+                                  min=0, max=30, value=defaultCut, step=1, round=T),
+                      # checkboxInput("ipCasesOnly", "Only include overlaps with people that have an IP (do not look for overlaps between people when neither person has an IP)", value=T),
+                      checkboxInput("removeAfter", tags$div(tags$b("Include re-infection"), tags$br(), 
+                                                            tags$p("For case-case overlaps, consider re-infection regardless of which IP comes first", style="font-size: 85%; font-weight:100;")))),
                # actionButton("clear", "Clear inputs")),
                column(2)),
              
@@ -61,7 +89,7 @@ ui <- fluidPage(
                       
              )),
              # ))))
-    tabPanel("Without Time Data",
+    tabPanel("Without Date Data",
              fluidRow(br(),
                       h4("Identify all possible pairs from lists of people", align="center")),
              fluidRow(
@@ -76,9 +104,10 @@ ui <- fluidPage(
                       textInput("noTimePrefix", "Name prefix for output files")),
                column(4,
                       h3("Set up link definitions"),
+                      helpText("Strength option will be applied to all columns (no strength means strength will be left blank) unless user chooses a column-specific strength. Valid strengths are definite, probable, possible,  or none (none will leave strength blank)."),
                       radioButtons("noTimeStrength", "Strength of link",
                                    choiceNames = list("Definite epi link", "Probable epi link", "Possible epi link",
-                                                      "No strength", "Custom strength"),
+                                                      "No strength", "Column-specific strength"),
                                    choiceValues = list("definite", "probable", "possible", "none", "custom"),
                                    selected = "probable"),
                       column(2),
@@ -152,7 +181,6 @@ server <- function(input, output, session) {
                                   cutoff = cutoff,
                                   ipEpiLink = input$linkType == "ipepi",
                                   removeAfter = !input$removeAfter,
-                                  ipCasesOnly = input$ipCasesOnly,
                                   progress = progress)
       outfiles <<- latteres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
@@ -251,7 +279,6 @@ server <- function(input, output, session) {
     updateSliderInput(session, "epicutoff", value=defaultCut)
     updateSliderInput(session, "ipepicutoff", value=defaultCut)
     updateCheckboxInput(session, "removeAfter", value=F)
-    updateCheckboxInput(session, "ipCasesOnly", value=T)
     # updateRadioButtons(session, "linkType", selected = epi)
     reset("linkType")
     reset("noTimeStrength")
@@ -274,7 +301,6 @@ server <- function(input, output, session) {
     updateSliderInput(session, "epicutoff", value=defaultCut)
     updateSliderInput(session, "ipepicutoff", value=defaultCut)
     updateCheckboxInput(session, "removeAfter", value=F)
-    updateCheckboxInput(session, "ipCasesOnly", value=T)
     reset("linkType")
     reset("noTimeStrength")
     output$message <- renderText({""})
@@ -337,13 +363,6 @@ server <- function(input, output, session) {
     shinyjs::hide("noTimeDownloadData")
   })
   observe({
-    input$ipCasesOnly
-    output$message <- renderText({""})
-    output$noTimeMessage <- renderText({""})
-    shinyjs::hide("downloadData")
-    shinyjs::hide("noTimeDownloadData")
-  })
-  observe({
     input$removeAfter
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
@@ -386,12 +405,10 @@ server <- function(input, output, session) {
     if(input$linkType == "ipepi") {
       shinyjs::hide("epicutoff")
       shinyjs::show("ipepicutoff")
-      shinyjs::show("ipCasesOnly")
       shinyjs::show("removeAfter")
     } else {
       shinyjs::show("epicutoff")
       shinyjs::hide("ipepicutoff")
-      shinyjs::hide("ipCasesOnly")
       shinyjs::hide("removeAfter")
     }
   })
