@@ -58,7 +58,7 @@ ui <- fluidPage(
                column(4,
                       h3("Set up link definitions"),
                       radioButtons("linkType", "Type of link",
-                                   choiceNames = list("Epi link (all possible overlaps)", "IP epi link (only overlaps where at least one person has an IP)"),
+                                   choiceNames = list("Epi link (all possible overlaps)", "IP epi link (only overlaps during an IP)"),
                                    choiceValues = list("epi", "ipepi"),
                                    selected = "epi"),
                       sliderInput("epicutoff", tags$div("Overlap threshold", tags$br(), 
