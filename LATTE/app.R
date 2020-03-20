@@ -14,7 +14,7 @@ ui <- fluidPage(
   # fluidRow(column(10, offset=2, titlePanel("LATTE"))),
   # fluidRow(column(12, align="center", titlePanel("LATTE"))),
   fluidRow(column(12, 
-                  titlePanel(tagList(span("LATTE",
+                  titlePanel(tagList(span("Location And Time To Epi (LATTE)",
                                           # span(actionButton('help', 'help'),
                                           span(dropdownButton(tags$style(".btn-custom {background-color: white; color: black; border-color: black;}"), #https://github.com/dreamRs/shinyWidgets/issues/126 
                                                               # circle = F,
@@ -50,7 +50,7 @@ ui <- fluidPage(
                       h3("Set up inputs"),
                       p("Warning: do not upload personally identifiable information (PII)", style="color:red"),
                       fileInput("locTab", "Table of dates in locations (required)", accept=c(".xlsx", ".csv")),
-                      fileInput("ipTab", "Table of infectious periods", accept=c(".xlsx", ".csv")),
+                      fileInput("ipTab", "Table of infectious periods (IP)", accept=c(".xlsx", ".csv")),
                       br(),
                       br(),
                       h3("Set up outputs"),

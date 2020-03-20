@@ -6,7 +6,7 @@ source("littNoGims.R")
 
 # Define UI ----
 ui <- fixedPage(
-  titlePanel(tagList(span("LITT",
+  titlePanel(tagList(span("Logically Inferred Tuberculosis Transmission (LITT)",
                           # span(actionButton('help', 'help'),
                           span(dropdownButton(tags$style(".btn-custom {background-color: white; color: black; border-color: black;}"), #https://github.com/dreamRs/shinyWidgets/issues/126 
                                               # circle = F,
