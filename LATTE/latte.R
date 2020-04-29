@@ -305,10 +305,10 @@ getIPEpiLinks <- function(res, cutoff, removeAfter) {
 ##cutoff = overlap must be more than cutoff number of days to be considered for an epi or IP epi link
 ##ipEpiLink = if true, calculate an IP epi link, otherwise calculate an epi link
 ##removeAfter = if true, remove overlaps that occur after the IP of either case (for IP epi links)
-##ipCasesOnly = if true and ipEpiLink true, only look for overlaps to cases with an IP
+##xxxipCasesOnly = if true and ipEpiLink true, only look for overlaps to cases with an IP
 ##log = log file name (where messages will be written)
 ##progress = progress bar for R Shiny interface (NA if not running through interface)
-latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter = F, ipCasesOnly = F, progress = NA, log = defaultLogName) {
+latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter = F, progress = NA, log = defaultLogName) {
   ##set up log
   cat("LATTE analysis\r\n", file = log)
   
@@ -478,9 +478,11 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   
   ###get list of overlaps
   res = NA
-  if(ipCasesOnly & ipEpiLink) { #if T, only look for overlaps with cases with IP
+  # if(ipCasesOnly & ipEpiLink) { #if T, only look for overlaps with cases with IP
+  if(ipEpiLink) { #if T, only look for overlaps with cases with IP
     if(all(is.na(ip)) || nrow(ip) < 1) {
-      cat("User wants to identify IP epi links and overlaps only with people who have an IP, but no person in analysis has an IP.\r\n", file = log, append = T)
+      cat("User wants to identify IP epi links and overlaps only with people who have an IP, but no person in analysis has an IP.\r\nEither upload an IP table or uncheck the option to only include overlaps with people that have an IP.\r\n", 
+          file = log, append = T)
       stop("IP table is needed if user only wants overlaps with people who have an IP.")
     }
     cases1 = sort(as.character(unique(ip$ID)))
@@ -685,14 +687,13 @@ timelineFig <- function(outPrefix, loc, ip, certLegOnly=F) {
 ##cutoff = overlap must be more than cutoff number of days to be considered for an epi or IP epi link
 ##ipEpiLink = if true, calculate an IP epi link, otherwise calculate an epi link
 ##removeAfter = if true, remove overlaps that occur after the IP of either case (for IP epi links)
-##ipCasesOnly = if true and ipEpiLink true, only look for overlaps to cases with an IP
 ##progress = optional progress bar (for Rshiny interface)
 ##drawTimeline = if true, generate timeline jpeg
-latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter = F, ipCasesOnly = F,
+latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter = F,
                              progress = NA, drawTimeline = F) {
   log = paste(outPrefix, defaultLogName, sep="")
   results = latte(loc = loc, ip = ip, cutoff = cutoff, ipEpiLink = ipEpiLink, 
-                  removeAfter = removeAfter, ipCasesOnly = ipCasesOnly, log = log)
+                  removeAfter = removeAfter, log = log)
   res = results$allOverlaps
   epi = results$epiLinks
   loc = results$location

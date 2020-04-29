@@ -35,7 +35,7 @@ allCombo <- function(colname, list, strength) {
     res = NA
   }
   
-  return(res)
+  return(list(res=res, n=length(list)))
 }
 
 ##removes whitespace to avoid issues of names not matching due to extra spaces around variables
@@ -106,8 +106,10 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
   strength = tolower(strength)
   if(!strength %in% strength.options) {
     cat(paste0("Provided strength is ", strength, 
-               ", which is not one of the recommended options. Recommended strengths are definite, probable, possible, none, or custom.\r\n"),
+               # ", which is not one of the recommended options. Recommended strengths are definite, probable, possible, none (strength left blank), or custom.\r\n"),
+               ", which is not one of the strength options. Strength options are definite, probable, possible, none (strength left blank), or custom.\r\n"),
         file = log, append = T)
+    stop("Invalid strength: ", strength)
   }
   cat(paste0("Using strength: ", strength, ".\r\n"), file = log, append = T)
   if(strength == "none") {
@@ -176,8 +178,10 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
       miss = custom$strength[!custom$strength %in% c(strength.options, NA, "")]
       cat(paste0(paste(miss, collapse = ", "), ifelse(length(miss)==1, " is one of the", " are"),
                  " strengths listed in the custom strength table but ", ifelse(length(miss)==1, "is", "are"), 
-                 " not one of the recommended options. Recommended strengths are definite, probable, possible, or none.\r\n"),
+                 # " not one of the recommended options. Recommended strengths are definite, probable, possible, or none.\r\n"),
+                 " not one of the strength options. Strength options are definite, probable, possible, or none (strength left blank).\r\n"),
           file = log, append = T)
+      stop("Invalid custom strength: ", paste(miss, collapse = ", "))
     }
     
     ###remove empty variables
@@ -220,6 +224,7 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
   
   ##run the pairs
   res = NA
+  numPeople = data.frame(name=vector(), n=vector()) #table of number of unique persons associated with each location
   for(c in 1:ncol(df)) {
     colname = df[1,c]
     list = df[-1,c]
@@ -229,6 +234,9 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
       s = custom$strength[custom$variable==colname]
     }
     r = allCombo(colname = colname, list = list, strength = s)
+    numPeople = rbind(numPeople,
+                      data.frame(name=colname, n=r$n))
+    r = r$res
     if(all(is.na(r))) { #less than two people in this column
       cat(paste0(colname, " was included in the input but had fewer than two people so no pairs were made.\r\n"),
           file = log, append = T)
@@ -242,6 +250,11 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
     if(all(class(progress)!="logical")) {
       progress$set(value = 2 + 2*(ncol(df)/c)) #add to 4 but update on every iteration
     }
+  }
+  ##print number of unique people in each location
+  cat("Number of unique people in each column:\r\nColumn name\t\tNumber\r\n", file = log, append = T)
+  for(n in 1:nrow(numPeople)) {
+    cat(paste0(numPeople$name[n], "\t\t", numPeople$n[n], "\r\n"), file = log, append = T)
   }
   return(list(pairs = res,
               input = df,
