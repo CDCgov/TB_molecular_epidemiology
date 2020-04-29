@@ -108,7 +108,16 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
     df[1,miss] = paste0("Column", miss)
     vars = as.character(df[1,])
   }
-  
+  ##look for duplicate column names
+  cn = character()
+  for(c in 1:ncol(df)) {
+    cn = c(cn, as.character(df[[1,c]]))
+  }
+  if(any(duplicated(cn))) {
+    dup = unique(cn[duplicated(cn)])
+    cat(paste0(paste(dup, collapse = ","), " is in the table twice. Column names must be unique.\r\n"), file = log, append = T) #stop here
+    stop("Column names must be unique.")
+  }
   ##check strength
   strength = tolower(strength)
   if(!strength %in% strength.options) {
