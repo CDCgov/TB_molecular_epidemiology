@@ -9,10 +9,17 @@ strength.options = c("definite", "probable", "possible", "none", "custom")
 ##colname = name of column in original table (becomes label)
 ##list = list of names
 ##strength = strength to assign
-##returns the data frame of pairs
+##returns the data frame of pairs, the number of unique people in the list, and a list of duplicated people
 allCombo <- function(colname, list, strength) {
   list = as.character(list)
   list = list[!is.na(list) & list!=""] #may have empty elements because some places will have fewer people
+  
+  if(any(duplicated(list))) {
+    dup = unique(list[duplicated(list)])
+    list = list[!duplicated(list)]
+  } else {
+    dup = NA
+  }
   
   if(length(list) >= 2) {
     ##set up result
@@ -35,7 +42,7 @@ allCombo <- function(colname, list, strength) {
     res = NA
   }
   
-  return(list(res=res, n=length(list)))
+  return(list(res=res, n=length(list), dup=dup))
 }
 
 ##removes whitespace to avoid issues of names not matching due to extra spaces around variables
@@ -236,6 +243,12 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
     r = allCombo(colname = colname, list = list, strength = s)
     numPeople = rbind(numPeople,
                       data.frame(name=colname, n=r$n))
+    if(!all(is.na(r$dup))) { #there were duplicated people; indicate in log
+      cat(paste0("The following people were listed multiple times in ", colname, ": ",
+                 paste(r$dup, collapse = ", "),
+                 ". The duplications were removed from the list so that they only appear once in the pairs.\r\n"),
+          file = log, append = T)
+    }
     r = r$res
     if(all(is.na(r))) { #less than two people in this column
       cat(paste0(colname, " was included in the input but had fewer than two people so no pairs were made.\r\n"),
