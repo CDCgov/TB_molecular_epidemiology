@@ -6,6 +6,7 @@ source("littNoGims.R")
 
 # Define UI ----
 ui <- fixedPage(
+  useShinyjs(),
   titlePanel(tagList(span("Logically Inferred Tuberculosis Transmission (LITT)",
                           # span(actionButton('help', 'help'),
                           span(dropdownButton(tags$style(".btn-custom {background-color: white; color: black; border-color: black;}"), #https://github.com/dreamRs/shinyWidgets/issues/126 
@@ -41,7 +42,7 @@ ui <- fixedPage(
            checkboxInput("writeDist",
                          "Include distance matrix in outputs", value=F)),
     column(4, #align="center",
-           h3("Set up", align="center"),
+           h3("Set up outputs", align="center"),
            textInput("prefix", "Name prefix for output files"),#, width="90%"),
            sliderInput("snpCutoff", "SNP cutoff", min=0, max=7, value=5, step=1, round=T)),
     column(4,
