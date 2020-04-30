@@ -2,7 +2,7 @@
 library(xlsx)
 
 ##base file names
-defaultNoTimeLogName = "LATTE_NoTime_log.txt" #default name of log file
+defaultNoTimeLogName = "LATTE_NoDate_Log.txt" #default name of log file
 strength.options = c("definite", "probable", "possible", "none", "custom")
 
 ##returns all combinations of names in list
@@ -58,7 +58,7 @@ removeWhitespace <- function(vec) {
 ##custom = if strength is "custom", custom is the table of strengths for each column in fname, otherwise is NA
 ##log = file to write messages to
 latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName, progress = NA) {
-  cat("LATTE analysis without time\r\n", file = log)
+  cat("LATTE analysis without date data\r\n", file = log)
   ##read fname without header to keep special characters
   if(endsWith(fname, ".xlsx")) {
     df = read.xlsx(fname, sheetIndex = 1, header = F)
@@ -67,8 +67,8 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
   } else if(endsWith(fname, ".txt")) {
     df = read.table(fname, header = F, sep = "\t")
   } else {
-    cat("People table must be an Excel (.xlsx extension) or CSV (.csv extension) file.\r\n", file = log, append = T)
-    stop("People table must be an Excel (.xlsx extension) or CSV (.csv extension) file.")
+    cat("Table of grouped people must be an Excel (.xlsx extension) or CSV (.csv extension) file.\r\n", file = log, append = T)
+    stop("Table of grouped people must be an Excel (.xlsx extension) or CSV (.csv extension) file.")
   }
   
   if(all(class(progress)!="logical")) {
@@ -85,15 +85,16 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
       c = c + 1
     }
   }
+  # cat(paste(ncol(df), "columns included in analysis.\r\n"), file = log, append = T)
   cat(paste(ncol(df), "columns found for analysis.\r\n"), file = log, append = T)
   if(ncol(df) < 1) {
-    cat("People table must have at least one non-empty column.\r\n", file = log, append = T)
-    stop("People table must have at least one non-empty column.")
+    cat("Table of grouped people must have at least one non-empty column.\r\n", file = log, append = T)
+    stop("Table of grouped people must have at least one non-empty column.")
   }
   if(nrow(df) < 3) {
-    cat(paste0("People table must have at least 3 rows (column name and two people), but this table only has ", 
+    cat(paste0("Table of grouped people must have at least 3 rows (column name and two people), but this table only has ", 
               nrow(df), ifelse(nrow(df)==1, " row", " rows"), ".\r\n"), file = log, append = T)
-    stop("People table in locations must have at least 3 rows.")
+    stop("Table of grouped people in locations must have at least 3 rows.")
   }
   ##check column names
   for(c in 1:ncol(df)) {
@@ -102,7 +103,7 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
   vars = as.character(df[1,])
   if(any(is.na(vars) | vars == "")) {
     miss = which(is.na(vars) | vars == "")
-    cat(paste0("Column name is missing for the following columns: ", paste(miss, collapse = ", "),
+    cat(paste0("Column name is missing in the table of grouped people for the following columns: ", paste(miss, collapse = ", "),
                ". The name assigned will be ", paste(paste0("Column", miss), collapse = ", "), 
                ifelse(length(miss)==1, ".", " respectively."), "\r\n"), file = log, append = T)
     df[1,miss] = paste0("Column", miss)
@@ -115,8 +116,8 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
   }
   if(any(duplicated(cn))) {
     dup = unique(cn[duplicated(cn)])
-    cat(paste0(paste(dup, collapse = ","), " is in the table twice. Column names must be unique.\r\n"), file = log, append = T) #stop here
-    stop("Column names must be unique.")
+    cat(paste0(paste(dup, collapse = ","), " is in the table of grouped people twice. Column names must be unique.\r\n"), file = log, append = T) #stop here
+    stop("Column names in the table of grouped people must be unique.")
   }
   ##check strength
   strength = tolower(strength)
@@ -134,12 +135,12 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
   
   ##set up custom
   if(strength == "custom" & all(is.na(custom))) {
-    cat("Custom strength was selected but no custom strengths were provided. If user wants to use custom strengths, they must provide a table of strengths for each column in people table.\r\n",
+    cat("Custom strength was selected but no custom strengths were provided. If user wants to use custom strengths, they must provide a table of custom strengths.\r\n",
         file = log, append = T)
-    stop("Custom strength was selected but no custom strengths were provided.")
+    stop("Custom strength was selected but no table of custom strengths was provided.")
   }
   if(strength != "custom" & !all(is.na(custom))) {
-    cat("Custom strengths were provided but will be ignored as another overall strength was provided.\r\n",
+    cat("Table of custom strengths was provided but will be ignored as another overall strength was provided.\r\n",
         file = log, append = T)
     custom = NA
   }
@@ -168,14 +169,14 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
     ###check column names
     names(custom) = tolower(names(custom))
     if(!"variable" %in% names(custom)) {
-        cat("No custom strength variable column in risk factor table, so custom strength cannot be used.\r\nPlease add a column named \"variable\" to the custom strength table.\r\n",
+        cat("No variable column in table of custom strengths, so custom strength cannot be used.\r\nPlease add a column named \"variable\" to the table of custom strengths.\r\n",
             file = log, append = T)
-        stop("No custom strength variable column in risk factor table, so custom strength cannot be used.\r\n")
+        stop("No variable column in table of custom strengths, so custom strength cannot be used.\r\n")
     }
     if(!"strength" %in% names(custom)) {
-      cat("No custom strength strength column in risk factor table, so custom strength cannot be used.\r\nPlease add a column named \"strength\" to the custom strength table.\r\n",
+      cat("No strength column in table of custom strengths, so custom strength cannot be used.\r\nPlease add a column named \"strength\" to the table of custom strengths.\r\n",
           file = log, append = T)
-      stop("No custom strength strength column in risk factor table, so custom strength cannot be used.\r\n")
+      stop("No strength column in table of custom strengths, so custom strength cannot be used.\r\n")
     }
     
     custom = custom[,c("variable", "strength")]
@@ -187,13 +188,13 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
     custom$strength = tolower(custom$strength)
     tmp = which(is.na(custom$strength) | custom$strength=="")
     if(length(tmp)) {
-      cat(paste0("The following rows in the custom strength table are missing a strength: ", paste(tmp, collapse = ", "),
-                 ". The corresponding pairs will be missing a strength value.\r\n"), file = log, append = T)
+      cat(paste0("The following row(s) in the table of custom strengths had a missing strength value: ", paste(tmp, collapse = ", "),
+                 ". The corresponding pairs of persons will be missing a strength value.\r\n"), file = log, append = T)
     }
     if(!all(custom$strength %in% c(strength.options, NA, ""))) {
       miss = custom$strength[!custom$strength %in% c(strength.options, NA, "")]
       cat(paste0(paste(miss, collapse = ", "), ifelse(length(miss)==1, " is one of the", " are"),
-                 " strengths listed in the custom strength table but ", ifelse(length(miss)==1, "is", "are"), 
+                 " strengths listed in the table of custom strengths but ", ifelse(length(miss)==1, "is", "are"), 
                  # " not one of the recommended options. Recommended strengths are definite, probable, possible, or none.\r\n"),
                  " not one of the strength options. Strength options are definite, probable, possible, or none (strength left blank).\r\n"),
           file = log, append = T)
@@ -203,7 +204,7 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
     ###remove empty variables
     tmp = which(is.na(custom$variable) | custom$variable=="")
     if(length(tmp)) {
-      cat(paste0("The following rows in the custom strength table are missing a variable: ", paste(tmp, collapse = ", "),
+      cat(paste0("The following rows in the table of custom strengths are missing a variable: ", paste(tmp, collapse = ", "),
                  ". These rows will be removed.\r\n"), file = log, append = T)
       custom = custom[-tmp,]
     }
@@ -211,11 +212,11 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
     ###check have all variables
     if(!all(vars %in% custom$variable)) {
       miss = vars[!vars %in% custom$variable]
-      cat(paste0("The following variables are in the people table but not listed in the custom strength table: ", 
+      cat(paste0("The following variables are in the table of grouped people but not listed in the table of custom strengths: ", 
                  paste(miss, collapse = ", "),
                  ". The pairs corresponding to ",
                  ifelse(length(miss)==1, "this variable", "these variables"), 
-                 " will be missing a strength value.\r\n"), file = log, append = T)
+                 " will be missing a strength value (strength left blank).\r\n"), file = log, append = T)
       custom = rbind(custom,
                      data.frame(variable = miss,
                                 strength = NA))
@@ -224,7 +225,7 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
     ###check for extra variables
     if(!all(custom$variable %in% vars)) {
       miss = custom$variable[!custom$variable %in% vars]
-      cat(paste0("The following variables are in the custom strength table but not listed in the people table: ", 
+      cat(paste0("The following variables are in the table of custom strengths but not listed in the table of grouped people: ", 
                  paste(miss, collapse = ", "), ". ",
                  ifelse(length(miss)==1, "This variable", "These variables"), 
                  " will be ignored.\r\n"), file = log, append = T)
@@ -293,9 +294,9 @@ latteNoTimeWithOutputs <- function(outPrefix, fname, strength, custom=NA, progre
   result = latteNoTime(fname = fname, strength = strength, custom = custom, log = log, progress = progress)
   
   ##set up files
-  pairName = paste0(outPrefix, "LATTE_NoTime_Links.xlsx")
-  inputName = paste0(outPrefix, "LATTE_NoTime_Input_People_Table.xlsx")
-  customName = paste0(outPrefix, "LATTE_NoTime_Input_Custom_Strength_Table.xlsx")
+  pairName = paste0(outPrefix, "LATTE_NoDate_Pairs.xlsx")
+  inputName = paste0(outPrefix, "LATTE_NoDate_Input_People.xlsx")
+  customName = paste0(outPrefix, "LATTE_NoDate_Input_Strengths.xlsx")
   outputExcelFiles = c(pairName, inputName, customName)
   if(any(file.exists(outputExcelFiles))) {
     del = outputExcelFiles[file.exists(outputExcelFiles)]
@@ -305,7 +306,7 @@ latteNoTimeWithOutputs <- function(outPrefix, fname, strength, custom=NA, progre
   ##write pair file
   pair = result$pairs
   if(!all(is.na(pair))) {
-    writeExcelTableNoTime(fileName = pairName, sheetName = "links", df = pair)
+    writeExcelTableNoTime(fileName = pairName, sheetName = "Pairs", df = pair)
   } else {
     outputExcelFiles = outputExcelFiles[outputExcelFiles!=pairName]
   }
@@ -321,7 +322,7 @@ latteNoTimeWithOutputs <- function(outPrefix, fname, strength, custom=NA, progre
     input = data.frame(x=input)
   }
   names(input) = colname
-  writeExcelTableNoTime(fileName = inputName, sheetName = "links", df = input, filter = F)
+  writeExcelTableNoTime(fileName = inputName, sheetName = "People", df = input, filter = F)
   if(all(class(progress)!="logical")) {
     progress$set(value = 6)
   }
@@ -330,7 +331,7 @@ latteNoTimeWithOutputs <- function(outPrefix, fname, strength, custom=NA, progre
   custom = result$custom
   if(!all(is.na(custom))) {
     names(custom) = c("Variable", "Strength")#in cleaning, was put in this order
-    writeExcelTableNoTime(fileName = customName, sheetName = "links", df = custom, filter = F)
+    writeExcelTableNoTime(fileName = customName, sheetName = "Strengths", df = custom, filter = F)
   } else {
     outputExcelFiles = outputExcelFiles[outputExcelFiles!=customName]
   }

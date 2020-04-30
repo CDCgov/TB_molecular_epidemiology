@@ -6,7 +6,7 @@ library(xlsx)
 afterIPstring = "after IP end" #string used to indicate that an overlap occurs after an IP end
 noIPstring = "no IP available" #string used to indicate when no IP is available for a person
 defaultCut = 2 #default time cutoff
-defaultLogName = "LATTE_log.txt" #default name of log file
+defaultLogName = "LATTE_Log.txt" #default name of log file
 
 ##function that takes the given data frame and corrects the ID column capitalization to be uniform across the program
 fixIDName <- function(df) {
@@ -31,10 +31,10 @@ fixLocNames <- function(df, log) {
               grepl("strength", names(df), ignore.case = T)] = "Confidence"
   reqCols = c("ID", "Location", "Start", "End", "Confidence")
   if(!all(reqCols %in% names(df))) {
-    cat("Location table is missing these required columns: ", file = log, append = T)
+    cat("Table of dates in locations is missing these required columns: ", file = log, append = T)
     cat(paste(reqCols[!reqCols %in% names(df)], collapse=", "), file = log, append = T)
     cat(". Analysis has been stopped.\r\n", file = log, append = T)
-    stop("Location table is missing required columns. Columns must include: ID, Location, Start, End, Confidence.")
+    stop("Table of dates in locations is missing required columns. Columns must include: ID, Location, Start, End, Confidence.")
   }
   return(df)
 }
@@ -47,7 +47,7 @@ fixIPnames <- function(df, log) {
     df = df[!apply(df, 1, function(x) all(is.na(x))),
             !apply(df, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
     if(class(df)!='data.frame' || nrow(df) < 1 || ncol(df) < 2) { #in removing all NA, now have fewer rows or columns than needed
-      cat("Invalid number of IP start or end columns, or number of cases in location with IP, so IP will not be included\r\n", file = log, append = T)
+      cat("Invalid number of IP start or end columns, or number of cases in location with IP, in table of infectious periods, so IP will not be included\r\n", file = log, append = T)
       return(NA)
     }
     ##start
@@ -58,7 +58,7 @@ fixIPnames <- function(df, log) {
       grepl("ip[. ]*stop", names(df), ignore.case = T) | grepl("infectious[. ]*period[. ]*stop", names(df), ignore.case = T)
     names(df)[col] = "IPEnd"
     if(sum(names(df) == "IPStart") != 1 | sum(names(df) == "IPEnd") != 1) {
-      cat("Invalid number of IP start or end columns, so IP will not be included\r\n", file = log, append = T)
+      cat("Invalid number of IP start or end columns in table of infectious periods, so IP will not be included\r\n", file = log, append = T)
       return(NA)
     }
     
@@ -77,7 +77,7 @@ fixIPnames <- function(df, log) {
   }
   reqcols = c("ID", "IPStart", "IPEnd")
   if(!all(reqcols %in% names(df))) {
-    cat("Infectious period inputs need column for ID, IP start and IP end, but some or all of this data is missing so IP will not be included\r\n", file = log, append = T)
+    cat("Table of infectious periods needs column for ID, IP start and IP end, but some or all of this data is missing so IP will not be included\r\n", file = log, append = T)
     df=NA
   }
   df = df[,names(df) %in% reqcols]
@@ -131,7 +131,7 @@ overlapIP <- function(start, end, ip, case) {
 ##cleans up the column names of the given data frame df for output
 namesForOutput <- function(df) {
   #ID1, ID2, location, strength, location fine
-  names(df)[names(df)=="NumDaysOverlap"] = "Number of overlapping days"
+  names(df)[names(df)=="NumDaysOverlap"] = "Number of days of overlap" #"Number of overlapping days"
   names(df)[names(df)=="OverlapStart"] = "Overlap start date"
   names(df)[names(df)=="OverlapEnd"] = "Overlap end date"
   names(df)[names(df)=="OverlapID1IP"] = "Number of days of overlap in ID1 IP" #"Number of days ID2 overlaps in ID1's IP"
@@ -144,8 +144,8 @@ namesForOutput <- function(df) {
   names(df)[names(df)=="End"] = "Location end"
   names(df)[names(df)=="numCertOverlap"] = "Total number of days of certain overlap with another person"
   names(df)[names(df)=="numTotOverlap"] = "Total number of days of any overlap with another person"
-  names(df)[names(df)=="numCertIPOverap"] = "Total number of days of certain overlap with another person during their IP"
-  names(df)[names(df)=="numTotIPOverlap"] = "Total number of days of any overlap with another person during their IP"
+  names(df)[names(df)=="numCertIPOverap"] = "Total number of days of certain overlap with another person during an IP"
+  names(df)[names(df)=="numTotIPOverlap"] = "Total number of days of any overlap with another person during an IP"
   
   ##format dates
   for(c in 1:ncol(df)) {
@@ -310,7 +310,7 @@ getIPEpiLinks <- function(res, cutoff, removeAfter) {
 ##progress = progress bar for R Shiny interface (NA if not running through interface)
 latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter = F, progress = NA, log = defaultLogName) {
   ##set up log
-  cat("LATTE analysis\r\n", file = log)
+  cat("LATTE analysis with date data\r\n", file = log)
   
   ###clean up headers
   loc = fixIDName(loc)
@@ -327,7 +327,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   ##fix strengths
   loc$Confidence = tolower(loc$Confidence)
   if(any(loc$Confidence!="certain" & loc$Confidence!="uncertain")) {
-    cat("The following rows in the location table have invalid confidence values and will be set to uncertain: ", file = log, append = T)
+    cat("The following rows in the table of dates in locations have invalid confidence values and will be set to uncertain: ", file = log, append = T)
     # cat(loc[loc$Confidence!="certain" & loc$Confidence!="uncertain",], file = log, append = T)
     cat(row.names(loc)[loc$Confidence!="certain" & loc$Confidence!="uncertain"], file = log, append = T)
     cat("\r\n", file = log, append = T)
@@ -337,7 +337,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   
   ###test for bad dates
   if(any(is.na(loc$Start) | is.na(loc$End))) {
-    cat("The following rows in the location table have invalid dates and will be removed from analysis: ", file = log, append = T)
+    cat("The following rows in the table of dates in locations have invalid dates and will be removed from analysis: ", file = log, append = T)
     # cat(loc[is.na(loc$Start) | is.na(loc$End),], file = log, append = T)
     cat(row.names(loc)[is.na(loc$Start) | is.na(loc$End)], file = log, append = T)
     cat("\r\n", file = log, append = T)
@@ -346,7 +346,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   
   ###test for bad date ranges
   if(any(loc$Start > loc$End)) {
-    cat("The following rows in the location table have an end date before the start date and will be removed from analysis: ", file = log, append = T)
+    cat("The following rows in the table of dates in locations have an end date before the start date and will be removed from analysis: ", file = log, append = T)
     # cat(loc[loc$Start > loc$End,], file = log, append = T)
     cat(row.names(loc)[loc$Start > loc$End], file = log, append = T)
     cat("\r\n", file = log, append = T)
@@ -370,20 +370,20 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
     ip$IPEnd = convertToDate(ip$IPEnd)
     ##message if missing an IP
     if(any(!cases %in% ip$ID)) {
-      cat("The following people are in the location table but not in the IP table so will have no IP in analysis: ", file = log, append = T)
+      cat("The following people are in the table of dates in locations but not in the table of infectious periods so will have no IP in analysis: ", file = log, append = T)
       cat(paste(as.character(cases[!cases %in% ip$ID]), collapse=", "), file = log, append = T)
       cat("\r\n", file = log, append = T)
     }
     ##test for bad IPs:
     if(any(is.na(ip$IPStart) | is.na(ip$IPEnd))) {
-      cat("The following people in the IP table have a missing IP start or end so will have no IP in analysis: ", file = log, append = T)
+      cat("The following people in the table of infectious periods have a missing IP start or end so will have no IP in analysis: ", file = log, append = T)
       cat(paste(as.character(ip$ID[is.na(ip$IPStart) | is.na(ip$IPEnd)]), collapse=", "), file = log, append = T)
       cat("\r\n", file = log, append = T)
     }
     ip = ip[!is.na(ip$IPStart),]
     ip = ip[!is.na(ip$IPEnd),]
     if(any(ip$IPStart >= ip$IPEnd)) {
-      cat("The following people in the IP table have an IP end date before the start date so will have no IP in analysis: ", file = log, append = T)
+      cat("The following people in the table of infectious periods have an IP end date before the start date so will have no IP in analysis: ", file = log, append = T)
       cat(as.character(ip$ID[ip$IPStart > ip$IPEnd]), file = log, append = T)
       cat("\r\n", file = log, append = T)
       ip = ip[ip$IPStart < ip$IPEnd,]
@@ -481,9 +481,9 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   # if(ipCasesOnly & ipEpiLink) { #if T, only look for overlaps with cases with IP
   if(ipEpiLink) { #if T, only look for overlaps with cases with IP
     if(all(is.na(ip)) || nrow(ip) < 1) {
-      cat("User wants to identify IP epi links and overlaps only with people who have an IP, but no person in analysis has an IP.\r\nEither upload an IP table or uncheck the option to only include overlaps with people that have an IP.\r\n", 
+      cat("User wants to identify IP epi links and overlaps only with people who have an IP, but no person in analysis has an IP.\r\nEither upload an table of infectious periods or select the epi link option instead of IP epi link.\r\n", 
           file = log, append = T)
-      stop("IP table is needed if user only wants overlaps with people who have an IP.")
+      stop("Table of infectious periods is needed if user only wants overlaps with people who have an IP.")
     }
     cases1 = sort(as.character(unique(ip$ID)))
     contacts = cases[!cases %in% cases1]
@@ -566,7 +566,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
     }
   } else {
     # cat("There are no links because no overlaps were found\r\n", file = log, append = T)
-    cat("No overlaps were found. As a result, there are no links.\r\n", file = log, append = T)
+    cat("No overlaps were found, so there are no links.\r\n", file = log, append = T)
   }
   
   if(all(class(progress)!="logical")) {
@@ -702,10 +702,10 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   
   ##if Excel spreadsheet already exists, delete file; otherwise will not write the new results
   overlapName = paste(outPrefix, "LATTE_All_Overlaps.xlsx", sep="")
-  epiName = paste(outPrefix, ifelse(ipEpiLink, "LATTE_IPEpi_Links_", "LATTE_Epi_Links_"), cutoff, "DCutoff",
+  epiName = paste(outPrefix, ifelse(ipEpiLink, "LATTE_IPEpi_Links_", "LATTE_Epi_Links_"), cutoff, "D",
                   ifelse(ipEpiLink, ifelse(removeAfter, "", "_KeepOLAfterIPEnd"), ""), ".xlsx", sep="")
-  locName = paste0(outPrefix, "LATTE_Location.xlsx")
-  ipName = paste0(outPrefix, "LATTE_IP.xlsx")
+  locName = paste0(outPrefix, "LATTE_Input_Dates.xlsx")
+  ipName = paste0(outPrefix, "LATTE_Input_IP.xlsx")
   summaryName = paste0(outPrefix, "LATTE_Summary_By_Person.xlsx")
   outputExcelFiles = c(overlapName, epiName, locName, ipName, summaryName)
   if(any(file.exists(outputExcelFiles))) {
