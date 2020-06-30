@@ -491,7 +491,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   } else {
     cases1 = cases
     contacts = character()
-    cat("Idenitfying all overlaps in time and location between all people.\r\n", file = log, append = T)
+    cat("Identifying all overlaps in time and location between all people.\r\n", file = log, append = T)
   }
   # for(i in 1:(length(cases)-1)) {
   for(i in 1:length(cases1)) {
