@@ -487,7 +487,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
     }
     cases1 = sort(as.character(unique(ip$ID)))
     contacts = cases[!cases %in% cases1]
-    cat("Idenitfying all overlaps in time and location with people that have an IP.\r\n", file = log, append = T)
+    cat("Identifying all overlaps in time and location with people that have an IP.\r\n", file = log, append = T)
   } else {
     cases1 = cases
     contacts = character()
