@@ -68,8 +68,8 @@ ui <- fluidPage(
                                                           tags$p("Number of days two people must overlap each other and an IP to form a definite or probable IP epi link.", style="font-size: 85%; font-weight:100;")), 
                                   min=0, max=30, value=defaultCut, step=1, round=T),
                       # checkboxInput("ipCasesOnly", "Only include overlaps with people that have an IP (do not look for overlaps between people when neither person has an IP)", value=T),
-                      checkboxInput("removeAfter", tags$div(tags$b("Include re-infection"), tags$br(), 
-                                                            tags$p("For case-case overlaps, consider re-infection regardless of which IP comes first", style="font-size: 85%; font-weight:100;")))),
+                      checkboxInput("removeAfter", tags$div(tags$b("Include reinfection"), tags$br(), 
+                                                            tags$p("For case-case overlaps, consider reinfection regardless of which IP comes first", style="font-size: 85%; font-weight:100;")))),
                # actionButton("clear", "Clear inputs")),
                column(2)),
              
