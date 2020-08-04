@@ -1,4 +1,6 @@
 ##make heatmap of LITT rankings
+##Author: Kathryn Winglee
+
 library(xlsx)
 
 ##outPrefix is the prefix for the output Excel spreadsheet

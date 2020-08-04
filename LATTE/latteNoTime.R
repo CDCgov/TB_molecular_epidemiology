@@ -1,4 +1,6 @@
 ##return all pairwise combinations of people in a given column
+##Author: Kathryn Winglee
+
 library(xlsx)
 
 ##base file names

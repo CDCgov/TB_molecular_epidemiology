@@ -1,4 +1,5 @@
 ###LATTE Shiny interface
+###Author: Kathryn Winglee
 
 library(shiny)
 library(shinyjs)

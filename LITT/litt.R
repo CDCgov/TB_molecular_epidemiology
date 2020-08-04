@@ -1,5 +1,6 @@
 ##logically inferred tuberculosis transmission (LITT)
 ##for each case, produces a ranked list of potential sources
+##Author: Kathryn Winglee
 
 source("../sharedFunctions.R")
 source("littScoreHeatmap.R")

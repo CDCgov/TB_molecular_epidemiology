@@ -1,4 +1,6 @@
 ##sets up LITT using TB GIMS data
+##Author: Kathryn Winglee
+
 source("litt.R")
 
 library(haven) #to read GIMS data

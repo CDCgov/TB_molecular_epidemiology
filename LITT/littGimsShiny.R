@@ -1,3 +1,5 @@
+##Author: Kathryn Winglee
+
 library(shiny)
 library(shinyjs)
 source("littGims.R")

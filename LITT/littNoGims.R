@@ -1,4 +1,5 @@
 ##sets up LITT without TB GIMS data
+
 source("litt.R")
 
 ##cleans up and writes case data table
