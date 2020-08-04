@@ -1,6 +1,8 @@
 ##Identify overlap in time and location between people
+##Author: Kathryn Winglee
 
 source("../sharedFunctions.R") ##need convertToDate
+source("ganttChart.R") #code to generate Gantt chart
 library(xlsx)
 
 afterIPstring = "after IP end" #string used to indicate that an overlap occurs after an IP end
@@ -707,7 +709,9 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   locName = paste0(outPrefix, "LATTE_Input_Dates.xlsx")
   ipName = paste0(outPrefix, "LATTE_Input_IP.xlsx")
   summaryName = paste0(outPrefix, "LATTE_Summary_By_Person.xlsx")
-  outputExcelFiles = c(overlapName, epiName, locName, ipName, summaryName)
+  lgcName = paste0(outPrefix, "LATTE_Gantt_Chart_By_Location.xlsx")
+  igcName = paste0(outPrefix, "LATTE_Gantt_Chart_IP.xlsx")
+  outputExcelFiles = c(overlapName, epiName, locName, ipName, summaryName, lgcName, igcName)
   if(any(file.exists(outputExcelFiles))) {
     del = outputExcelFiles[file.exists(outputExcelFiles)]
     file.remove(del)
@@ -755,22 +759,38 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   ###write out location table
   if(!all(is.na(loc))) {
     writeExcelTable(df=loc, fileName=locName, wrapHeader = T, sheetName = "Location Data")
+    if(all(class(progress)!="logical")) {
+      progress$set(value = 10)
+    }
+    
+    locationGanttChart(fileName = lgcName, loc = loc, ip = ip)
+    if(all(class(progress)!="logical")) {
+      progress$set(value = 11)
+    }
+    
   } else {
-    outputExcelFiles = outputExcelFiles[outputExcelFiles != locName]
-  }
-  
-  if(all(class(progress)!="logical")) {
-    progress$set(value = 10)
+    outputExcelFiles = outputExcelFiles[!outputExcelFiles %in% c(locName, lgcName)]
+    if(all(class(progress)!="logical")) {
+      progress$set(value = 12)
+    }
   }
   
   ###write out IP table
   if(!all(is.na(ip))) {
     writeExcelTable(df=ip, fileName=ipName, wrapHeader = T, sheetName = "IP Data")
+    if(all(class(progress)!="logical")) {
+      progress$set(value = 13)
+    }
+    
+    ipGanttChart(fileName = igcName, ip = ip)
+    if(all(class(progress)!="logical")) {
+      progress$set(value = 14)
+    }
   } else {
-    outputExcelFiles = outputExcelFiles[outputExcelFiles != ipName]
-  }
-  if(all(class(progress)!="logical")) {
-    progress$set(value = 11)
+    outputExcelFiles = outputExcelFiles[!outputExcelFiles %in% c(ipName, igcName)]
+    if(all(class(progress)!="logical")) {
+      progress$set(value = 14)
+    }
   }
   
   ###write out person summary table
@@ -780,7 +800,7 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
     outputExcelFiles = outputExcelFiles[outputExcelFiles != summaryName]
   }
   if(all(class(progress)!="logical")) {
-    progress$set(value = 12)
+    progress$set(value = 15)
   }
   
   ###generate figure
