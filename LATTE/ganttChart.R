@@ -199,7 +199,8 @@ setUpDateSectionByWeek <- function(workbook, sheet, cells, dates, centStyle,
   years = as.numeric(sapply(sp, "[[", 1))
   weeks = as.numeric(sapply(sp, "[[", 2))
   week.start = MMWRweek2Date(years, weeks)
-  months = format(week.start, "%B, %Y")#month(dates)
+  # months = format(week.start, "%B, %Y")#month, year
+  months = as.numeric(format(week.start, "%Y")) #year only; make numeric to get rid of Excel warning
   datebreaks = unique(c(1,which(!duplicated(months)))) #list of columns that start a month (need a separator) (include the first in the set of dates)
   
   addBorders(workbook, cells, colStart, colEnd, numCols, rowStart, numRows, datebreaks)
@@ -339,9 +340,10 @@ locationGanttChart <- function(fileName, loc, ip, time.interval = "day") {
     colStart = 3 #number of columns with labels before first column of data
     numCols = length(dates) + colStart + 2 
     colEnd = numCols - 2
+    numCells = max(c(numCols,(colStart + 24))) #24 for the legend; number of columns of cells created
     
     rows = createRow(sheet, rowIndex = 1:numRows)
-    cells = createCell(rows, colIndex = 1:max(c(numCols,(colStart + 24)))) #24 for the legend
+    cells = createCell(rows, colIndex = 1:numCells) 
     
     ##set up styles
     certStyle = CellStyle(workbook) + Fill(foregroundColor = certCol)
@@ -355,7 +357,7 @@ locationGanttChart <- function(fileName, loc, ip, time.interval = "day") {
     setCellValue(cells[[1,2]], 
                  paste("Dates are grouped by", 
                        ifelse(time.interval=="week", 
-                              "MMWR week (listed in row 4; the month in row 4 is the month the MMWR week starts in)", 
+                              "MMWR week", # (listed in row 4; the month in row 4 is the month the MMWR week starts in)", 
                               time.interval)))
     setCellStyle(cells[[2,colStart+1]], 
                  cellStyle = certStyle + Border(position = c("BOTTOM", "LEFT", "TOP")))
@@ -438,13 +440,55 @@ locationGanttChart <- function(fileName, loc, ip, time.interval = "day") {
         }
       }
       
-      ##add dates
+      ##for weeks and months, there may be overlaps (e.g. same month in two different intervals)
+      ##have certain be overriding (if both certain and uncertain present, mark as certain)
       csub = sub[sub$ID == ids[i],]
+      uncert = NA
+      cert = NA
       for(r in 1:nrow(csub)) {
         d = seq(csub$Start[r], csub$End[r], by=1)
         d = convertDates(time.interval, d) 
-        cols = which(dates %in% d)
         if(tolower(csub$Confidence[r])=="certain") {
+          if(all(is.na(cert))) {
+            cert = d
+          } else {
+            cert = c(cert, d)
+          }
+        } else {
+          if(all(is.na(uncert))) {
+            uncert = d
+          } else {
+            uncert = c(uncert, d)
+          }
+        }
+      }
+      list = NA #because know at least one row, know that this will not be NA at the end of this chunk
+      strengths = NA
+      if(!all(is.na(uncert))) {
+        uncert = unique(uncert[!uncert %in% cert])
+        list = uncert
+        strengths = rep("uncertain", length(uncert))
+      }
+      if(!all(is.na(cert))) {
+        cert = unique(cert)
+        if(!all(is.na(list))) {
+          list = c(list, cert)
+          strengths = c(strengths, rep("certain", length(cert)))
+        } else {
+          list = cert
+          strengths = rep("certain", length(cert))
+        }
+      }
+      
+      ##fill in dates in location
+      # for(r in 1:nrow(csub)) {
+      #   d = seq(csub$Start[r], csub$End[r], by=1)
+      #   d = convertDates(time.interval, d) 
+      for(stren in unique(strengths)) {
+        d = list[strengths==stren]
+        cols = which(dates %in% d)
+        # if(tolower(csub$Confidence[r])=="certain") {
+        if(stren == "certain") {
           sty = certStyle
         } else {
           sty = uncertStyle
@@ -524,6 +568,9 @@ locationGanttChart <- function(fileName, loc, ip, time.interval = "day") {
     autoSizeColumn(sheet, 1) #fit ID lengths for first column
     setColumnWidth(sheet, colIndex=c(2:colStart, (colEnd+1):numCols), colWidth=14.3)
     setColumnWidth(sheet, colIndex=(colStart+1):colEnd, colWidth=4.5)
+    if(numCols < numCells) { #extra cells created for legend; also need to be made smaller
+      setColumnWidth(sheet, colIndex=(numCols+1):numCells, colWidth=4.5)
+    }
     
     ##freeze first column
     createFreezePane(sheet, rowSplit = rowStart+1, colSplit = 2)
@@ -561,9 +608,10 @@ ipGanttChart <- function(fileName, ip, time.interval = "week") {
   colStart = 1 #number of columns with labels before first column of data
   numCols = length(dates) + colStart 
   colEnd = numCols
+  numCells = max(c(numCols,(colStart + 7))) #7 for the legend; number of columns of cells created
   
   rows = createRow(sheet, rowIndex = 1:numRows)
-  cells = createCell(rows, colIndex = 1:max(c(numCols,(colStart + 7)))) #7 for the legend
+  cells = createCell(rows, colIndex = 1:numCells) 
   
   ##set up styles
   ipStyle = CellStyle(workbook) + Fill(foregroundColor = ipCol)
@@ -575,7 +623,7 @@ ipGanttChart <- function(fileName, ip, time.interval = "week") {
   setCellValue(cells[[1,2]], 
                paste("Dates are grouped by", 
                       ifelse(time.interval=="week", 
-                             "MMWR week (listed in row 4; the month in row 4 is the month the MMWR week starts in)", 
+                             "MMWR week", # (listed in row 4; the month in row 4 is the month the MMWR week starts in)", 
                              time.interval)))
   setCellStyle(cells[[2,colStart+1]], 
                cellStyle = ipStyle + Border(position = c("BOTTOM", "LEFT", "TOP")))
@@ -671,6 +719,9 @@ ipGanttChart <- function(fileName, ip, time.interval = "week") {
   ##fix column widths
   autoSizeColumn(sheet, 1) #fit ID lengths for first column
   setColumnWidth(sheet, colIndex=(colStart+1):colEnd, colWidth=4.5)
+  if(numCols < numCells) { #extra cells created for legend; also need to be made smaller
+    setColumnWidth(sheet, colIndex=(numCols+1):numCells, colWidth=4.5)
+  }
   
   ##freeze first column
   createFreezePane(sheet, rowSplit = rowStart+1, colSplit = 2)
