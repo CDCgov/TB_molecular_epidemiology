@@ -11,9 +11,6 @@ source("latteNoTime.R")
 
 # Define UI ----
 ui <- fluidPage(
-  # titlePanel("LATTE"),
-  # fluidRow(column(10, offset=2, titlePanel("LATTE"))),
-  # fluidRow(column(12, align="center", titlePanel("LATTE"))),
   fluidRow(column(12, 
                   titlePanel(tagList(span("Location And Time To Epi (LATTE)",
                                           # span(actionButton('help', 'help'),
@@ -35,23 +32,18 @@ ui <- fluidPage(
                                                                            onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20training%20datasets')"),
                                                               actionButton("help", "Reference")),
                                                style = "position:absolute;right:2em;"))), #https://stackoverflow.com/questions/54523349/place-actionbutton-on-right-side-of-titlepanel-in-shiny
-                  windowTitle = "LATTE"))),
+                             windowTitle = "LATTE"))),
   useShinyjs(),
   tabsetPanel(
-    tabPanel("With Date Data",
-             # fluidRow(column(1),
-             #          column(11,
-             #                 br(),
-             #          p("Identify overlaps in time and location"))),
+    tabPanel("Link analysis with date data",
              fluidRow(br(),
                       h4("Identify epi links based on overlaps in dates of people in locations", align="center")),
              fluidRow(
-               column(2),
                column(4,
                       h3("Set up inputs"),
                       p("Warning: do not upload personally identifiable information (PII)", style="color:red"),
                       fileInput("locTab", "Table of dates in locations (required)", accept=c(".xlsx", ".csv")),
-                      fileInput("ipTab", "Table of infectious periods (IP)", accept=c(".xlsx", ".csv")),
+                      fileInput("ipTab", "Table of infectious periods (IP) (required for IP epi link and IP Gantt chart)", accept=c(".xlsx", ".csv")),
                       br(),
                       br(),
                       h3("Set up outputs"),
@@ -69,10 +61,25 @@ ui <- fluidPage(
                                                           tags$p("Number of days two people must overlap each other and an IP to form a definite or probable IP epi link.", style="font-size: 85%; font-weight:100;")), 
                                   min=0, max=30, value=defaultCut, step=1, round=T),
                       # checkboxInput("ipCasesOnly", "Only include overlaps with people that have an IP (do not look for overlaps between people when neither person has an IP)", value=T),
-                      checkboxInput("removeAfter", tags$div(tags$b("Include reinfection"), tags$br(), 
-                                                            tags$p("For case-case overlaps, consider reinfection regardless of which IP comes first", style="font-size: 85%; font-weight:100;")))),
-               # actionButton("clear", "Clear inputs")),
-               column(2)),
+                      checkboxInput("removeAfter", tags$div(tags$b("Include re-exposure"), tags$br(), 
+                                                            tags$p("For case-case overlaps, consider re-exposure regardless of which IP comes first", style="font-size: 85%; font-weight:100;")))),
+               column(4,
+                      h3("Set up Gantt chart outputs"),
+                      checkboxInput("locGantt", tags$div(tags$p("Generate location Gantt chart", style="font-size: 125%; font-weight:100;")), value = T),
+                      div(style = "padding: 0px 0px; margin-top:-2em; margin-left:2em",#remove space between rows
+                          fluidRow(#column(2),
+                            column(12, 
+                                   checkboxGroupInput("locGanttTime", 
+                                                      tags$div(tags$p("Select time interval(s):", style="font-size: 100%; font-weight:100; padding: 0px 0px; margin-bottom:-2em")), 
+                                                      c("Day"="day", "Week"="week", "Month"="month"),
+                                                      selected="day")))),
+                      checkboxInput("ipGantt", tags$div(tags$p("Generate IP Gantt chart", style="font-size: 125%; font-weight:100;")), value = T),
+                      div(style = "padding: 0px 0px; margin-top:-2em; ; margin-left:2em",#remove space between rows
+                          fluidRow(column(10, 
+                                          checkboxGroupInput("ipGanttTime", 
+                                                             tags$div(tags$p("Select time interval(s):", style="font-size: 100%; font-weight:100; padding: 0px 0px; margin-bottom:-2em")), 
+                                                             c("Day"="day", "Week"="week", "Month"="month"),
+                                                             selected="week")))))),
              
              fluidRow(column(12, align="center",
                              br(),
@@ -86,11 +93,8 @@ ui <- fluidPage(
                              htmlOutput("message"))), #use instead of textOutput so can change font of returning string: https://stackoverflow.com/questions/24049159/change-the-color-and-font-of-text-in-shiny-app
              fluidRow(column(12, align="center",
                              br(),
-                             downloadButton("downloadData", "Download Results"))
-                      
-             )),
-             # ))))
-    tabPanel("Without Date Data",
+                             downloadButton("downloadData", "Download Results")))),
+    tabPanel("Link analysis without date data",
              fluidRow(br(),
                       h4("Identify all possible pairs from grouped list(s) of people", align="center")),
              fluidRow(
@@ -117,7 +121,7 @@ ui <- fluidPage(
                                                                         tags$p("Valid strength values are definite, probable, possible, or no strength specified (strength left blank).", style="font-size: 85%; font-weight:100;")), 
                                        accept=c(".xlsx", ".csv")))),
                column(2)),
-
+             
              fluidRow(column(12, align="center",
                              br(),
                              actionButton("noTimeClear", "Clear inputs"),
@@ -130,7 +134,52 @@ ui <- fluidPage(
                              htmlOutput("noTimeMessage"))), #use instead of textOutput so can change font of returning string: https://stackoverflow.com/questions/24049159/change-the-color-and-font-of-text-in-shiny-app
              fluidRow(column(12, align="center",
                              br(),
-                             downloadButton("noTimeDownloadData", "Download Results"))))))
+                             downloadButton("noTimeDownloadData", "Download Results")))),
+    tabPanel("Gantt charts only",
+             fluidRow(br(),
+                      h4("Generate Gantt charts without any link analysis", align="center")),
+             fluidRow(
+               column(2),
+               column(4,
+                      h3("Set up inputs"),
+                      p("Warning: do not upload personally identifiable information (PII)", style="color:red"),
+                      fileInput("ganttLocTab", "Table of dates in locations (required for location Gantt chart)", accept=c(".xlsx", ".csv")),
+                      fileInput("ganttIPTabGantt", "Table of infectious periods (IP) (required for IP Gantt chart)", accept=c(".xlsx", ".csv")),
+                      br(),
+                      br(),
+                      h3("Set up outputs"),
+                      textInput("GanttPrefix", "Name prefix for output files")),
+               column(4,
+                      h3("Set up Gantt chart outputs"),
+                      checkboxInput("ganttLocGantt", tags$div(tags$p("Generate location Gantt chart", style="font-size: 125%; font-weight:100;")), value = T),
+                      div(style = "padding: 0px 0px; margin-top:-2em; margin-left:2em",#remove space between rows
+                          fluidRow(#column(2),
+                            column(12, 
+                                   checkboxGroupInput("ganttLocGanttTime", 
+                                                      tags$div(tags$p("Select time interval(s):", style="font-size: 100%; font-weight:100; padding: 0px 0px; margin-bottom:-2em")), 
+                                                      c("Day"="day", "Week"="week", "Month"="month"),
+                                                      selected="day")))),
+                      checkboxInput("ganttIPGantt", tags$div(tags$p("Generate IP Gantt chart", style="font-size: 125%; font-weight:100;")), value = T),
+                      div(style = "padding: 0px 0px; margin-top:-2em; ; margin-left:2em",#remove space between rows
+                          fluidRow(column(10, 
+                                          checkboxGroupInput("ganttIPGanttTime", 
+                                                             tags$div(tags$p("Select time interval(s):", style="font-size: 100%; font-weight:100; padding: 0px 0px; margin-bottom:-2em")), 
+                                                             c("Day"="day", "Week"="week", "Month"="month"),
+                                                             selected="week"))))),
+               column(2)),
+             fluidRow(column(12, align="center",
+                             br(),
+                             actionButton("clear", "Clear inputs"),
+                             br(),
+                             br(),
+                             actionButton("ganttRun", "Run", style='background-color:royalblue; color:white; padding:20px 40px'))), #https://www.w3schools.com/css/css3_buttons.asp
+             fluidRow(column(12, align="center",
+                             br(),
+                             br(),
+                             htmlOutput("ganttMessage"))), #use instead of textOutput so can change font of returning string: https://stackoverflow.com/questions/24049159/change-the-color-and-font-of-text-in-shiny-app
+             fluidRow(column(12, align="center",
+                             br(),
+                             downloadButton("ganttDownloadData", "Download Results"))))))
 
 
 ##text to format html string to increase message font size
@@ -147,12 +196,14 @@ notime.outfiles = NA #list of output files
 # Define server logic ----
 server <- function(input, output, session) {
   shinyjs::hide("downloadData")
+  shinyjs::hide("noTimeDownloadData")
+  shinyjs::hide("ganttDownloadData")
   
   rv <- reactiveValues(clLoc = F,
                        clIP = F,
                        clNTtab = F,
-                       clNTcust = F) #variables that if true, indicate that clear has been hit but a new table has not been uploaded
-  
+                       clNTcust = F)#variables that if true, indicate that clear has been hit but a new table has not been uploaded
+                       
   ##run LATTE when action button hit
   observeEvent(input$run, {
     if(rv$clLoc) {
@@ -232,7 +283,7 @@ server <- function(input, output, session) {
     }, error = function(e) {
       notime.outfiles <<- paste(tmpdir, input$noTimePrefix, defaultNoTimeLogName, sep="")
       output$noTimeMessage <- renderText({paste(outputfontsizestart, "Error detected:<br/>", geterrmessage(),
-                                          "<br/>Download and view log for more details.", outputfontsizeend, sep="")})
+                                                "<br/>Download and view log for more details.", outputfontsizeend, sep="")})
       cat(geterrmessage(), file = notime.outfiles, append = T)
       shinyjs::show("noTimeDownloadData")
     })
@@ -282,7 +333,10 @@ server <- function(input, output, session) {
     updateSliderInput(session, "epicutoff", value=defaultCut)
     updateSliderInput(session, "ipepicutoff", value=defaultCut)
     updateCheckboxInput(session, "removeAfter", value=F)
-    # updateRadioButtons(session, "linkType", selected = epi)
+    updateCheckboxInput(session, "locGantt", value=T)
+    updateCheckboxInput(session, "ipGantt", value=T)
+    updateCheckboxGroupInput(session, "locGanttTime", selected="day")
+    updateCheckboxGroupInput(session, "ipGanttTime", selected="week")
     reset("linkType")
     reset("noTimeStrength")
     output$message <- renderText({""})
@@ -304,6 +358,10 @@ server <- function(input, output, session) {
     updateSliderInput(session, "epicutoff", value=defaultCut)
     updateSliderInput(session, "ipepicutoff", value=defaultCut)
     updateCheckboxInput(session, "removeAfter", value=F)
+    updateCheckboxInput(session, "locGantt", value=T)
+    updateCheckboxInput(session, "ipGantt", value=T)
+    updateCheckboxGroupInput(session, "locGanttTime", selected="day")
+    updateCheckboxGroupInput(session, "ipGanttTime", selected="week")
     reset("linkType")
     reset("noTimeStrength")
     output$message <- renderText({""})
@@ -373,6 +431,34 @@ server <- function(input, output, session) {
     shinyjs::hide("noTimeDownloadData")
   })
   observe({
+    input$locGantt
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+  })
+  observe({
+    input$locGanttTime
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+  })
+  observe({
+    input$ipGantt
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+  })
+  observe({
+    input$ipGanttTime
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+  })
+  observe({
     input$noTimeTab
     rv$clNTtab <- F
     output$message <- renderText({""})
@@ -422,6 +508,42 @@ server <- function(input, output, session) {
       shinyjs::show("noTimeCustomStrength")
     } else {
       shinyjs::hide("noTimeCustomStrength")
+    }
+  })
+  
+  ##for Gantt chart timing, ensure upper checkbox is selected/unselected based on checkbox group
+  observeEvent(input$locGantt, {
+    if(input$locGantt) {
+      if(is.null(input$locGanttTime)) {
+        updateCheckboxGroupInput(session, "locGanttTime", selected="day")
+      }
+    } else {
+      updateCheckboxGroupInput(session, "locGanttTime", selected=character(0))
+    }
+  })
+  observe({
+    input$locGanttTime
+    if(is.null(input$locGanttTime)) {
+      updateCheckboxInput(session, "locGantt", value = F)
+    } else {
+      updateCheckboxInput(session, "locGantt", value = T)
+    }
+  })
+  observeEvent(input$ipGantt, {
+    if(input$ipGantt) {
+      if(is.null(input$ipGanttTime)) {
+        updateCheckboxGroupInput(session, "ipGanttTime", selected="week")
+      }
+    } else {
+      updateCheckboxGroupInput(session, "ipGanttTime", selected=character(0))
+    }
+  })
+  observe({
+    input$ipGanttTime
+    if(is.null(input$ipGanttTime)) {
+      updateCheckboxInput(session, "ipGantt", value = F)
+    } else {
+      updateCheckboxInput(session, "ipGantt", value = T)
     }
   })
 }
