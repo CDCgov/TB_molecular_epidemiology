@@ -248,8 +248,8 @@ server <- function(input, output, session) {
                                   ipEpiLink = input$linkType == "ipepi",
                                   removeAfter = !input$removeAfter,
                                   progress = progress,
-                                  drawLocGantt = input$ganttLocGanttTime,
-                                  drawIPGantt = input$ganttIPGanttTime)
+                                  drawLocGantt = input$locGanttTime,
+                                  drawIPGantt = input$ipGanttTime)
       outfiles <<- latteres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
       shinyjs::show("downloadData")
