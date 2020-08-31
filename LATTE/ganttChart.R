@@ -310,7 +310,11 @@ convertDates<-function(time.interval, dates) {
 ##loc = location data (formatted from LATTE)
 ##ip = infectious period data (formatted from LATTE)
 ##time.interval = time interval to use for columns (can be day, week, or month)
-locationGanttChart <- function(fileName, loc, ip, time.interval = "day") {
+##workbook = if NA, create new workbook, otherwise write results as new sheet in workbook
+##save = if true, save the workbook at the end
+##returns the workbook used to write the results to
+locationGanttChart <- function(fileName, loc, ip, time.interval = "day",
+                               workbook=NA, save=T) {
   ##check time.interval
   time.interval = tolower(time.interval)
   if(!time.interval %in% c("day", "week", "month")) {
@@ -318,7 +322,11 @@ locationGanttChart <- function(fileName, loc, ip, time.interval = "day") {
            ". Valid time intervals are: day, week, or month.\r\n")
   }
   
-  workbook = createWorkbook(type = "xlsx")
+  ##set up
+  if(class(workbook)!="jobjRef") {
+    workbook = createWorkbook(type = "xlsx")
+  }
+  
   locations = sort(unique(as.character(loc$Location)))
   
   ##create Gantt charts as one sheet per location
@@ -576,14 +584,21 @@ locationGanttChart <- function(fileName, loc, ip, time.interval = "day") {
     createFreezePane(sheet, rowSplit = rowStart+1, colSplit = 2)
   }
   
-  saveWorkbook(workbook, fileName)
+  if(save) {
+    saveWorkbook(workbook, fileName)
+  }
+  return(workbook)
 }
 
 ##generates a Gantt chart for the infectious period (IP) data
 ##fileName = name of output file
 ##ip = infectious period data (formatted from LATTE, assumes no missing IP end or start)
 ##time.interval = time interval to use for columns (can be day, week, or month)
-ipGanttChart <- function(fileName, ip, time.interval = "week") {
+##workbook = if NA, create new workbook, otherwise write results as new sheet in workbook
+##save = if true, save the workbook at the end
+##returns the workbook used to write the results to 
+ipGanttChart <- function(fileName, ip, time.interval = "week",
+                         workbook=NA, save=T) {
   ##check time.interval
   time.interval = tolower(time.interval)
   if(!time.interval %in% c("day", "week", "month")) {
@@ -592,7 +607,9 @@ ipGanttChart <- function(fileName, ip, time.interval = "week") {
   }
   
   ##set up sheet, dates, and ids
-  workbook = createWorkbook(type = "xlsx")
+  if(class(workbook)!="jobjRef") {
+    workbook = createWorkbook(type = "xlsx")
+  }
   sheet = createSheet(workbook, paste("IP by", time.interval))
   dates = seq(from = min(ip$IPStart), to = max(ip$IPEnd), by = 1)
   dates = convertDates(time.interval, dates)
@@ -726,5 +743,8 @@ ipGanttChart <- function(fileName, ip, time.interval = "week") {
   ##freeze first column
   createFreezePane(sheet, rowSplit = rowStart+1, colSplit = 2)
   
-  saveWorkbook(workbook, fileName)
+  if(save) {
+    saveWorkbook(workbook, fileName)
+  }
+  return(workbook)
 }

@@ -161,7 +161,7 @@ namesForOutput <- function(df) {
 ##writes the data frame df to the Excel file or workbook and sheet
 ##df = data to write
 ##if fileName is not NA, generate the workbook first
-##workbook should be provided if no fileName is given, otherwise the value will be ignored
+##workbook = if NA, create new workbook, otherwise write results as new sheet in workbook
 ##returns the workbook in case additional sheets need to be written
 ##if wrapHeader is true, set column widths to the longest length and wrap the header (rather than using auto, which will not wrap the header)
 ##save = if true, save the workbook
@@ -223,7 +223,7 @@ writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHea
 ##cutoff = time cutoff; cases must overlap for at least this many days to be a definite or probable epi link
 getEpiLinks <-function(res, cutoff) {
   epi = NA
-  allCombo = strsplit(unique(paste(res$ID1, res$ID2, sep=",.")), ",.")
+  allCombo = strsplit(unique(paste(res$ID1, res$ID2, sep=",.")), ",.") #note because cases are sorted, there should be no reversed situations
   for(c in allCombo) {
     sub = res[res$ID1==c[1] & res$ID2==c[2],]
     if(nrow(sub) > 0) {
@@ -690,9 +690,10 @@ timelineFig <- function(outPrefix, loc, ip, certLegOnly=F) {
 ##ipEpiLink = if true, calculate an IP epi link, otherwise calculate an epi link
 ##removeAfter = if true, remove overlaps that occur after the IP of either case (for IP epi links)
 ##progress = optional progress bar (for Rshiny interface)
-##drawTimeline = if true, generate timeline jpeg
+##drawLocGantt = list of time intervals to draw location Gantt chart (options: day, week, month); null if none
+##drawIPGantt = list of time intervals to draw IP Gantt chart (options: day, week, month); null if none
 latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter = F,
-                             progress = NA, drawTimeline = F) {
+                             progress = NA, drawLocGantt = NULL, drawIPGantt = NULL) {
   log = paste(outPrefix, defaultLogName, sep="")
   results = latte(loc = loc, ip = ip, cutoff = cutoff, ipEpiLink = ipEpiLink, 
                   removeAfter = removeAfter, log = log)
@@ -762,17 +763,29 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
     if(all(class(progress)!="logical")) {
       progress$set(value = 10)
     }
-    
-    locationGanttChart(fileName = lgcName, loc = loc, ip = ip)
-    if(all(class(progress)!="logical")) {
-      progress$set(value = 11)
-    }
-    
   } else {
-    outputExcelFiles = outputExcelFiles[!outputExcelFiles %in% c(locName, lgcName)]
+    outputExcelFiles = outputExcelFiles[outputExcelFiles != locName]
     if(all(class(progress)!="logical")) {
       progress$set(value = 12)
     }
+  }
+  
+  ##write out location Gantt chart
+  if(!all(is.na(loc)) & !is.null(drawLocGantt)) {
+    cat(paste("Generating location Gantt chart for these time intervals:", 
+              paste0(drawLocGantt, collapse = ", "), "\r\n"), file = log, append = T)
+    wb = NA
+    for(time in drawLocGantt) {
+      wb = locationGanttChart(fileName = lgcName, loc = loc, ip = ip, time.interval = time, 
+                              workbook = wb, save = F)
+      if(all(class(progress)!="logical")) {
+        progress$set(value = 11)
+      }
+    }
+    saveWorkbook(wb, lgcName)
+  } else {
+    cat(paste("No location Gantt chart generated\r\n"), file = log, append = T)
+    outputExcelFiles = outputExcelFiles[outputExcelFiles != lgcName]
   }
   
   ###write out IP table
@@ -781,16 +794,28 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
     if(all(class(progress)!="logical")) {
       progress$set(value = 13)
     }
-    
-    ipGanttChart(fileName = igcName, ip = ip)
-    if(all(class(progress)!="logical")) {
-      progress$set(value = 14)
-    }
   } else {
-    outputExcelFiles = outputExcelFiles[!outputExcelFiles %in% c(ipName, igcName)]
+    outputExcelFiles = outputExcelFiles[outputExcelFiles != ipName]
     if(all(class(progress)!="logical")) {
       progress$set(value = 14)
     }
+  }
+  
+  ##write out IP Gantt chart
+  if(!all(is.na(ip)) & !is.null(drawIPGantt)) {
+    cat(paste("Generating IP Gantt chart for these time intervals:", 
+              paste0(drawIPGantt, collapse = ", "), "\r\n"), file = log, append = T)
+    wb = NA
+    for(time in drawIPGantt) {
+      wb = ipGanttChart(fileName = igcName, ip = ip, time.interval = time, workbook = wb, save = F)
+      if(all(class(progress)!="logical")) {
+        progress$set(value = 14)
+      }
+    }
+    saveWorkbook(wb, igcName)
+  } else {
+    cat(paste("No IP Gantt chart generated\r\n"), file = log, append = T)
+    outputExcelFiles = outputExcelFiles[outputExcelFiles != igcName]
   }
   
   ###write out person summary table
@@ -804,10 +829,10 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   }
   
   ###generate figure
-  if(drawTimeline) {
-    figs = timelineFig(outPrefix, loc, ip)
-    outputExcelFiles = c(outputExcelFiles, figs) #add figs to output list
-  }
+  # if(drawTimeline) {
+  #   figs = timelineFig(outPrefix, loc, ip)
+  #   outputExcelFiles = c(outputExcelFiles, figs) #add figs to output list
+  # }
   
   results$outputFiles = c(log, outputExcelFiles)
   return(results)

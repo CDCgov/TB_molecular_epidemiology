@@ -206,6 +206,7 @@ server <- function(input, output, session) {
                        
   ##run LATTE when action button hit
   observeEvent(input$run, {
+    #check for location file (required)
     if(rv$clLoc) {
       loc = NA
     } else {
@@ -215,6 +216,22 @@ server <- function(input, output, session) {
       output$message <- renderText({paste(outputfontsizestart, "No location data; please input a location table", outputfontsizeend, sep="")})
       return(NULL)
     }
+    
+    #check for IP file (required sometimes)
+    if(rv$clIP) {
+      ip = NA
+    } else {
+      ip = readShinyInputFile(input$ipTab)
+    }
+    if(all(is.na(loc)) & input$linkType == "ipepi") {
+      output$message <- renderText({paste(outputfontsizestart, "No IP data; please input an IP table or select epi link instead of IP epi link", outputfontsizeend, sep="")})
+      return(NULL)
+    }
+    if(all(is.na(loc)) & !is.null(input$ipGanttTime)) {
+      output$message <- renderText({paste(outputfontsizestart, "No IP data; please input an IP table or deselect the IP Gantt chart options", outputfontsizeend, sep="")})
+      return(NULL)
+    }
+    
     progress <- Progress$new(session, min=-1, max=15)
     on.exit(progress$close())
     progress$set(message = "Running LATTE")
@@ -223,11 +240,6 @@ server <- function(input, output, session) {
     cutoff = ifelse(input$linkType == "ipepi", input$ipepicutoff, input$epicutoff)
     progress$set(value=0)
     outPrefix = paste(tmpdir, input$prefix, sep="")
-    if(rv$clIP) {
-      ip = NA
-    } else {
-      ip = readShinyInputFile(input$ipTab)
-    }
     res = tryCatch({
       latteres = latteWithOutputs(outPrefix = outPrefix,
                                   loc = loc,
@@ -235,7 +247,9 @@ server <- function(input, output, session) {
                                   cutoff = cutoff,
                                   ipEpiLink = input$linkType == "ipepi",
                                   removeAfter = !input$removeAfter,
-                                  progress = progress)
+                                  progress = progress,
+                                  drawLocGantt = input$ganttLocGanttTime,
+                                  drawIPGantt = input$ganttIPGanttTime)
       outfiles <<- latteres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
       shinyjs::show("downloadData")
