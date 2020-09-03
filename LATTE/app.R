@@ -37,7 +37,7 @@ ui <- fluidPage(
   tabsetPanel(
     tabPanel("Link analysis with date data",
              fluidRow(br(),
-                      h4("Identify epi links based on overlaps in dates of people in locations", align="center")),
+                      h4("Identify epi links based on overlaps in dates of people in locations", align="left", style="margin-left:30px;")),
              fluidRow(
                column(4,
                       h3("Set up inputs"),
@@ -96,7 +96,7 @@ ui <- fluidPage(
                              downloadButton("downloadData", "Download Results")))),
     tabPanel("Link analysis without date data",
              fluidRow(br(),
-                      h4("Identify all possible pairs from grouped list(s) of people", align="center")),
+                      h4("Identify all possible links from grouped list(s) of people without date data", align="left", style="margin-left:30px;")),
              fluidRow(
                column(2),
                column(4,
@@ -137,7 +137,7 @@ ui <- fluidPage(
                              downloadButton("noTimeDownloadData", "Download Results")))),
     tabPanel("Gantt charts only",
              fluidRow(br(),
-                      h4("Generate Gantt charts without any link analysis", align="center")),
+                      h4("Generate Gantt charts without any link analysis", align="left", style="margin-left:30px;")),
              fluidRow(
                column(2),
                column(4,
