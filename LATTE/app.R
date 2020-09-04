@@ -223,11 +223,11 @@ server <- function(input, output, session) {
     } else {
       ip = readShinyInputFile(input$ipTab)
     }
-    if(all(is.na(loc)) & input$linkType == "ipepi") {
+    if(all(is.na(ip)) & input$linkType == "ipepi") {
       output$message <- renderText({paste(outputfontsizestart, "No IP data; please input an IP table or select epi link instead of IP epi link", outputfontsizeend, sep="")})
       return(NULL)
     }
-    if(all(is.na(loc)) & !is.null(input$ipGanttTime)) {
+    if(all(is.na(ip)) & !is.null(input$ipGanttTime)) {
       output$message <- renderText({paste(outputfontsizestart, "No IP data; please input an IP table or deselect the IP Gantt chart options", outputfontsizeend, sep="")})
       return(NULL)
     }
