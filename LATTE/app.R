@@ -65,7 +65,7 @@ ui <- fluidPage(
                                                             tags$p("For case-case overlaps, consider re-exposure regardless of which IP comes first", style="font-size: 85%; font-weight:100;")))),
                column(4,
                       h3("Set up Gantt chart outputs"),
-                      checkboxInput("locGantt", tags$div(tags$p("Generate location Gantt chart", style="font-size: 125%; font-weight:100;")), value = T),
+                      checkboxInput("locGantt", tags$div(tags$p("Generate location Gantt chart(s)", style="font-size: 125%; font-weight:100;")), value = T),
                       div(style = "padding: 0px 0px; margin-top:-2em; margin-left:2em",#remove space between rows
                           fluidRow(#column(2),
                             column(12, 
@@ -73,7 +73,7 @@ ui <- fluidPage(
                                                       tags$div(tags$p("Select time interval(s):", style="font-size: 100%; font-weight:100; padding: 0px 0px; margin-bottom:-2em")), 
                                                       c("Day"="day", "Week"="week", "Month"="month"),
                                                       selected="day")))),
-                      checkboxInput("ipGantt", tags$div(tags$p("Generate IP Gantt chart", style="font-size: 125%; font-weight:100;")), value = T),
+                      checkboxInput("ipGantt", tags$div(tags$p("Generate IP Gantt chart(s)", style="font-size: 125%; font-weight:100;")), value = T),
                       div(style = "padding: 0px 0px; margin-top:-2em; ; margin-left:2em",#remove space between rows
                           fluidRow(column(10, 
                                           checkboxGroupInput("ipGanttTime", 
@@ -151,7 +151,7 @@ ui <- fluidPage(
                       textInput("GanttPrefix", "Name prefix for output files")),
                column(4,
                       h3("Set up Gantt chart outputs"),
-                      checkboxInput("ganttLocGantt", tags$div(tags$p("Generate location Gantt chart", style="font-size: 125%; font-weight:100;")), value = T),
+                      checkboxInput("ganttLocGantt", tags$div(tags$p("Generate location Gantt chart(s)", style="font-size: 125%; font-weight:100;")), value = T),
                       div(style = "padding: 0px 0px; margin-top:-2em; margin-left:2em",#remove space between rows
                           fluidRow(#column(2),
                             column(12, 
@@ -159,7 +159,7 @@ ui <- fluidPage(
                                                       tags$div(tags$p("Select time interval(s):", style="font-size: 100%; font-weight:100; padding: 0px 0px; margin-bottom:-2em")), 
                                                       c("Day"="day", "Week"="week", "Month"="month"),
                                                       selected="day")))),
-                      checkboxInput("ganttIPGantt", tags$div(tags$p("Generate IP Gantt chart", style="font-size: 125%; font-weight:100;")), value = T),
+                      checkboxInput("ganttIPGantt", tags$div(tags$p("Generate IP Gantt chart(s)", style="font-size: 125%; font-weight:100;")), value = T),
                       div(style = "padding: 0px 0px; margin-top:-2em; ; margin-left:2em",#remove space between rows
                           fluidRow(column(10, 
                                           checkboxGroupInput("ganttIPGanttTime", 
