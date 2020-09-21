@@ -22,20 +22,24 @@ addRightHandHeaderBorders <- function(workbook, cells, colStart, colEnd, rowStar
     setCellStyle(cells[[rowStart-1,colEnd]],
                  cellStyle = CellStyle(workbook) + 
                    Border(position = c("TOP", "BOTTOM", "RIGHT", "LEFT"), 
-                          pen = c("BORDER_THIN", "BORDER_THIN", "BORDER_THICK", "BORDER_THICK")))
+                          pen = c("BORDER_THIN", "BORDER_THIN", "BORDER_THICK", "BORDER_THICK")) +
+                   Alignment(wrapText=TRUE, horizontal="ALIGN_CENTER"))
     setCellStyle(cells[[rowStart,colEnd]],
                  cellStyle = CellStyle(workbook) + 
                    Border(position = c("RIGHT", "LEFT", "TOP", "BOTTOM"),
-                          pen = c("BORDER_THICK", "BORDER_THICK", rep("BORDER_THIN", 2))))
+                          pen = c("BORDER_THICK", "BORDER_THICK", rep("BORDER_THIN", 2))) +
+                   Alignment(wrapText=TRUE, horizontal="ALIGN_CENTER"))
   } else {
     setCellStyle(cells[[rowStart-1,colEnd]],
                  cellStyle = CellStyle(workbook) + 
                    Border(position = c("TOP", "BOTTOM", "RIGHT"), 
-                          pen = c("BORDER_THIN", "BORDER_THIN", "BORDER_THICK")))
+                          pen = c("BORDER_THIN", "BORDER_THIN", "BORDER_THICK")) +
+                   Alignment(wrapText=TRUE, horizontal="ALIGN_CENTER"))
     setCellStyle(cells[[rowStart,colEnd]],
                  cellStyle = CellStyle(workbook) + 
                    Border(position = c("RIGHT", "LEFT", "TOP", "BOTTOM"),
-                          pen = c("BORDER_THICK", rep("BORDER_THIN", 3))))
+                          pen = c("BORDER_THICK", rep("BORDER_THIN", 3))) +
+                   Alignment(wrapText=TRUE, horizontal="ALIGN_CENTER"))
     
   }
 }
