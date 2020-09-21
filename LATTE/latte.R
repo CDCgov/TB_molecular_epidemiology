@@ -130,6 +130,22 @@ overlapIP <- function(start, end, ip, case) {
   return(val)
 }
 
+##function that returns the last day in thethe infectious period from ip for case overlaps the time range represented by start and end
+lastDateInIP <- function(start, end, ip, case) {
+  val = NA
+  if(!all(is.na(ip))) {
+    if(case %in% ip$ID) {
+      if(!is.na(ip$IPStart[ip$ID==case]) & !is.na(ip$IPEnd[ip$ID==case])) {
+        ol = getOverlap(start, end, ip$IPStart[ip$ID==case], ip$IPEnd[ip$ID==case])
+        if(!all(is.na(ol))) {
+          val = ol[2]
+        }
+      }
+    }
+  }
+  return(val)
+}
+
 ##cleans up the column names of the given data frame df for output
 namesForOutput <- function(df) {
   #ID1, ID2, location, strength, location fine
@@ -148,6 +164,8 @@ namesForOutput <- function(df) {
   names(df)[names(df)=="numTotOverlap"] = "Total number of days of any overlap with another person"
   names(df)[names(df)=="numCertIPOverap"] = "Total number of days of certain overlap with another person during an IP"
   names(df)[names(df)=="numTotIPOverlap"] = "Total number of days of any overlap with another person during an IP"
+  names(df)[names(df)=="lastDateOLinIP"] = "Last date of overlap with another person during their IP"
+  names(df)[names(df)=="lastDateCertOLinIP"] = "Last date of certain overlap with another person during their IP"
   
   ##format dates
   for(c in 1:ncol(df)) {
@@ -396,7 +414,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   }
   
   if(all(class(progress)!="logical")) {
-    progress$set(value = 1)
+    progress$set(value = progress$getValue()+1, detail = "running data checks") #1
   }
   
   ###check still have data after removing bad rows
@@ -474,7 +492,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   loc = dedup
   
   if(all(class(progress)!="logical")) {
-    progress$set(value = 2)
+    progress$set(value = progress$getValue()+1, detail = "getting overlaps") #2
   }
   
   
@@ -526,7 +544,9 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
                                       OverlapStart=ol[1],
                                       OverlapEnd=ol[2],
                                       OverlapID1IP=as.character(overlapIP(ol[1], ol[2], ip, id1)),
-                                      OverlapID2IP=as.character(overlapIP(ol[1], ol[2], ip, id2)))
+                                      OverlapID2IP=as.character(overlapIP(ol[1], ol[2], ip, id2)),
+                                      lastDateID1IP = as.Date(lastDateInIP(ol[1], ol[2], ip, id1)),
+                                      lastDateID2IP = as.Date(lastDateInIP(ol[1], ol[2], ip, id2)))
                     if(all(is.na(res))) {
                       res = temp
                     } else {
@@ -586,6 +606,8 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
                      numTotOverlap = NA,
                      numCertIPOverap = NA,
                      numTotIPOverlap = NA,
+                     lastDateCertOLinIP = as.Date(NA),
+                     lastDateOLinIP = as.Date(NA),
                      stringsAsFactors = F)
     for(i in 1:nrow(tot)) {
       id = tot$ID[i]
@@ -605,8 +627,19 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
                                      sub$OverlapID2IP[sub$ID2!=id & sub$Strength=="certain"]), na.rm = T)
       tot$numTotIPOverlap[i] = sum(c(sub$OverlapID1IP[sub$ID1!=id],
                                      sub$OverlapID2IP[sub$ID2!=id]), na.rm = T)
+      lastipdates = c(sub$lastDateID1IP[sub$ID1!=id], sub$lastDateID2IP[sub$ID2!=id])
+      if(!all(is.na(lastipdates))) {
+        tot$lastDateOLinIP[i] = max(lastipdates, na.rm = T) 
+        lastipdates = c(sub$lastDateID1IP[sub$ID1!=id & sub$Strength=="certain"], 
+                        sub$lastDateID2IP[sub$ID2!=id & sub$Strength=="certain"])
+        if(!all(is.na(lastipdates))) {
+          tot$lastDateCertOLinIP[i] = max(lastipdates, na.rm = T) 
+        }
+      }
     }
   }
+  
+  res = res[,!names(res) %in% c("lastDateID1IP", "lastDateID2IP")] #remove extra columns added to calculate last date of any overlap in an IP
   
   if(all(class(progress)!="logical")) {
     progress$set(value = 5)
@@ -761,7 +794,8 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   if(!all(is.na(loc))) {
     writeExcelTable(df=loc, fileName=locName, wrapHeader = T, sheetName = "Location Data")
     if(all(class(progress)!="logical")) {
-      progress$set(value = 10)
+      # progress$set(value = 10)
+      progress$set(value = progress$getValue()+1, detail = "generating gantt chart") #1
     }
   } else {
     outputExcelFiles = outputExcelFiles[outputExcelFiles != locName]
