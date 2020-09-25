@@ -236,6 +236,84 @@ writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHea
   return(workbook)
 }
 
+##write out the files using location and IP (the cleaned inputs and Gantt charts) - shared by latteWithOutputs and latteGanttOnly
+##returns updated list of output files
+##loc = optional table of locations, expected columns = ID, location, start, end, confidence
+##ip = optional table of infectious periods, expected columns = ID, IPStart, IPEnd
+##progress = optional progress bar (for Rshiny interface)
+##drawLocGantt = list of time intervals to draw location Gantt chart (options: day, week, month); null if none
+##drawIPGantt = list of time intervals to draw IP Gantt chart (options: day, week, month); null if none
+##outputExcelFiles = current list of output files
+##log = log file name (where messages will be written)
+##locName, lgcName, ipName, igcName = names for the output files for input lociation data, location Gantt chart, input IP data, IP Gantt chart, respectively
+writeIPLocOutputs <- function(loc = NA, ip = NA, progress = NA, 
+                              drawLocGantt = NULL, drawIPGantt = NULL, outputExcelFiles,
+                              log, locName, lgcName, ipName, igcName) {
+  ###write out location table
+  if(!all(is.na(loc))) {
+    writeExcelTable(df=loc, fileName=locName, wrapHeader = T, sheetName = "Location Data")
+    if(all(class(progress)!="logical")) {
+      # progress$set(value = 10)
+      progress$set(value = progress$getValue()+1, detail = "generating gantt chart") #1
+    }
+  } else {
+    outputExcelFiles = outputExcelFiles[outputExcelFiles != locName]
+    if(all(class(progress)!="logical")) {
+      progress$set(value = 12)
+    }
+  }
+  
+  ##write out location Gantt chart
+  if(!all(is.na(loc)) & !is.null(drawLocGantt)) {
+    cat(paste("Generating location Gantt chart for these time intervals:", 
+              paste0(drawLocGantt, collapse = ", "), "\r\n"), file = log, append = T)
+    wb = NA
+    for(time in drawLocGantt) {
+      wb = locationGanttChart(fileName = lgcName, loc = loc, ip = ip, time.interval = time, 
+                              workbook = wb, save = F)
+      if(all(class(progress)!="logical")) {
+        progress$set(value = 11)
+      }
+    }
+    saveWorkbook(wb, lgcName)
+  } else {
+    cat(paste("No location Gantt chart generated\r\n"), file = log, append = T)
+    outputExcelFiles = outputExcelFiles[outputExcelFiles != lgcName]
+  }
+  
+  ###write out IP table
+  if(!all(is.na(ip))) {
+    writeExcelTable(df=ip, fileName=ipName, wrapHeader = T, sheetName = "IP Data")
+    if(all(class(progress)!="logical")) {
+      progress$set(value = 13)
+    }
+  } else {
+    outputExcelFiles = outputExcelFiles[outputExcelFiles != ipName]
+    if(all(class(progress)!="logical")) {
+      progress$set(value = 14)
+    }
+  }
+  
+  ##write out IP Gantt chart
+  if(!all(is.na(ip)) & !is.null(drawIPGantt)) {
+    cat(paste("Generating IP Gantt chart for these time intervals:", 
+              paste0(drawIPGantt, collapse = ", "), "\r\n"), file = log, append = T)
+    wb = NA
+    for(time in drawIPGantt) {
+      wb = ipGanttChart(fileName = igcName, ip = ip, time.interval = time, workbook = wb, save = F)
+      if(all(class(progress)!="logical")) {
+        progress$set(value = 14)
+      }
+    }
+    saveWorkbook(wb, igcName)
+  } else {
+    cat(paste("No IP Gantt chart generated\r\n"), file = log, append = T)
+    outputExcelFiles = outputExcelFiles[outputExcelFiles != igcName]
+  }
+  return(outputExcelFiles)
+}
+
+
 ###returns a table of epi links, using:
 ##res = results table containing all overlaps
 ##cutoff = time cutoff; cases must overlap for at least this many days to be a definite or probable epi link
@@ -319,66 +397,68 @@ getIPEpiLinks <- function(res, cutoff, removeAfter) {
   return(epi)
 }
 
-##run the LATTE algorithm
+##clean the location and IP input files for analysis
 ##loc = table of locations, expected columns = ID, location, start, end, confidence
 ##ip = optional table of infectious periods, expected columns = ID, IPStart, IPEnd
-##cutoff = overlap must be more than cutoff number of days to be considered for an epi or IP epi link
-##ipEpiLink = if true, calculate an IP epi link, otherwise calculate an epi link
-##removeAfter = if true, remove overlaps that occur after the IP of either case (for IP epi links)
-##xxxipCasesOnly = if true and ipEpiLink true, only look for overlaps to cases with an IP
 ##log = log file name (where messages will be written)
-##progress = progress bar for R Shiny interface (NA if not running through interface)
-latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter = F, progress = NA, log = defaultLogName) {
-  ##set up log
-  cat("LATTE analysis with date data\r\n", file = log)
-  
-  ###clean up headers
-  loc = fixIDName(loc)
-  loc = fixLocNames(loc, log)
-  
-  ###if location end is empty, assume it is one day and assign location start
-  loc[] = lapply(loc, as.character)
-  loc$End[is.na(loc$End) | loc$End==""] = loc$Start[is.na(loc$End) | loc$End==""] 
-  
-  ###convert dates
-  loc$Start = convertToDate(loc$Start)
-  loc$End = convertToDate(loc$End)
-  
-  ##fix strengths
-  loc$Confidence = tolower(loc$Confidence)
-  if(any(loc$Confidence!="certain" & loc$Confidence!="uncertain")) {
-    cat("The following rows in the table of dates in locations have invalid confidence values and will be set to uncertain: ", file = log, append = T)
-    # cat(loc[loc$Confidence!="certain" & loc$Confidence!="uncertain",], file = log, append = T)
-    cat(row.names(loc)[loc$Confidence!="certain" & loc$Confidence!="uncertain"], file = log, append = T)
-    cat("\r\n", file = log, append = T)
-    cat("\tValid confidence values are: certain, uncertain\r\n", file = log, append = T)
-    loc$Confidence[loc$Confidence!="certain" & loc$Confidence!="uncertain"] = "uncertain"
+##ganttOnly = if true, analysis is only going to run Gantt charts so location table is not required (can be NA)
+cleanInputs <- function(loc, ip = NA, progress = NA, log = defaultLogName, ganttOnly = F) {
+  if(!all(is.na(loc))) {
+    ###clean up headers
+    loc = fixIDName(loc)
+    loc = fixLocNames(loc, log)
+    
+    ###if location end is empty, assume it is one day and assign location start
+    loc[] = lapply(loc, as.character)
+    loc$End[is.na(loc$End) | loc$End==""] = loc$Start[is.na(loc$End) | loc$End==""] 
+    
+    ###convert dates
+    loc$Start = convertToDate(loc$Start)
+    loc$End = convertToDate(loc$End)
+    
+    ##fix strengths
+    loc$Confidence = tolower(loc$Confidence)
+    if(any(loc$Confidence!="certain" & loc$Confidence!="uncertain")) {
+      cat("The following rows in the table of dates in locations have invalid confidence values and will be set to uncertain: ", file = log, append = T)
+      # cat(loc[loc$Confidence!="certain" & loc$Confidence!="uncertain",], file = log, append = T)
+      cat(row.names(loc)[loc$Confidence!="certain" & loc$Confidence!="uncertain"], file = log, append = T)
+      cat("\r\n", file = log, append = T)
+      cat("\tValid confidence values are: certain, uncertain\r\n", file = log, append = T)
+      loc$Confidence[loc$Confidence!="certain" & loc$Confidence!="uncertain"] = "uncertain"
+    }
+    
+    ###test for bad dates
+    if(any(is.na(loc$Start) | is.na(loc$End))) {
+      cat("The following rows in the table of dates in locations have invalid dates and will be removed from analysis: ", file = log, append = T)
+      # cat(loc[is.na(loc$Start) | is.na(loc$End),], file = log, append = T)
+      cat(row.names(loc)[is.na(loc$Start) | is.na(loc$End)], file = log, append = T)
+      cat("\r\n", file = log, append = T)
+      loc = loc[!is.na(loc$Start) & !is.na(loc$End),]
+    }
+    
+    ###test for bad date ranges
+    if(any(loc$Start > loc$End)) {
+      cat("The following rows in the table of dates in locations have an end date before the start date and will be removed from analysis: ", file = log, append = T)
+      # cat(loc[loc$Start > loc$End,], file = log, append = T)
+      cat(row.names(loc)[loc$Start > loc$End], file = log, append = T)
+      cat("\r\n", file = log, append = T)
+      loc = loc[loc$Start <= loc$End,]
+    }
+    
+    cases = sort(unique(as.character(loc$ID)))
+  } else if(ganttOnly) {
+    cases = character()
+  } else {
+    cat("There are no people to analyze. At least two people are needed.\r\n", file = log, append = T)
+    stop("There are no people to analyze. At least two people are needed.")
   }
-  
-  ###test for bad dates
-  if(any(is.na(loc$Start) | is.na(loc$End))) {
-    cat("The following rows in the table of dates in locations have invalid dates and will be removed from analysis: ", file = log, append = T)
-    # cat(loc[is.na(loc$Start) | is.na(loc$End),], file = log, append = T)
-    cat(row.names(loc)[is.na(loc$Start) | is.na(loc$End)], file = log, append = T)
-    cat("\r\n", file = log, append = T)
-    loc = loc[!is.na(loc$Start) & !is.na(loc$End),]
-  }
-  
-  ###test for bad date ranges
-  if(any(loc$Start > loc$End)) {
-    cat("The following rows in the table of dates in locations have an end date before the start date and will be removed from analysis: ", file = log, append = T)
-    # cat(loc[loc$Start > loc$End,], file = log, append = T)
-    cat(row.names(loc)[loc$Start > loc$End], file = log, append = T)
-    cat("\r\n", file = log, append = T)
-    loc = loc[loc$Start <= loc$End,]
-  }
-  
-  cases = sort(unique(as.character(loc$ID)))
   
   ##clean IP
   if(!all(is.na(ip))) {
     ip = fixIDName(ip)
-    ip = ip[ip$ID %in% cases,]
+    if(!ganttOnly) {
+      ip = ip[ip$ID %in% cases,]
+    }
     if(nrow(ip) > 1) {
       ip = fixIPnames(ip, log)
     } else {
@@ -389,21 +469,29 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
     ip$IPStart = convertToDate(ip$IPStart)
     ip$IPEnd = convertToDate(ip$IPEnd)
     ##message if missing an IP
-    if(any(!cases %in% ip$ID)) {
+    if(!ganttOnly & any(!cases %in% ip$ID)) {
       cat("The following people are in the table of dates in locations but not in the table of infectious periods so will have no IP in analysis: ", file = log, append = T)
       cat(paste(as.character(cases[!cases %in% ip$ID]), collapse=", "), file = log, append = T)
       cat("\r\n", file = log, append = T)
     }
     ##test for bad IPs:
     if(any(is.na(ip$IPStart) | is.na(ip$IPEnd))) {
-      cat("The following people in the table of infectious periods have a missing IP start or end so will have no IP in analysis: ", file = log, append = T)
+      if(!ganttOnly) {
+        cat("The following people in the table of infectious periods have a missing IP start or end so will have no IP in analysis: ", file = log, append = T)
+      } else {
+        cat("The following people in the table of infectious periods have a missing IP start or end so will be removed from IP Gantt chart: ", file = log, append = T)
+      }
       cat(paste(as.character(ip$ID[is.na(ip$IPStart) | is.na(ip$IPEnd)]), collapse=", "), file = log, append = T)
       cat("\r\n", file = log, append = T)
     }
     ip = ip[!is.na(ip$IPStart),]
     ip = ip[!is.na(ip$IPEnd),]
     if(any(ip$IPStart >= ip$IPEnd)) {
-      cat("The following people in the table of infectious periods have an IP end date before the start date so will have no IP in analysis: ", file = log, append = T)
+      if(!ganttOnly) {
+        cat("The following people in the table of infectious periods have an IP end date before the start date so will have no IP in analysis: ", file = log, append = T)
+      } else {
+        cat("The following people in the table of infectious periods have an IP end date before the start date so will be removed from IP Gantt chart: ", file = log, append = T)  
+      }
       cat(as.character(ip$ID[ip$IPStart > ip$IPEnd]), file = log, append = T)
       cat("\r\n", file = log, append = T)
       ip = ip[ip$IPStart < ip$IPEnd,]
@@ -418,7 +506,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   }
   
   ###check still have data after removing bad rows
-  if(length(cases) < 2) {
+  if(!ganttOnly & length(cases) < 2) {
     cat(paste0("There are ", length(cases), " people to analyze. At least two people are needed.\r\n"), file = log, append = T)
     stop("There are ", length(cases), " people to analyze. At least two people are needed.")
   }
@@ -489,7 +577,27 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
       }
     }
   }
-  loc = dedup
+  
+  return(list(loc = dedup, ip = ip))
+}
+
+##run the LATTE algorithm
+##loc = table of locations, expected columns = ID, location, start, end, confidence
+##ip = optional table of infectious periods, expected columns = ID, IPStart, IPEnd
+##cutoff = overlap must be more than cutoff number of days to be considered for an epi or IP epi link
+##ipEpiLink = if true, calculate an IP epi link, otherwise calculate an epi link
+##removeAfter = if true, remove overlaps that occur after the IP of either case (for IP epi links)
+##log = log file name (where messages will be written)
+##progress = progress bar for R Shiny interface (NA if not running through interface)
+latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter = F, progress = NA, log = defaultLogName) {
+  ##set up log
+  cat("LATTE analysis with date data\r\n", file = log)
+  
+  cleaned = cleanInputs(loc = loc, ip = ip, progress = progress, log = log, ganttOnly = F)
+  loc = cleaned$loc
+  ip = cleaned$ip
+  
+  cases = sort(unique(as.character(loc$ID)))
   
   if(all(class(progress)!="logical")) {
     progress$set(value = progress$getValue()+1, detail = "getting overlaps") #2
@@ -637,9 +745,9 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
         }
       }
     }
+    
+    res = res[,!names(res) %in% c("lastDateID1IP", "lastDateID2IP")] #remove extra columns added to calculate last date of any overlap in an IP
   }
-  
-  res = res[,!names(res) %in% c("lastDateID1IP", "lastDateID2IP")] #remove extra columns added to calculate last date of any overlap in an IP
   
   if(all(class(progress)!="logical")) {
     progress$set(value = 5)
@@ -715,6 +823,12 @@ timelineFig <- function(outPrefix, loc, ip, certLegOnly=F) {
   }
 }
 
+##file names used in multiple versions
+locFileName = "LATTE_Input_Dates.xlsx"
+ipFileName = "LATTE_Input_IP.xlsx"
+lgcFileName = "LATTE_Gantt_Chart_By_Location.xlsx"
+igcFileName = "LATTE_Gantt_Chart_IP.xlsx"
+
 ##run the LATTE algorithm and then produce Excel files of results and timeline figures
 ##outPrefix = prefix for output files
 ##loc = table of locations, expected columns = ID, location, start, end, confidence
@@ -740,11 +854,11 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   overlapName = paste(outPrefix, "LATTE_All_Overlaps.xlsx", sep="")
   epiName = paste(outPrefix, ifelse(ipEpiLink, "LATTE_IPEpi_Links_", "LATTE_Epi_Links_"), cutoff, "D",
                   ifelse(ipEpiLink, ifelse(removeAfter, "", "_KeepOLAfterIPEnd"), ""), ".xlsx", sep="")
-  locName = paste0(outPrefix, "LATTE_Input_Dates.xlsx")
-  ipName = paste0(outPrefix, "LATTE_Input_IP.xlsx")
+  locName = paste0(outPrefix, locFileName)
+  ipName = paste0(outPrefix, ipFileName)
   summaryName = paste0(outPrefix, "LATTE_Summary_By_Person.xlsx")
-  lgcName = paste0(outPrefix, "LATTE_Gantt_Chart_By_Location.xlsx")
-  igcName = paste0(outPrefix, "LATTE_Gantt_Chart_IP.xlsx")
+  lgcName = paste0(outPrefix, lgcFileName)
+  igcName = paste0(outPrefix, igcFileName)
   outputExcelFiles = c(overlapName, epiName, locName, ipName, summaryName, lgcName, igcName)
   if(any(file.exists(outputExcelFiles))) {
     del = outputExcelFiles[file.exists(outputExcelFiles)]
@@ -790,67 +904,11 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
     progress$set(value = 9)
   }
   
-  ###write out location table
-  if(!all(is.na(loc))) {
-    writeExcelTable(df=loc, fileName=locName, wrapHeader = T, sheetName = "Location Data")
-    if(all(class(progress)!="logical")) {
-      # progress$set(value = 10)
-      progress$set(value = progress$getValue()+1, detail = "generating gantt chart") #1
-    }
-  } else {
-    outputExcelFiles = outputExcelFiles[outputExcelFiles != locName]
-    if(all(class(progress)!="logical")) {
-      progress$set(value = 12)
-    }
-  }
-  
-  ##write out location Gantt chart
-  if(!all(is.na(loc)) & !is.null(drawLocGantt)) {
-    cat(paste("Generating location Gantt chart for these time intervals:", 
-              paste0(drawLocGantt, collapse = ", "), "\r\n"), file = log, append = T)
-    wb = NA
-    for(time in drawLocGantt) {
-      wb = locationGanttChart(fileName = lgcName, loc = loc, ip = ip, time.interval = time, 
-                              workbook = wb, save = F)
-      if(all(class(progress)!="logical")) {
-        progress$set(value = 11)
-      }
-    }
-    saveWorkbook(wb, lgcName)
-  } else {
-    cat(paste("No location Gantt chart generated\r\n"), file = log, append = T)
-    outputExcelFiles = outputExcelFiles[outputExcelFiles != lgcName]
-  }
-  
-  ###write out IP table
-  if(!all(is.na(ip))) {
-    writeExcelTable(df=ip, fileName=ipName, wrapHeader = T, sheetName = "IP Data")
-    if(all(class(progress)!="logical")) {
-      progress$set(value = 13)
-    }
-  } else {
-    outputExcelFiles = outputExcelFiles[outputExcelFiles != ipName]
-    if(all(class(progress)!="logical")) {
-      progress$set(value = 14)
-    }
-  }
-  
-  ##write out IP Gantt chart
-  if(!all(is.na(ip)) & !is.null(drawIPGantt)) {
-    cat(paste("Generating IP Gantt chart for these time intervals:", 
-              paste0(drawIPGantt, collapse = ", "), "\r\n"), file = log, append = T)
-    wb = NA
-    for(time in drawIPGantt) {
-      wb = ipGanttChart(fileName = igcName, ip = ip, time.interval = time, workbook = wb, save = F)
-      if(all(class(progress)!="logical")) {
-        progress$set(value = 14)
-      }
-    }
-    saveWorkbook(wb, igcName)
-  } else {
-    cat(paste("No IP Gantt chart generated\r\n"), file = log, append = T)
-    outputExcelFiles = outputExcelFiles[outputExcelFiles != igcName]
-  }
+  outputExcelFiles = writeIPLocOutputs(loc = loc, ip = ip, progress = progress, 
+                                       drawLocGantt = drawLocGantt, drawIPGantt = drawIPGantt, 
+                                       outputExcelFiles = outputExcelFiles, log = log, 
+                                       locName = locName, lgcName = lgcName, 
+                                       ipName = ipName, igcName = igcName)
   
   ###write out person summary table
   if(!all(is.na(tot))) {
@@ -870,4 +928,39 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
   
   results$outputFiles = c(log, outputExcelFiles)
   return(results)
+}
+
+##clean input tables and generate Gantt charts without looking for overlaps
+##outPrefix = prefix for output files
+##loc = optional table of locations, expected columns = ID, location, start, end, confidence
+##ip = optional table of infectious periods, expected columns = ID, IPStart, IPEnd
+##progress = optional progress bar (for Rshiny interface)
+##drawLocGantt = list of time intervals to draw location Gantt chart (options: day, week, month); null if none
+##drawIPGantt = list of time intervals to draw IP Gantt chart (options: day, week, month); null if none
+latteGanttOnly <- function(outPrefix, loc = NA, ip = NA, progress = NA, 
+                           drawLocGantt = NULL, drawIPGantt = NULL) {
+  log = paste(outPrefix, defaultLogName, sep="")
+  cat("Gantt charts only\r\n", file = log)
+  
+  cleaned = cleanInputs(loc = loc, ip = ip, progress = progress, log = log, ganttOnly = T)
+  loc = cleaned$loc
+  ip = cleaned$ip
+  
+  locName = paste0(outPrefix, locFileName)
+  ipName = paste0(outPrefix, ipFileName)
+  lgcName = paste0(outPrefix, lgcFileName)
+  igcName = paste0(outPrefix, igcFileName)
+  outputExcelFiles = c(locName, ipName, lgcName, igcName)
+  if(any(file.exists(outputExcelFiles))) {
+    del = outputExcelFiles[file.exists(outputExcelFiles)]
+    file.remove(del)
+  }
+  
+  outputExcelFiles = writeIPLocOutputs(loc = loc, ip = ip, progress = progress, 
+                                       drawLocGantt = drawLocGantt, drawIPGantt = drawIPGantt, 
+                                       outputExcelFiles = outputExcelFiles, log = log, 
+                                       locName = locName, lgcName = lgcName, 
+                                       ipName = ipName, igcName = igcName)
+  
+  return(list(outputFiles = c(log, outputExcelFiles)))
 }
