@@ -942,6 +942,20 @@ latteGanttOnly <- function(outPrefix, loc = NA, ip = NA, progress = NA,
   log = paste(outPrefix, defaultLogName, sep="")
   cat("Gantt charts only\r\n", file = log)
   
+  if(is.null(drawLocGantt)) {
+    if(!all(is.na(loc))) {
+      cat("Table of dates in locations was provided but no location Gantt chart options were selected, so this table will be ignored.\r\n", file = log, append = T)
+      loc = NA
+    }
+  }
+  
+  if(is.null(drawIPGantt)) {
+    if(!all(is.na(ip))) {
+      cat("Table of infectious periods was provided but no IP Gantt chart options were selected, so this table will be ignored.\r\n", file = log, append = T)
+      ip = NA
+    }
+  }
+  
   cleaned = cleanInputs(loc = loc, ip = ip, progress = progress, log = log, ganttOnly = T)
   loc = cleaned$loc
   ip = cleaned$ip

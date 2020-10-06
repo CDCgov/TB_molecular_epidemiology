@@ -144,11 +144,11 @@ ui <- fluidPage(
                       h3("Set up inputs"),
                       p("Warning: do not upload personally identifiable information (PII)", style="color:red"),
                       fileInput("ganttLocTab", "Table of dates in locations (required for location Gantt chart)", accept=c(".xlsx", ".csv")),
-                      fileInput("ganttIPTabGantt", "Table of infectious periods (IP) (required for IP Gantt chart)", accept=c(".xlsx", ".csv")),
+                      fileInput("ganttIPTab", "Table of infectious periods (IP) (required for IP Gantt chart)", accept=c(".xlsx", ".csv")),
                       br(),
                       br(),
                       h3("Set up outputs"),
-                      textInput("GanttPrefix", "Name prefix for output files")),
+                      textInput("ganttPrefix", "Name prefix for output files")),
                column(4,
                       h3("Set up Gantt chart outputs"),
                       checkboxInput("ganttLocGantt", tags$div(tags$p("Generate location Gantt chart(s)", style="font-size: 125%; font-weight:100;")), value = T),
@@ -169,7 +169,7 @@ ui <- fluidPage(
                column(2)),
              fluidRow(column(12, align="center",
                              br(),
-                             actionButton("clear", "Clear inputs"),
+                             actionButton("ganttClear", "Clear inputs"),
                              br(),
                              br(),
                              actionButton("ganttRun", "Run", style='background-color:royalblue; color:white; padding:20px 40px'))), #https://www.w3schools.com/css/css3_buttons.asp
@@ -190,8 +190,9 @@ outputfontsizeend = "</b></font>"
 dash <- .Platform$file.sep #file separator
 tmpdir = tempdir() #temporary directory to write outputs
 tmpdir = paste(tmpdir, dash, sep="")
-outfiles = NA #list of output files
-notime.outfiles = NA #list of output files
+outfiles = NA #list of output files for LATTE
+notime.outfiles = NA #list of output files for no time LATTE
+gantt.outfiles = NA #list of output files for Gantt chart only
 
 # Define server logic ----
 server <- function(input, output, session) {
@@ -199,10 +200,13 @@ server <- function(input, output, session) {
   shinyjs::hide("noTimeDownloadData")
   shinyjs::hide("ganttDownloadData")
   
+  ##variables that if true, indicate that clear has been hit but a new table has not been uploaded
   rv <- reactiveValues(clLoc = F,
-                       clIP = F,
+                       clIP = F, #Latte with time tables
                        clNTtab = F,
-                       clNTcust = F)#variables that if true, indicate that clear has been hit but a new table has not been uploaded
+                       clNTcust = F, #Latte without time tables
+                       clGLoc = F,
+                       clGIP = F) #Gantt chart only tables
                        
   ##run LATTE when action button hit
   observeEvent(input$run, {
@@ -303,6 +307,55 @@ server <- function(input, output, session) {
     })
   })
   
+  ##run Gantt chart only when action button hit
+  observeEvent(input$ganttRun, {
+    #check for location file (sometimes required)
+    if(rv$clGLoc) {
+      loc = NA
+    } else {
+      loc = readShinyInputFile(input$ganttLocTab)
+    }
+    if(all(is.na(loc)) & !is.null(input$ganttLocGanttTime)) {
+      output$ganttMessage <- renderText({paste(outputfontsizestart, "No location data; please input a location table or deselect the location Gantt chart options", outputfontsizeend, sep="")})
+      return(NULL)
+    }
+    
+    #check for IP file (required sometimes)
+    if(rv$clGIP) {
+      ip = NA
+    } else {
+      ip = readShinyInputFile(input$ganttIPTab)
+    }
+    if(all(is.na(ip)) & !is.null(input$ganttIPGanttTime)) {
+      output$ganttMessage <- renderText({paste(outputfontsizestart, "No IP data; please input an IP table or deselect the IP Gantt chart options", outputfontsizeend, sep="")})
+      return(NULL)
+    }
+    
+    progress <- Progress$new(session, min=0, max=7)
+    on.exit(progress$close())
+    progress$set(message = "Running LATTE")
+    output$ganttMessage <- renderText({paste(outputfontsizestart, "Starting analysis", outputfontsizeend, sep="")})
+    progress$set(value=0)
+    outPrefix = paste(tmpdir, input$ganttPrefix, sep="")
+    res = tryCatch({
+      latteres = latteGanttOnly(outPrefix = outPrefix, 
+                                loc = loc, 
+                                ip = ip, 
+                                progress = progress, 
+                                drawLocGantt = input$ganttLocGanttTime,
+                                drawIPGantt = input$ganttIPGanttTime)
+      gantt.outfiles <<- latteres$outputFiles
+      output$ganttMessage <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
+      shinyjs::show("ganttDownloadData")
+    }, error = function(e) {
+      gantt.outfiles <<- paste(tmpdir, input$ganttPrefix, defaultLogName, sep="")
+      output$ganttMessage <- renderText({paste(outputfontsizestart, "Error detected:<br/>", geterrmessage(),
+                                                "<br/>Download and view log for more details.", outputfontsizeend, sep="")})
+      cat(geterrmessage(), file = gantt.outfiles, append = T)
+      shinyjs::show("ganttDownloadData")
+    })
+  })
+  
   ##zip and download outputs
   output$downloadData <- downloadHandler(
     filename = function() {
@@ -340,56 +393,132 @@ server <- function(input, output, session) {
     contentType = "application/zip"
   )
   
+  output$ganttDownloadData <- downloadHandler(
+    filename = function() {
+      paste(input$ganttPrefix, "LATTE.zip", sep="")
+    },
+    content = function(fname) {
+      gantt.outfiles = sub(tmpdir, "", gantt.outfiles, fixed=T)
+      currdir = getwd()
+      setwd(tmpdir)
+      zipr(zipfile = fname, files = gantt.outfiles)
+      if(file.exists(paste0(fname, ".zip"))) {
+        file.rename(paste0(fname, ".zip"), fname)
+      }
+      output$ganttMessage <- renderText({paste(outputfontsizestart, "Download complete", outputfontsizeend, sep="")})
+      setwd(currdir)
+    },
+    contentType = "application/zip"
+  )
+  
   ##clear inputs if clear button is clicked
   observeEvent(input$clear, {
     updateTextInput(session, "prefix", value="")
     updateTextInput(session, "noTimePrefix", value="")
+    updateTextInput(session, "ganttPrefix", value="")
     updateSliderInput(session, "epicutoff", value=defaultCut)
     updateSliderInput(session, "ipepicutoff", value=defaultCut)
     updateCheckboxInput(session, "removeAfter", value=F)
     updateCheckboxInput(session, "locGantt", value=T)
     updateCheckboxInput(session, "ipGantt", value=T)
+    updateCheckboxInput(session, "ganttLocGantt", value=T)
+    updateCheckboxInput(session, "ganttIPGantt", value=T)
     updateCheckboxGroupInput(session, "locGanttTime", selected="day")
     updateCheckboxGroupInput(session, "ipGanttTime", selected="week")
+    updateCheckboxGroupInput(session, "ganttLocGanttTime", selected="day")
+    updateCheckboxGroupInput(session, "ganttIPGanttTime", selected="week")
     reset("linkType")
     reset("noTimeStrength")
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
     reset("locTab")
     reset("ipTab")
     reset("noTimeTab")
     reset("noTimeCustomStrength")
+    reset("ganttLocTab")
+    reset("ganttIPTab")
     rv$clLoc <- T
     rv$clIP <- T
     rv$clNTtab <- T
     rv$clNTcust <- T
+    rv$clGLoc <- T
+    rv$clGIP <- T
   })
   observeEvent(input$noTimeClear, {
     updateTextInput(session, "prefix", value="")
     updateTextInput(session, "noTimePrefix", value="")
+    updateTextInput(session, "ganttPrefix", value="")
     updateSliderInput(session, "epicutoff", value=defaultCut)
     updateSliderInput(session, "ipepicutoff", value=defaultCut)
     updateCheckboxInput(session, "removeAfter", value=F)
     updateCheckboxInput(session, "locGantt", value=T)
     updateCheckboxInput(session, "ipGantt", value=T)
+    updateCheckboxInput(session, "ganttLocGantt", value=T)
+    updateCheckboxInput(session, "ganttIPGantt", value=T)
     updateCheckboxGroupInput(session, "locGanttTime", selected="day")
     updateCheckboxGroupInput(session, "ipGanttTime", selected="week")
+    updateCheckboxGroupInput(session, "ganttLocGanttTime", selected="day")
+    updateCheckboxGroupInput(session, "ganttIPGanttTime", selected="week")
     reset("linkType")
     reset("noTimeStrength")
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
     reset("locTab")
     reset("ipTab")
     reset("noTimeTab")
     reset("noTimeCustomStrength")
+    reset("ganttLocTab")
+    reset("ganttIPTab")
     rv$clLoc <- T
     rv$clIP <- T
     rv$clNTtab <- T
     rv$clNTcust <- T
+    rv$clGLoc <- T
+    rv$clGIP <- T
+  })
+  observeEvent(input$ganttClear, {
+    updateTextInput(session, "prefix", value="")
+    updateTextInput(session, "noTimePrefix", value="")
+    updateTextInput(session, "ganttPrefix", value="")
+    updateSliderInput(session, "epicutoff", value=defaultCut)
+    updateSliderInput(session, "ipepicutoff", value=defaultCut)
+    updateCheckboxInput(session, "removeAfter", value=F)
+    updateCheckboxInput(session, "locGantt", value=T)
+    updateCheckboxInput(session, "ipGantt", value=T)
+    updateCheckboxInput(session, "ganttLocGantt", value=T)
+    updateCheckboxInput(session, "ganttIPGantt", value=T)
+    updateCheckboxGroupInput(session, "locGanttTime", selected="day")
+    updateCheckboxGroupInput(session, "ipGanttTime", selected="week")
+    updateCheckboxGroupInput(session, "ganttLocGanttTime", selected="day")
+    updateCheckboxGroupInput(session, "ganttIPGanttTime", selected="week")
+    reset("linkType")
+    reset("noTimeStrength")
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
+    reset("locTab")
+    reset("ipTab")
+    reset("noTimeTab")
+    reset("noTimeCustomStrength")
+    reset("ganttLocTab")
+    reset("ganttIPTab")
+    rv$clLoc <- T
+    rv$clIP <- T
+    rv$clNTtab <- T
+    rv$clNTcust <- T
+    rv$clGLoc <- T
+    rv$clGIP <- T
   })
   
   ##if any inputs change, hide download button and remove output message
@@ -398,56 +527,71 @@ server <- function(input, output, session) {
     rv$clLoc <- F
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$ipTab
     rv$clIP <- F
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$prefix
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$linkType
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$epicutoff
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$ipepicutoff
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$removeAfter
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$locGantt
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
   })
@@ -455,52 +599,95 @@ server <- function(input, output, session) {
     input$locGanttTime
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$ipGantt
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$ipGanttTime
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$noTimeTab
     rv$clNTtab <- F
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$noTimePrefix
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$noTimeStrength
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$noTimeCustomStrength
     rv$clNTcust <- F
     output$message <- renderText({""})
     output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
     shinyjs::hide("downloadData")
     shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
+  })
+  observe({
+    input$ganttLocTab
+    rv$clGLoc <- F
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
+  })
+  observe({
+    input$ganttIPTab
+    rv$clGIP <- F
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
+  })
+  observe({
+    input$ganttPrefix
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   
   ##show correct cutoff and check box, depending on link type
@@ -514,6 +701,13 @@ server <- function(input, output, session) {
       shinyjs::hide("ipepicutoff")
       shinyjs::hide("removeAfter")
     }
+    
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   
   ##show custom strength upload only when selected
@@ -523,9 +717,17 @@ server <- function(input, output, session) {
     } else {
       shinyjs::hide("noTimeCustomStrength")
     }
+    
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   
   ##for Gantt chart timing, ensure upper checkbox is selected/unselected based on checkbox group
+  ##LATTE with dates Gantt chart timing
   observeEvent(input$locGantt, {
     if(input$locGantt) {
       if(is.null(input$locGanttTime)) {
@@ -534,6 +736,13 @@ server <- function(input, output, session) {
     } else {
       updateCheckboxGroupInput(session, "locGanttTime", selected=character(0))
     }
+    
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$locGanttTime
@@ -542,6 +751,13 @@ server <- function(input, output, session) {
     } else {
       updateCheckboxInput(session, "locGantt", value = T)
     }
+    
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observeEvent(input$ipGantt, {
     if(input$ipGantt) {
@@ -551,6 +767,13 @@ server <- function(input, output, session) {
     } else {
       updateCheckboxGroupInput(session, "ipGanttTime", selected=character(0))
     }
+    
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
   observe({
     input$ipGanttTime
@@ -559,6 +782,76 @@ server <- function(input, output, session) {
     } else {
       updateCheckboxInput(session, "ipGantt", value = T)
     }
+    
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
+  })
+  ##Gantt chart only Gantt chart timing
+  observeEvent(input$ganttLocGantt, {
+    if(input$ganttLocGantt) {
+      if(is.null(input$ganttLocGanttTime)) {
+        updateCheckboxGroupInput(session, "ganttLocGanttTime", selected="day")
+      }
+    } else {
+      updateCheckboxGroupInput(session, "ganttLocGanttTime", selected=character(0))
+    }
+    
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
+  })
+  observe({
+    input$ganttLocGanttTime
+    if(is.null(input$ganttLocGanttTime)) {
+      updateCheckboxInput(session, "ganttLocGantt", value = F)
+    } else {
+      updateCheckboxInput(session, "ganttLocGantt", value = T)
+    }
+    
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
+  })
+  observeEvent(input$ganttIPGantt, {
+    if(input$ganttIPGantt) {
+      if(is.null(input$ganttIPGanttTime)) {
+        updateCheckboxGroupInput(session, "ganttIPGanttTime", selected="week")
+      }
+    } else {
+      updateCheckboxGroupInput(session, "ganttIPGanttTime", selected=character(0))
+    }
+    
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
+  })
+  observe({
+    input$ganttIPGanttTime
+    if(is.null(input$ganttIPGanttTime)) {
+      updateCheckboxInput(session, "ganttIPGantt", value = F)
+    } else {
+      updateCheckboxInput(session, "ganttIPGantt", value = T)
+    }
+    
+    output$message <- renderText({""})
+    output$noTimeMessage <- renderText({""})
+    output$ganttMessage <- renderText({""})
+    shinyjs::hide("downloadData")
+    shinyjs::hide("noTimeDownloadData")
+    shinyjs::hide("ganttDownloadData")
   })
 }
 
