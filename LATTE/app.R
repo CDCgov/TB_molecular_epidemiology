@@ -257,8 +257,8 @@ server <- function(input, output, session) {
                                   progress = progress,
                                   drawLocGantt = input$locGanttTime,
                                   drawIPGantt = input$ipGanttTime)
-      print(paste("Run max progress:", maxProgress))
-      print(progress$getValue())
+      # print(paste("Run max progress:", maxProgress))
+      # print(progress$getValue())
       outfiles <<- latteres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
       shinyjs::show("downloadData")
@@ -300,6 +300,7 @@ server <- function(input, output, session) {
                                         strength = input$noTimeStrength,
                                         custom = custom,
                                         progress = progress)
+      # print(progress$getValue()) #should be 7
       notime.outfiles <<- latteres$outputFiles
       output$noTimeMessage <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
       shinyjs::show("noTimeDownloadData")
@@ -352,8 +353,8 @@ server <- function(input, output, session) {
                                 progress = progress, 
                                 drawLocGantt = input$ganttLocGanttTime,
                                 drawIPGantt = input$ganttIPGanttTime)
-      print(paste("Run max progress:", maxProgress))
-      print(progress$getValue())
+      # print(paste("Run max progress:", maxProgress))
+      # print(progress$getValue())
       gantt.outfiles <<- latteres$outputFiles
       output$ganttMessage <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
       shinyjs::show("ganttDownloadData")

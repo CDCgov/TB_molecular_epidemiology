@@ -74,7 +74,7 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
   }
   
   if(all(class(progress)!="logical")) {
-    progress$set(value = 1)
+    progress$set(value = 1, detail = "running data checks")
   }
   
   ##check table
@@ -238,7 +238,7 @@ latteNoTime <- function(fname, strength="", custom=NA, log=defaultNoTimeLogName,
   }
   
   if(all(class(progress)!="logical")) {
-    progress$set(value = 2)
+    progress$set(value = 2, detail = "making links")
   }
   
   ##run the pairs
@@ -313,7 +313,7 @@ latteNoTimeWithOutputs <- function(outPrefix, fname, strength, custom=NA, progre
     outputExcelFiles = outputExcelFiles[outputExcelFiles!=pairName]
   }
   if(all(class(progress)!="logical")) {
-    progress$set(value = 5)
+    progress$set(value = 5, detail = "generating output tables")
   }
   
   ##write input file
