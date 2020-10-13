@@ -82,7 +82,7 @@ ui <- fluidPage(
                                                              selected="week")))))),
              
              fluidRow(column(12, align="center",
-                             br(),
+                             # br(),
                              actionButton("clear", "Clear inputs"),
                              br(),
                              br(),
@@ -123,7 +123,7 @@ ui <- fluidPage(
                column(2)),
              
              fluidRow(column(12, align="center",
-                             br(),
+                             # br(),
                              actionButton("noTimeClear", "Clear inputs"),
                              br(),
                              br(),
@@ -168,7 +168,7 @@ ui <- fluidPage(
                                                              selected="week"))))),
                column(2)),
              fluidRow(column(12, align="center",
-                             br(),
+                             # br(),
                              actionButton("ganttClear", "Clear inputs"),
                              br(),
                              br(),
