@@ -45,7 +45,7 @@ ui <- fluidPage(
                       fileInput("locTab", "Table of dates in locations (required)", accept=c(".xlsx", ".csv")),
                       fileInput("ipTab", "Table of infectious periods (IP) (required for IP epi link and IP Gantt chart)", accept=c(".xlsx", ".csv")),
                       br(),
-                      br(),
+                      # br(),
                       h3("Set up outputs"),
                       textInput("prefix", "Name prefix for output files")),
                column(4,
@@ -104,7 +104,7 @@ ui <- fluidPage(
                       p("Warning: do not upload personally identifiable information (PII)", style="color:red"),
                       fileInput("noTimeTab", "Table of grouped list(s) of people (required)", accept=c(".xlsx", ".csv")),
                       br(),
-                      br(),
+                      # br(),
                       h3("Set up outputs"),
                       textInput("noTimePrefix", "Name prefix for output files")),
                column(4,
@@ -146,7 +146,7 @@ ui <- fluidPage(
                       fileInput("ganttLocTab", "Table of dates in locations (required for location Gantt chart)", accept=c(".xlsx", ".csv")),
                       fileInput("ganttIPTab", "Table of infectious periods (IP) (required for IP Gantt chart)", accept=c(".xlsx", ".csv")),
                       br(),
-                      br(),
+                      # br(),
                       h3("Set up outputs"),
                       textInput("ganttPrefix", "Name prefix for output files")),
                column(4,
@@ -336,7 +336,10 @@ server <- function(input, output, session) {
       return(NULL)
     }
     
-    progress <- Progress$new(session, min=0, max=7)
+    maxProgress = (2 + length(input$ganttLocGanttTime)*2 + length(input$ganttIPGanttTime)*2 +
+                     ifelse("day" %in% input$ganttLocGanttTime, 1, 0) +
+                     ifelse("day" %in% input$ganttIPGanttTime, 1, 0))
+    progress <- Progress$new(session, min=0, max=maxProgress)
     on.exit(progress$close())
     progress$set(message = "Running LATTE")
     output$ganttMessage <- renderText({paste(outputfontsizestart, "Starting analysis", outputfontsizeend, sep="")})
@@ -349,6 +352,8 @@ server <- function(input, output, session) {
                                 progress = progress, 
                                 drawLocGantt = input$ganttLocGanttTime,
                                 drawIPGantt = input$ganttIPGanttTime)
+      print(paste("Run max progress:", maxProgress))
+      print(progress$getValue())
       gantt.outfiles <<- latteres$outputFiles
       output$ganttMessage <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
       shinyjs::show("ganttDownloadData")

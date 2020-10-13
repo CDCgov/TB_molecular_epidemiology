@@ -250,7 +250,7 @@ writeIPLocOutputs <- function(loc = NA, ip = NA, progress = NA,
                               drawLocGantt = NULL, drawIPGantt = NULL, outputExcelFiles,
                               log, locName, lgcName, ipName, igcName) {
   if(all(class(progress)!="logical")) {
-    progress$set(value = progress$getValue()+1, detail = "generating output tables: location table") #6 for LATTE
+    progress$set(value = progress$getValue()+0.5, detail = "generating output tables: location table") #5.5 for LATTE; 1.5 for Gantt after writing IP
   }
   
   ###write out location table
@@ -289,7 +289,7 @@ writeIPLocOutputs <- function(loc = NA, ip = NA, progress = NA,
   }
   
   if(all(class(progress)!="logical")) {
-    progress$set(detail = "generating output tables: IP table") #7 + location Gantt length for LATTE
+    progress$set(value = progress$getValue()+0.5, detail = "generating output tables: IP table") #6 + location Gantt length for LATTE
   }
   
   ###write out IP table
