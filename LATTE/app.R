@@ -236,7 +236,10 @@ server <- function(input, output, session) {
       return(NULL)
     }
     
-    progress <- Progress$new(session, min=-1, max=15)
+    maxProgress = (7 + length(input$locGanttTime)*2 + length(input$ipGanttTime)*2 +
+                     ifelse("day" %in% input$locGanttTime, 1, 0) +
+                     ifelse("day" %in% input$ipGanttTime, 1, 0))
+    progress <- Progress$new(session, min=-1, max=maxProgress)
     on.exit(progress$close())
     progress$set(message = "Running LATTE")
     output$message <- renderText({paste(outputfontsizestart, "Starting analysis", outputfontsizeend, sep="")})
@@ -254,6 +257,8 @@ server <- function(input, output, session) {
                                   progress = progress,
                                   drawLocGantt = input$locGanttTime,
                                   drawIPGantt = input$ipGanttTime)
+      print(paste("Run max progress:", maxProgress))
+      print(progress$getValue())
       outfiles <<- latteres$outputFiles
       output$message <- renderText({paste(outputfontsizestart, "Analysis complete", outputfontsizeend, sep="")})
       shinyjs::show("downloadData")

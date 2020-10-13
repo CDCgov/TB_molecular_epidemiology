@@ -142,8 +142,11 @@ addBorders <- function(workbook, cells, colStart, colEnd, numCols, rowStart, num
 ##numCols = number of columns total in the sheet/cells
 ##rowStart = row to start writing the data
 ##numRows = number of rows total in the sheet/cells
+##progress = optional progress bar (for Rshiny interface)
+##prog.loc.incr = how much of the progressbar to increment
 setUpDateSectionByDay <- function(workbook, sheet, cells, dates, centStyle,
-                             colStart, colEnd, numCols, rowStart, numRows) {
+                             colStart, colEnd, numCols, rowStart, numRows, 
+                             progress=NA, prog.loc.incr = 1) {
   ##set up dates
   # years = year(dates)
   months = format(dates, "%B, %Y")#month(dates)
@@ -152,6 +155,11 @@ setUpDateSectionByDay <- function(workbook, sheet, cells, dates, centStyle,
   
   addBorders(workbook, cells, colStart, colEnd, numCols, rowStart, numRows, datebreaks)
   
+  if(all(class(progress)!="logical")) {
+    progress.value = progress$getValue() # due to rounding errors, may not end at exactly +1
+    prog.incr = prog.loc.incr/(length(unique(months)) + length(days)) #increment for progress
+    # print(paste("Day increment is", prog.incr, "starting from", progress.value))
+  }
   ##month date header
   mrow = rowStart-1 #row with month data
   for(d in unique(months)) {
@@ -162,6 +170,9 @@ setUpDateSectionByDay <- function(workbook, sheet, cells, dates, centStyle,
                  cellStyle = centStyle + 
                    Border(position = c("BOTTOM", "TOP", "LEFT", "RIGHT"), 
                           pen = c("BORDER_THIN", "BORDER_THIN", "BORDER_THICK", "BORDER_THICK")))
+    if(all(class(progress)!="logical")) {
+      progress$set(value = progress$getValue()+prog.incr)
+    }
   }
   
   ##day date header
@@ -178,7 +189,15 @@ setUpDateSectionByDay <- function(workbook, sheet, cells, dates, centStyle,
                    cellStyle = centStyle + 
                      Border(position = c("BOTTOM", "TOP", "RIGHT", "LEFT"), pen = "BORDER_THIN"))
     }
+    if(all(class(progress)!="logical")) {
+      progress$set(value = progress$getValue()+prog.incr)
+    }
   }
+  
+  # if(all(class(progress)!="logical")) {
+  #   print(paste("After day header before correction: ", progress$getValue()))
+  #   # progress$set(value = progress.value+1)
+  # }
   
   addRightHandHeaderBorders(workbook, cells, colStart, colEnd, rowStart, datebreaks)
   
@@ -196,8 +215,11 @@ setUpDateSectionByDay <- function(workbook, sheet, cells, dates, centStyle,
 ##numCols = number of columns total in the sheet/cells
 ##rowStart = row to start writing the data
 ##numRows = number of rows total in the sheet/cells
+##progress = optional progress bar (for Rshiny interface)
+##prog.loc.incr = how much of the progressbar to increment
 setUpDateSectionByWeek <- function(workbook, sheet, cells, dates, centStyle,
-                                  colStart, colEnd, numCols, rowStart, numRows) {
+                                  colStart, colEnd, numCols, rowStart, numRows, 
+                                  progress=NA, prog.loc.incr = 1) {
   ##set up dates
   sp = strsplit(dates, "_")
   years = as.numeric(sapply(sp, "[[", 1))
@@ -209,6 +231,11 @@ setUpDateSectionByWeek <- function(workbook, sheet, cells, dates, centStyle,
   
   addBorders(workbook, cells, colStart, colEnd, numCols, rowStart, numRows, datebreaks)
   
+  if(all(class(progress)!="logical")) {
+    progress.value = progress$getValue() # due to rounding errors, may not end at exactly +1
+    prog.incr = prog.loc.incr/(length(unique(months)) + length(weeks)) #increment for progress
+    # print(paste("Week increment is", prog.incr, "starting from", progress.value))
+  }
   ##month date header (note that the month is based on the first day; an MMWR week will be grouped in that month, regardless of how many days in that week are actually in that month)
   mrow = rowStart-1 #row with month data
   for(d in unique(months)) {
@@ -219,6 +246,9 @@ setUpDateSectionByWeek <- function(workbook, sheet, cells, dates, centStyle,
                  cellStyle = centStyle + 
                    Border(position = c("BOTTOM", "TOP", "LEFT", "RIGHT"), 
                           pen = c("BORDER_THIN", "BORDER_THIN", "BORDER_THICK", "BORDER_THICK")))
+    if(all(class(progress)!="logical")) {
+      progress$set(value = progress$getValue()+prog.incr)
+    }
   }
   
   ##week date header
@@ -235,9 +265,16 @@ setUpDateSectionByWeek <- function(workbook, sheet, cells, dates, centStyle,
                    cellStyle = centStyle + 
                      Border(position = c("BOTTOM", "TOP", "RIGHT", "LEFT"), pen = "BORDER_THIN"))
     }
+    if(all(class(progress)!="logical")) {
+      progress$set(value = progress$getValue()+prog.incr)
+    }
   }
   
   addRightHandHeaderBorders(workbook, cells, colStart, colEnd, rowStart, datebreaks)
+  if(all(class(progress)!="logical")) {
+    # print(paste("After day header before correction: ", progress$getValue()))
+    # progress$set(value = progress.value+1)
+  }
   
   return(datebreaks)
 }
@@ -253,8 +290,11 @@ setUpDateSectionByWeek <- function(workbook, sheet, cells, dates, centStyle,
 ##numCols = number of columns total in the sheet/cells
 ##rowStart = row to start writing the data
 ##numRows = number of rows total in the sheet/cells
+##progress = optional progress bar (for Rshiny interface)
+##prog.loc.incr = how much of the progressbar to increment
 setUpDateSectionByMonth <- function(workbook, sheet, cells, dates, centStyle,
-                                   colStart, colEnd, numCols, rowStart, numRows) {
+                                   colStart, colEnd, numCols, rowStart, numRows, 
+                                   progress=NA, prog.loc.incr = 1) {
   ##set up dates
   sp = strsplit(dates, "-")
   years = as.numeric(sapply(sp, "[[", 2))
@@ -262,6 +302,13 @@ setUpDateSectionByMonth <- function(workbook, sheet, cells, dates, centStyle,
   datebreaks = unique(c(1,which(!duplicated(years)))) #list of columns that start a month (need a separator) (include the first in the set of dates)
   
   addBorders(workbook, cells, colStart, colEnd, numCols, rowStart, numRows, datebreaks)
+  
+  if(all(class(progress)!="logical")) {
+    progress.value = progress$getValue() # due to rounding errors, may not end at exactly +1
+    prog.incr = prog.loc.incr/(length(unique(years)) + length(months)) #increment for progress
+    # print(paste("Month increment is", prog.incr, "starting from", progress.value, "initial increment: ", prog.loc.incr,
+    #             "years:", length(unique(years)), "months:", length(months)))
+  }
   
   ##year date header
   mrow = rowStart-1 #row with year data
@@ -273,6 +320,9 @@ setUpDateSectionByMonth <- function(workbook, sheet, cells, dates, centStyle,
                  cellStyle = centStyle + 
                    Border(position = c("BOTTOM", "TOP", "LEFT", "RIGHT"), 
                           pen = c("BORDER_THIN", "BORDER_THIN", "BORDER_THICK", "BORDER_THICK")))
+    if(all(class(progress)!="logical")) {
+      progress$set(value = progress$getValue()+prog.incr)
+    }
   }
   
   ##month date header
@@ -289,9 +339,16 @@ setUpDateSectionByMonth <- function(workbook, sheet, cells, dates, centStyle,
                    cellStyle = centStyle + 
                      Border(position = c("BOTTOM", "TOP", "RIGHT", "LEFT"), pen = "BORDER_THIN"))
     }
+    if(all(class(progress)!="logical")) {
+      progress$set(value = progress$getValue()+prog.incr)
+    }
   }
   
   addRightHandHeaderBorders(workbook, cells, colStart, colEnd, rowStart, datebreaks)
+  # if(all(class(progress)!="logical")) {
+  #   print(paste("After month header before correction: ", progress$getValue()))
+  #   # progress$set(value = progress.value+1)
+  # }
   
   return(datebreaks)
 }
@@ -316,9 +373,10 @@ convertDates<-function(time.interval, dates) {
 ##time.interval = time interval to use for columns (can be day, week, or month)
 ##workbook = if NA, create new workbook, otherwise write results as new sheet in workbook
 ##save = if true, save the workbook at the end
+##progress = optional progress bar (for Rshiny interface)
 ##returns the workbook used to write the results to
 locationGanttChart <- function(fileName, loc, ip, time.interval = "day",
-                               workbook=NA, save=T) {
+                               workbook=NA, save=T, progress = NA) {
   ##check time.interval
   time.interval = tolower(time.interval)
   if(!time.interval %in% c("day", "week", "month")) {
@@ -332,6 +390,12 @@ locationGanttChart <- function(fileName, loc, ip, time.interval = "day",
   }
   
   locations = sort(unique(as.character(loc$Location)))
+  
+  if(all(class(progress)!="logical")) {
+    # print(paste("before updating", time.interval, ":", progress$getValue()))
+    progress$set(detail = paste0("writing location Gantt chart: ", time.interval))
+    prog.loc = ifelse(time.interval=="day", 3, 2) / length(locations) #how much to increment for each location
+  }
   
   ##create Gantt charts as one sheet per location
   for(l in locations) {
@@ -418,14 +482,24 @@ locationGanttChart <- function(fileName, loc, ip, time.interval = "day",
     ##set up header
     if(time.interval=="month") {
       datebreaks = setUpDateSectionByMonth(workbook, sheet, cells, dates, centStyle,
-                                           colStart, colEnd, numCols, rowStart, numRows)
+                                           colStart, colEnd, numCols, rowStart, numRows, 
+                                           progress, prog.loc/2)
     } else if(time.interval=="week") {
       datebreaks = setUpDateSectionByWeek(workbook, sheet, cells, dates, centStyle,
-                                          colStart, colEnd, numCols, rowStart, numRows)
+                                          colStart, colEnd, numCols, rowStart, numRows, 
+                                          progress, prog.loc/2)
     } else { #day
       datebreaks = setUpDateSectionByDay(workbook, sheet, cells, dates, centStyle,
-                                         colStart, colEnd, numCols, rowStart, numRows)
+                                         colStart, colEnd, numCols, rowStart, numRows, 
+                                         progress, prog.loc/2)
     }
+    
+    # if(all(class(progress)!="logical")) {
+    #   prog.id = prog.loc * 1/(length(ids)*2)#how much to increment for each ID; *2 for IP
+    #   print(paste("after writing location header for", time.interval, ":", progress$getValue()))
+    #   # progress$set(value = progress$getValue()+prog.id, 
+    #   #              detail = paste0("writing location Gantt chart: ", time.interval))
+    # }
     
     ##fill in dates in location
     for(i in 1:length(ids)) {
@@ -521,6 +595,11 @@ locationGanttChart <- function(fileName, loc, ip, time.interval = "day",
           setCellStyle(cells[[row,c+colStart]], tmp)
         }
       }
+      # if(all(class(progress)!="logical")) {
+      #   prog.id = prog.loc * 1/length(ids)#how much to increment for each ID
+      #   progress$set(value = progress$getValue()+prog.id, 
+      #                detail = paste0("writing location Gantt chart: ", time.interval))
+      # }
     }
     
     ##fill in IP
@@ -574,6 +653,11 @@ locationGanttChart <- function(fileName, loc, ip, time.interval = "day",
           }
         }
       }
+      # if(all(class(progress)!="logical")) {
+      #   prog.id = prog.loc * 1/length(ids)#how much to increment for each ID
+      #   progress$set(value = progress$getValue()+prog.id, 
+      #                detail = paste0("writing location Gantt chart: ", time.interval))
+      # }
     }
     
     ##fix column widths
@@ -586,7 +670,14 @@ locationGanttChart <- function(fileName, loc, ip, time.interval = "day",
     
     ##freeze first column
     createFreezePane(sheet, rowSplit = rowStart+1, colSplit = 2)
+    
+    if(all(class(progress)!="logical")) {
+      progress$set(value = progress$getValue()+prog.loc/2, 
+                   detail = paste0("writing location Gantt chart: ", time.interval))
+    }
   }
+  
+  # print(paste("after writing location for", time.interval, ":", progress$getValue()))
   
   if(save) {
     saveWorkbook(workbook, fileName)
@@ -600,16 +691,17 @@ locationGanttChart <- function(fileName, loc, ip, time.interval = "day",
 ##time.interval = time interval to use for columns (can be day, week, or month)
 ##workbook = if NA, create new workbook, otherwise write results as new sheet in workbook
 ##save = if true, save the workbook at the end
+##progress = optional progress bar (for Rshiny interface)
 ##returns the workbook used to write the results to 
 ipGanttChart <- function(fileName, ip, time.interval = "week",
-                         workbook=NA, save=T) {
+                         workbook=NA, save=T, progress = NA) {
   ##check time.interval
   time.interval = tolower(time.interval)
   if(!time.interval %in% c("day", "week", "month")) {
     return("Invalid time interval: ", time.interval, 
            ". Valid time intervals are: day, week, or month.\r\n")
   }
-  
+
   ##set up sheet, dates, and ids
   if(class(workbook)!="jobjRef") {
     workbook = createWorkbook(type = "xlsx")
@@ -621,6 +713,13 @@ ipGanttChart <- function(fileName, ip, time.interval = "week",
   if(length(dates) > 16384-5) { #maximum number of column in Excel
     warning("More dates than possible Excel columns; Gantt chart will be truncated")
     dates = dates[1:(16384-5)]
+  }
+  
+  if(all(class(progress)!="logical")) {
+    progress$set(detail = paste0("writing IP Gantt chart: ", time.interval))
+    prog.incr = ifelse(time.interval=="day", 3, 2) #how much to increment for total Gantt chart
+    prog.id = prog.incr / length(ids) #how much to increment for each person
+    # print(paste("start of IP Gantt:", progress$getValue(), "length:", length(ids), "increment:", prog.id))
   }
   
   ##set up cells
@@ -672,15 +771,26 @@ ipGanttChart <- function(fileName, ip, time.interval = "week",
   ##set up header
   if(time.interval=="month") {
     datebreaks = setUpDateSectionByMonth(workbook, sheet, cells, dates, centStyle,
-                                 colStart, colEnd, numCols, rowStart, numRows)
+                                 colStart, colEnd, numCols, rowStart, numRows, 
+                                 progress, prog.incr/2)
   } else if(time.interval=="week") {
     datebreaks = setUpDateSectionByWeek(workbook, sheet, cells, dates, centStyle,
-                                 colStart, colEnd, numCols, rowStart, numRows)
+                                 colStart, colEnd, numCols, rowStart, numRows, 
+                                 progress, prog.incr/2)
   } else { #day
     datebreaks = setUpDateSectionByDay(workbook, sheet, cells, dates, centStyle,
-                                 colStart, colEnd, numCols, rowStart, numRows)
+                                 colStart, colEnd, numCols, rowStart, numRows, 
+                                 progress, prog.incr/2)
   }
   
+  # if(all(class(progress)!="logical")) {
+  #   progress$set(value = progress$getValue()+prog.id, 
+  #                detail = paste0("writing IP Gantt chart: ", time.interval))
+  # }
+  # if(all(class(progress)!="logical")) {
+  #   print(paste("after IP Gantt header:", progress$getValue()))
+  # }
+
   ##fill in IP
   for(i in 1:length(ids)) {
     row = rowStart + 1 + i
@@ -735,8 +845,17 @@ ipGanttChart <- function(fileName, ip, time.interval = "week",
       }
       setCellStyle(cells[[row,c+colStart]], sty)
     }
+    
+    if(all(class(progress)!="logical")) {
+      progress$set(value = progress$getValue()+prog.id/2, 
+                   detail = paste0("writing IP Gantt chart: ", time.interval))
+    }
   }
   
+  # if(all(class(progress)!="logical")) {
+  #   print(paste("after IP Gantt:", progress$getValue()))
+  # }
+
   ##fix column widths
   autoSizeColumn(sheet, 1) #fit ID lengths for first column
   setColumnWidth(sheet, colIndex=(colStart+1):colEnd, colWidth=4.5)

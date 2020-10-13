@@ -249,18 +249,22 @@ writeExcelTable<-function(fileName, workbook=NA, sheetName="Sheet1", df, wrapHea
 writeIPLocOutputs <- function(loc = NA, ip = NA, progress = NA, 
                               drawLocGantt = NULL, drawIPGantt = NULL, outputExcelFiles,
                               log, locName, lgcName, ipName, igcName) {
+  if(all(class(progress)!="logical")) {
+    progress$set(value = progress$getValue()+1, detail = "generating output tables: location table") #6 for LATTE
+  }
+  
   ###write out location table
   if(!all(is.na(loc))) {
     writeExcelTable(df=loc, fileName=locName, wrapHeader = T, sheetName = "Location Data")
-    if(all(class(progress)!="logical")) {
-      # progress$set(value = 10)
-      progress$set(value = progress$getValue()+1, detail = "generating gantt chart") #1
-    }
+    # if(all(class(progress)!="logical")) {
+    #   # progress$set(value = 10)
+    #   progress$set(value = progress$getValue()+1, detail = "generating gantt chart") #1
+    # }
   } else {
     outputExcelFiles = outputExcelFiles[outputExcelFiles != locName]
-    if(all(class(progress)!="logical")) {
-      progress$set(value = 12)
-    }
+    # if(all(class(progress)!="logical")) {
+    #   progress$set(value = 12)
+    # }
   }
   
   ##write out location Gantt chart
@@ -269,11 +273,14 @@ writeIPLocOutputs <- function(loc = NA, ip = NA, progress = NA,
               paste0(drawLocGantt, collapse = ", "), "\r\n"), file = log, append = T)
     wb = NA
     for(time in drawLocGantt) {
+      # if(all(class(progress)!="logical")) {
+      #   progress$set(value = progress$getValue()+1, detail = "generating output tables: location table") #6 for LATTE
+      # }
       wb = locationGanttChart(fileName = lgcName, loc = loc, ip = ip, time.interval = time, 
-                              workbook = wb, save = F)
-      if(all(class(progress)!="logical")) {
-        progress$set(value = 11)
-      }
+                              workbook = wb, save = F, progress = progress)
+      # if(all(class(progress)!="logical")) {
+      #   progress$set(value = 11)
+      # }
     }
     saveWorkbook(wb, lgcName)
   } else {
@@ -281,17 +288,21 @@ writeIPLocOutputs <- function(loc = NA, ip = NA, progress = NA,
     outputExcelFiles = outputExcelFiles[outputExcelFiles != lgcName]
   }
   
+  if(all(class(progress)!="logical")) {
+    progress$set(detail = "generating output tables: IP table") #7 + location Gantt length for LATTE
+  }
+  
   ###write out IP table
   if(!all(is.na(ip))) {
     writeExcelTable(df=ip, fileName=ipName, wrapHeader = T, sheetName = "IP Data")
-    if(all(class(progress)!="logical")) {
-      progress$set(value = 13)
-    }
+    # if(all(class(progress)!="logical")) {
+    #   progress$set(value = 13)
+    # }
   } else {
     outputExcelFiles = outputExcelFiles[outputExcelFiles != ipName]
-    if(all(class(progress)!="logical")) {
-      progress$set(value = 14)
-    }
+    # if(all(class(progress)!="logical")) {
+    #   progress$set(value = 14)
+    # }
   }
   
   ##write out IP Gantt chart
@@ -300,10 +311,10 @@ writeIPLocOutputs <- function(loc = NA, ip = NA, progress = NA,
               paste0(drawIPGantt, collapse = ", "), "\r\n"), file = log, append = T)
     wb = NA
     for(time in drawIPGantt) {
-      wb = ipGanttChart(fileName = igcName, ip = ip, time.interval = time, workbook = wb, save = F)
-      if(all(class(progress)!="logical")) {
-        progress$set(value = 14)
-      }
+      wb = ipGanttChart(fileName = igcName, ip = ip, time.interval = time, workbook = wb, save = F, progress = progress)
+      # if(all(class(progress)!="logical")) {
+      #   progress$set(value = 14)
+      # }
     }
     saveWorkbook(wb, igcName)
   } else {
@@ -403,6 +414,10 @@ getIPEpiLinks <- function(res, cutoff, removeAfter) {
 ##log = log file name (where messages will be written)
 ##ganttOnly = if true, analysis is only going to run Gantt charts so location table is not required (can be NA)
 cleanInputs <- function(loc, ip = NA, progress = NA, log = defaultLogName, ganttOnly = F) {
+  if(all(class(progress)!="logical")) {
+    progress$set(detail = "running data checks") 
+  }
+  
   if(!all(is.na(loc))) {
     ###clean up headers
     loc = fixIDName(loc)
@@ -501,14 +516,15 @@ cleanInputs <- function(loc, ip = NA, progress = NA, log = defaultLogName, gantt
     }
   }
   
-  if(all(class(progress)!="logical")) {
-    progress$set(value = progress$getValue()+1, detail = "running data checks") #1
-  }
-  
   ###check still have data after removing bad rows
   if(!ganttOnly & length(cases) < 2) {
     cat(paste0("There are ", length(cases), " people to analyze. At least two people are needed.\r\n"), file = log, append = T)
     stop("There are ", length(cases), " people to analyze. At least two people are needed.")
+  }
+  
+  
+  if(all(class(progress)!="logical")) {
+    progress$set(value = progress$getValue()+0.5, detail = "running data checks") #0.5
   }
   
   ###check that no date ranges for a particular case are overlapping (so don't double count days)
@@ -578,6 +594,10 @@ cleanInputs <- function(loc, ip = NA, progress = NA, log = defaultLogName, gantt
     }
   }
   
+  if(all(class(progress)!="logical")) {
+    progress$set(value = progress$getValue()+0.5, detail = "running data checks") #1
+  }
+  
   return(list(loc = dedup, ip = ip))
 }
 
@@ -600,9 +620,8 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   cases = sort(unique(as.character(loc$ID)))
   
   if(all(class(progress)!="logical")) {
-    progress$set(value = progress$getValue()+1, detail = "getting overlaps") #2
+    progress$set(detail = "getting overlaps") #1
   }
-  
   
   ###get list of overlaps
   res = NA
@@ -669,12 +688,12 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
       }
     }
     if(all(class(progress)!="logical")) {
-      progress$set(value = 2 + i/length(cases))
+      progress$set(value = 1 + i/length(cases))
     }
   }
   
-  if(all(class(progress)!="logical")) { #above will stop at 3-1/length(cases)
-    progress$set(value = 3)
+  if(all(class(progress)!="logical")) { #above will stop at 2-1/length(cases)
+    progress$set(value = 2, detail = "converting to epi links")
   }
   
   ###convert to epi links (one link per pair; if pair has multiple overlaps in time and space, strength = strongest, location=all locations (even ones with weaker epi))
@@ -700,7 +719,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   }
   
   if(all(class(progress)!="logical")) {
-    progress$set(value = 4)
+    progress$set(value = 3, detail = "generating summary")
   }
   
   ###summarize the total overlap for each case
@@ -750,7 +769,7 @@ latte <- function(loc, ip = NA, cutoff = defaultCut, ipEpiLink = F, removeAfter 
   }
   
   if(all(class(progress)!="logical")) {
-    progress$set(value = 5)
+    progress$set(value = 4)
   }
   return(list(allOverlaps = res, 
               epiLinks = epi,
@@ -843,7 +862,7 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
                              progress = NA, drawLocGantt = NULL, drawIPGantt = NULL) {
   log = paste(outPrefix, defaultLogName, sep="")
   results = latte(loc = loc, ip = ip, cutoff = cutoff, ipEpiLink = ipEpiLink, 
-                  removeAfter = removeAfter, log = log)
+                  removeAfter = removeAfter, log = log, progress = progress)
   res = results$allOverlaps
   epi = results$epiLinks
   loc = results$location
@@ -865,7 +884,7 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
     file.remove(del)
   }
   if(all(class(progress)!="logical")) {
-    progress$set(value = 6)
+    progress$set(detail = "generating output tables: overlaps")
   }
   
   ###write out overlaps
@@ -879,7 +898,7 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
     outputExcelFiles = outputExcelFiles[outputExcelFiles != overlapName]
   }
   if(all(class(progress)!="logical")) {
-    progress$set(value = 7)
+    progress$set(value = 5, detail = "generating output tables: epi links")
   }
   
   ###write out epi links
@@ -900,9 +919,11 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
       }
     }
   }
-  if(all(class(progress)!="logical")) {
-    progress$set(value = 9)
-  }
+  # if(all(class(progress)!="logical")) {
+  #   progress$set(value = 6)
+  # }
+  
+  # print(paste("should be at 5:", progress$getValue()))
   
   outputExcelFiles = writeIPLocOutputs(loc = loc, ip = ip, progress = progress, 
                                        drawLocGantt = drawLocGantt, drawIPGantt = drawIPGantt, 
@@ -910,14 +931,21 @@ latteWithOutputs <- function(outPrefix, loc, ip = NA, cutoff = defaultCut, ipEpi
                                        locName = locName, lgcName = lgcName, 
                                        ipName = ipName, igcName = igcName)
   
+  # print(paste("after writeIPLocOutputs:", progress$getValue()))
+  
+  if(all(class(progress)!="logical")) {
+    progress$set(detail = "generating output tables: summary table") 
+  }
+  
   ###write out person summary table
   if(!all(is.na(tot))) {
     writeExcelTable(df=tot, fileName=summaryName, wrapHeader = T, sheetName = "Summary By Person")
   } else {
     outputExcelFiles = outputExcelFiles[outputExcelFiles != summaryName]
   }
+
   if(all(class(progress)!="logical")) {
-    progress$set(value = 15)
+    progress$set(value = progress$getValue()+1, detail = "") #8 + Gantt chart length
   }
   
   ###generate figure
