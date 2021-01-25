@@ -2,7 +2,7 @@
 ##for each case, produces a ranked list of potential sources
 ##Author: Kathryn Winglee
 
-source("../sharedFunctions.R")
+source("sharedFunctions.R")
 source("littScoreHeatmap.R")
 source("littRankHeatmap.R")
 library(lubridate) #for adding months

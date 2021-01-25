@@ -1,7 +1,7 @@
 ##Identify overlap in time and location between people
 ##Author: Kathryn Winglee
 
-source("../sharedFunctions.R") ##need convertToDate
+source("sharedFunctions.R") ##need convertToDate
 source("ganttChart.R") #code to generate Gantt chart
 library(xlsx)
 
