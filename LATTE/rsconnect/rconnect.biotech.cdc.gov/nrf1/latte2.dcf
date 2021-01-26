@@ -1,0 +1,12 @@
+name: latte2
+title: LATTE
+username: nrf1
+account: nrf1
+server: rconnect.biotech.cdc.gov
+hostUrl: https://rconnect.biotech.cdc.gov/__api__
+appId: 62
+bundleId: 143
+url: https://rconnect.biotech.cdc.gov/content/62/
+when: 1611591011.75818
+asMultiple: FALSE
+asStatic: FALSE
