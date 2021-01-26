@@ -1,0 +1,12 @@
+name: amd_portal_tile
+title: AMD_Portal_Tile
+username: nrf1
+account: nrf1
+server: rconnect.biotech.cdc.gov
+hostUrl: https://rconnect.biotech.cdc.gov/__api__
+appId: 66
+bundleId: 157
+url: https://rconnect.biotech.cdc.gov/TB_molecular_epidemiology/
+when: 1611691470.46574
+asMultiple: FALSE
+asStatic: TRUE
