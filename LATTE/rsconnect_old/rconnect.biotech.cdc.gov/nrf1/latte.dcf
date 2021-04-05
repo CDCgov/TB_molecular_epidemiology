@@ -4,9 +4,9 @@ username: nrf1
 account: nrf1
 server: rconnect.biotech.cdc.gov
 hostUrl: https://rconnect.biotech.cdc.gov/__api__
-appId: 101
-bundleId: 262
-url: https://rconnect.biotech.cdc.gov/content/101/
-when: 1617657513.82924
+appId: 61
+bundleId: 142
+url: https://rconnect.biotech.cdc.gov/content/61/
+when: 1611590902.80726
 asMultiple: FALSE
 asStatic: FALSE
