@@ -3,7 +3,7 @@ This repository was created for use by CDC programs to collaborate on public hea
 
 ## Logically Inferred Tuberculosis Transmission (LITT)
 
-LITT is an algorithm that can be used to integrate whole genome sequencing, clinical, and epidemiological data to identify and rank potential sources for tuberculosis cases.
+LITT is an algorithm that can be used to integrate whole genome sequencing, clinical, and epidemiological data to identify and rank potential sources for tuberculosis cases. More details can be found in our [paper](https://www.frontiersin.org/articles/10.3389/fpubh.2021.667337/full).
 
 ## Location And Time To Epi (LATTE)
 LATTE identifies all overlaps in space and time from a list of dates that cases (or contacts) were in a particular location, then combines that with infectious periods (IP) to identify and categorize epi or IP epi links.
