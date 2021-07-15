@@ -4,9 +4,9 @@ username: nrf1
 account: nrf1
 server: rconnect.biotech.cdc.gov
 hostUrl: https://rconnect.biotech.cdc.gov/__api__
-appId: 103
-bundleId: 265
-url: https://rconnect.biotech.cdc.gov/content/103/
-when: 1617657946.77493
+appId: 66
+bundleId: 157
+url: https://rconnect.biotech.cdc.gov/TB_molecular_epidemiology/
+when: 1611691470.46574
 asMultiple: FALSE
 asStatic: TRUE
