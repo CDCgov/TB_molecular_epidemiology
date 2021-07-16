@@ -5,8 +5,9 @@ account: nrf1
 server: rconnect.biotech.cdc.gov
 hostUrl: https://rconnect.biotech.cdc.gov/__api__
 appId: 102
-bundleId: 264
-url: https://rconnect.biotech.cdc.gov/content/102/
-when: 1617657632.33775
+bundleId: 794
+url: https://rconnect.biotech.cdc.gov/litt/
+when: 1626450427.78091
+lastSyncTime: 1626450427.78093
 asMultiple: FALSE
 asStatic: FALSE
