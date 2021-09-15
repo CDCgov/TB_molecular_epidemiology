@@ -110,6 +110,11 @@ formatDistanceMatrixWithoutStno <- function(fileName, log, appendlog=T) { #forme
           mat[r,c] = snps[c]
         }
       }
+      if(nrow(mat) != ncol(mat)) {
+        cat("Distance matrix has ", nrow(mat), " rows but ", ncol(mat), 
+            " columns. It must have the same number of rows and columns containing SNP distance.\r\n", file = log, append = T)
+        stop("Distance matrix must have the same number of rows and columns containing SNP distance.")
+      }
       row.names(mat) = row.names(df)
     } # else if(make.names(row.names(mat))[1] != colnames(mat)[1]) {
       # mat = as.matrix(read.table(fileName, sep="", header = F, row.names = 1))
@@ -118,10 +123,20 @@ formatDistanceMatrixWithoutStno <- function(fileName, log, appendlog=T) { #forme
   } else if(endsWith(fileName, ".xls") || endsWith(fileName, ".xlsx")) {
     df = read.xlsx(fileName, sheetIndex = 1)
     mat = as.matrix(df[,-1])
+    if(nrow(mat) != ncol(mat)) {
+      cat("Distance matrix has ", nrow(mat), " rows but ", ncol(mat), 
+          " columns. It must have the same number of rows and columns containing SNP distance.\r\n", file = log, append = T)
+      stop("Distance matrix must have the same number of rows and columns containing SNP distance.")
+    }
     row.names(mat) = df[,1]
     colnames(mat) = as.character(df[,1]) #fix the . for non character spaces
   } else if(endsWith(fileName, ".csv")) {
     mat = as.matrix(read.table(fileName, sep=",", header = T, row.names = 1))
+    if(nrow(mat) != ncol(mat)) {
+      cat("Distance matrix has ", nrow(mat), " rows but ", ncol(mat), 
+          " columns. It must have the same number of rows and columns containing SNP distance.\r\n", file = log, append = T)
+      stop("Distance matrix must have the same number of rows and columns containing SNP distance.")
+    }
     colnames(mat) = row.names(mat) #fix the . for non character spaces
   } else {
     cat("Distance matrix should be in a text, Excel or CSV file format. SNP distances will not be used.\r\n", file = log, append = T)

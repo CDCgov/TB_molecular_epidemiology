@@ -22,11 +22,11 @@ ui <- fixedPage(
                                               h4("Help"),
                                               tags$style(HTML("#help{border-color: white; width:260px; text-align:left}")),
                                               actionButton("help", "User's manual & training presentation",
-                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20user%20manual%20and%20training%20presentation')"),
+                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT_users_manual_and_training_presentation')"),
                                               actionButton("help", "Input file templates",
-                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20input%20file%20templates')"),
+                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT_input_file_templates')"),
                                               actionButton("help", "Training datasets",
-                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT%20training%20datasets')"),
+                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT_training_datasets')"),
                                               actionButton("help", "Reference",
                                                            onclick="window.open('https://www.frontiersin.org/articles/10.3389/fpubh.2021.667337/full')")),
                                style = "position:absolute;right:2em;"))), #https://stackoverflow.com/questions/54523349/place-actionbutton-on-right-side-of-titlepanel-in-shiny
@@ -108,11 +108,6 @@ server <- function(input, output, session) {
     progress$set(value=0)
     outPrefix = paste(tmpdir, input$prefix, sep="")
     cat("", file = paste(outPrefix, defaultLogName, sep=""), append=F) #re-initialize log on new runs
-    if(rv$clDist) {
-      dist = NA
-    } else {
-      dist = readShinyDistanceMatrix(input$distMatrix, bn=F, log = paste(outPrefix, defaultLogName, sep=""))
-    }
     if(rv$clEpi) {
       epi = NA
     } else {
@@ -124,6 +119,11 @@ server <- function(input, output, session) {
       rf = readShinyInputFile(input$rfTable)
     }
     res = tryCatch({
+      if(rv$clDist) {
+        dist = NA
+      } else {
+        dist = readShinyDistanceMatrix(input$distMatrix, bn=F, log = paste(outPrefix, defaultLogName, sep=""))
+      }
       littres = littNoGims(outPrefix = outPrefix,
                            caseData = caseData,
                            dist = dist, # readShinyDistanceMatrix(input$distMatrix, bn=F), #input$BNdist),
