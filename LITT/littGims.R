@@ -225,12 +225,22 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
     } #else if(make.names(row.names(mat))[1] != colnames(mat)[1]) {
       # mat = as.matrix(read.table(fileName, sep="\t", header = F, row.names = 1))
     # }
+    if(nrow(mat) != ncol(mat)) {
+      cat("Distance matrix has ", nrow(mat), " rows but ", ncol(mat), 
+          " columns. It must have the same number of rows and columns containing SNP distance.\r\n", file = log, append = T)
+      stop("Distance matrix must have the same number of rows and columns containing SNP distance.")
+    }
     colnames(mat) = row.names(mat) #fix the . for non character spaces
   } else if(endsWith(fileName, ".xls") || endsWith(fileName, ".xlsx")) {
     df = read.xlsx(fileName, sheetIndex = 1)
     df = df[!apply(df, 1, function(x) all(is.na(x))),
               !apply(df, 2, function(x) all(is.na(x)))] #remove rows and columns that are all NA
     mat = as.matrix(df[,-1])
+    if(nrow(mat) != ncol(mat)) {
+      cat("Distance matrix has ", nrow(mat), " rows but ", ncol(mat), 
+          " columns. It must have the same number of rows and columns containing SNP distance.\r\n", file = log, append = T)
+      stop("Distance matrix must have the same number of rows and columns containing SNP distance.")
+    }
     row.names(mat) = df[,1]
     colnames(mat) = as.character(df[,1]) #fix the . for non character spaces
   } else if(endsWith(fileName, ".csv")) {
@@ -238,6 +248,11 @@ formatBNDistanceMatrix <- function(fileName, log, appendlog=T) { #formerly forma
     ##remove rows and columns that are all NA
     mat = mat[!apply(mat, 1, function(x) all(is.na(x))),
               !apply(mat, 2, function(x) all(is.na(x)))]
+    if(nrow(mat) != ncol(mat)) {
+      cat("Distance matrix has ", nrow(mat), " rows but ", ncol(mat), 
+          " columns. It must have the same number of rows and columns containing SNP distance.\r\n", file = log, append = T)
+      stop("Distance matrix must have the same number of rows and columns containing SNP distance.")
+    }
     colnames(mat) = row.names(mat) #fix the . for non character spaces
   } else {
     cat("Distance matrix should be in a text, Excel or CSV file format.\r\n", file = log, append = T)

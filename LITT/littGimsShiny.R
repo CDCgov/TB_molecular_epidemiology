@@ -11,7 +11,28 @@ gimsVars = c("IDU", "NONIDU", "ALCOHOL", "HOMELESS", "AnyCorr")
 
 # Define UI ----
 ui <- fluidPage(
-  titlePanel("LITT with TB GIMS"),
+  # titlePanel("LITT with TB GIMS"),
+  titlePanel(tagList(span("Logically Inferred Tuberculosis Transmission (LITT) integrated with TB GIMS",
+                          span(dropdownButton(tags$style(".btn-custom {background-color: white; color: black; border-color: black;}"), #https://github.com/dreamRs/shinyWidgets/issues/126 
+                                              # circle = F,
+                                              # label = "?",
+                                              size = "sm",
+                                              status="custom",
+                                              icon = icon("question"), #https://shiny.rstudio.com/reference/shiny/0.14/icon.html
+                                              tooltip=tooltipOptions(title="Help"),
+                                              right = T,
+                                              h4("Help"),
+                                              tags$style(HTML("#help{border-color: white; width:260px; text-align:left}")),
+                                              actionButton("help", "User's manual & training presentation",
+                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT_users_manual_and_training_presentation')"),
+                                              actionButton("help", "Input file templates",
+                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT_input_file_templates')"),
+                                              actionButton("help", "Training datasets",
+                                                           onclick="window.open('https://github.com/CDCgov/TB_molecular_epidemiology/tree/master/LITT_Documentation/LITT_training_datasets')"),
+                                              actionButton("help", "Reference",
+                                                           onclick="window.open('https://www.frontiersin.org/articles/10.3389/fpubh.2021.667337/full')")),
+                               style = "position:absolute;right:2em;"))), #https://stackoverflow.com/questions/54523349/place-actionbutton-on-right-side-of-titlepanel-in-shiny
+             windowTitle = "LITT"),
   useShinyjs(),
   fluidRow(
     column(3, align="center",
@@ -117,14 +138,7 @@ server <- function(input, output, session) {
     progress$set(value=0)
     outPrefix = paste(tmpdir, input$prefix, sep="")
     ##distance matrix, epi and rf table
-    if(rv$clDist) {
-      dist = NA
-    } else if(all(is.na(rv$dist))){
-      dist = readShinyDistanceMatrix(input$distMatrix, bn=input$BNmat, log = paste(outPrefix, defaultLogName, sep=""))
-    } else {
-      dist = rv$dist
-    }
-    if(rv$clEpi) {
+        if(rv$clEpi) {
       epi = NA
     } else if(all(is.na(rv$epi))){
       epi = readShinyInputFile(input$epi)
@@ -151,6 +165,13 @@ server <- function(input, output, session) {
     }
     
     res = tryCatch({
+      if(rv$clDist) {
+        dist = NA
+      } else if(all(is.na(rv$dist))){
+        dist = readShinyDistanceMatrix(input$distMatrix, bn=input$BNmat, log = paste(outPrefix, defaultLogName, sep=""))
+      } else {
+        dist = rv$dist
+      }
       littres = littGims(outPrefix = outPrefix,
                          cases = cases,
                          caseData = caseData,
