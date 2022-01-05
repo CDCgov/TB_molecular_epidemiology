@@ -2,6 +2,8 @@
 
 library(shiny)
 library(shinyjs)
+library(shinyWidgets)
+library(zip)
 source("littGims.R")
 
 # gimsVars = c("HOMELESS", "HIVSTAT", "CORRINST", "LONGTERM", "IDU", "NONIDU", "ALCOHOL", 
