@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "locale": "en_US",
+  "platform": "4.0.4",
+  "metadata": {
+    "appmode": "static",
+    "primary_rmd": null,
+    "primary_html": "AMD_Portal_Tile/index.html",
+    "content_category": null,
+    "has_parameters": false
+  },
+  "packages": null,
+  "files": {
+    "AMD_Portal_Tile/index.html": {
+      "checksum": "fc0b5bd6f3523a36fd2366a000cbcd78"
+    },
+    "AMD_Portal_Tile/rsconnect_old/documents/index.html/rconnect.biotech.cdc.gov/nrf1/amd_portal_tile.dcf": {
+      "checksum": "776dd240e99cbfc2701d34d043382ff7"
+    },
+    "AMD_Portal_Tile/rsconnect/documents/index.html/rconnect.biotech.cdc.gov/nrf1/amd_portal_tile.dcf": {
+      "checksum": "537438ebb62056b706b19e033ac6a6f5"
+    },
+    "code-of-conduct.md": {
+      "checksum": "e2c9f6360ca04e201cf6703b7d9f26b2"
+    },
+    "CONTRIBUTING.md": {
+      "checksum": "03d1893233f526ba1d0739d6dd4e7275"
+    },
+    "DISCLAIMER.md": {
+      "checksum": "2eaff348b0393c674fb74c360b8b44e5"
+    },
+    "Instructions_for_adding_TB_molecular_epidemiology_apps_to_OAMD_Portal.docx": {
+      "checksum": "c0363aedad8143c730d6428d748ecc72"
+    },
+    "LATTE_Documentation/LATTE_input_file_templates/LATTE_Table_of_custom_strengths_template_13Nov20.xlsx": {
+      "checksum": "349a489aac07cc2a89164a2c3fd1da02"
+    },
+    "LATTE_Documentation/LATTE_input_file_templates/LATTE_Table_of_dates_in_locations_template_13Nov20.xlsx": {
+      "checksum": "c4cfa7a903bdcf62a7f9f8e3f7a4ffac"
+    },
+    "LATTE_Documentation/LATTE_input_file_templates/LATTE_Table_of_infectious_periods_template_13Nov20.xlsx": {
+      "checksum": "1fbdc30910fa07d99af4d564fb7e3bb9"
+    },
+    "LATTE_Documentation/LATTE_input_file_templates/LATTE_Table_of_persons_in_locations_template_13Nov20.xlsx": {
+      "checksum": "be4c6796cb09bd502cfa0b5498f65997"
+    },
+    "LATTE_Documentation/LATTE_training_datasets/LATTE_training_dataset_01/LATTE_training_dataset_01_Table_of_dates_in_locations_13Nov20.xlsx": {
+      "checksum": "aa7373e919f050d62c10826d41d58a31"
+    },
+    "LATTE_Documentation/LATTE_training_datasets/LATTE_training_dataset_01/LATTE_training_dataset_01_Table_of_infectious_periods_13Nov20.xlsx": {
+      "checksum": "a29db61d9fe146e25f9738736f7938d6"
+    },
+    "LATTE_Documentation/LATTE_training_datasets/LATTE_training_dataset_02/LATTE_training_dataset_02_Custom_strengths_table_13Nov20.xlsx": {
+      "checksum": "12b0291d0554764a058c70e3dd5fcdb6"
+    },
+    "LATTE_Documentation/LATTE_training_datasets/LATTE_training_dataset_02/LATTE_training_dataset_02_Table_of_grouped_lists_of_people_13Nov20.xlsx": {
+      "checksum": "900c15a5420fa1948bf95f3aa1e99504"
+    },
+    "LATTE_Documentation/LATTE_users_manual_and_training_presentation/LATTE_training_presentation_4Dec20_508.pptx": {
+      "checksum": "55c6184c3a8963f480d76c14d8e701d9"
+    },
+    "LATTE_Documentation/LATTE_users_manual_and_training_presentation/LATTE_users_manual_v1.1_4Dec20-508.pdf": {
+      "checksum": "cbe48fa32ee9676fcff4fabd48f1c2fb"
+    },
+    "LATTE/app.R": {
+      "checksum": "88db72744632f965b20f1b54786dbaa0"
+    },
+    "LATTE/ganttChart.R": {
+      "checksum": "5edb01cfc35309cc5012be37be95ac13"
+    },
+    "LATTE/latte.R": {
+      "checksum": "09ab7ac5ec49485adb4eaac2a2e47a56"
+    },
+    "LATTE/latteNoTime.R": {
+      "checksum": "f0eedcd54ea6dcd6b5445edf66a8f36c"
+    },
+    "LATTE/rsconnect_old/rconnect.biotech.cdc.gov/nrf1/latte.dcf": {
+      "checksum": "03d67f7856c804447261dd5f5136827f"
+    },
+    "LATTE/rsconnect_old/rconnect.biotech.cdc.gov/nrf1/latte2.dcf": {
+      "checksum": "897050740d1f5841bcaae8c96771b53f"
+    },
+    "LATTE/rsconnect_old/rconnect.biotech.cdc.gov/nrf1/latte3.dcf": {
+      "checksum": "0033fcaece1cb465f679922a4f83036b"
+    },
+    "LATTE/rsconnect/rconnect.biotech.cdc.gov/nrf1/latte.dcf": {
+      "checksum": "77c163bbdb097c390d166194985af760"
+    },
+    "LATTE/sharedFunctions.R": {
+      "checksum": "888fdd3e4b63adf2a5ea7e3c9a8ffd9d"
+    },
+    "LICENSE": {
+      "checksum": "e3fc50a88d0a364313df4b21ef20c29e"
+    },
+    "LITT_Documentation/LITT_input_file_templates/LITT_Case_data_table_template_13Nov20.xlsx": {
+      "checksum": "dde0011a08758b5a26826ae731344eb8"
+    },
+    "LITT_Documentation/LITT_input_file_templates/LITT_Epi_link_table_template_13Nov20.xlsx": {
+      "checksum": "bae60d170642c54179097a68a71aa181"
+    },
+    "LITT_Documentation/LITT_input_file_templates/LITT_Table_of_risk_factor_weights_template_13Nov20.xlsx": {
+      "checksum": "6cbcf67a2279126bcb0df9bc5e330019"
+    },
+    "LITT_Documentation/LITT_training_datasets/LITT_training_dataset_01/LITT_training_dataset_01_Case_data_table_13Nov20.xlsx": {
+      "checksum": "f6e664031f83a8858ce0f7ee35c6b062"
+    },
+    "LITT_Documentation/LITT_training_datasets/LITT_training_dataset_01/LITT_training_dataset_01_Epi_link_table_13Nov20.xlsx": {
+      "checksum": "edc214962f6edaa664381da4ce6ce907"
+    },
+    "LITT_Documentation/LITT_training_datasets/LITT_training_dataset_01/LITT_training_dataset_01_schematic_13Nov20.pptx": {
+      "checksum": "f23dfadbce241998c75a27b650a644e0"
+    },
+    "LITT_Documentation/LITT_training_datasets/LITT_training_dataset_01/LITT_training_dataset_01_SNP_distance_matrix_13Nov20.xlsx": {
+      "checksum": "9a4e60520102754cb8c8de257d98ce1a"
+    },
+    "LITT_Documentation/LITT_training_datasets/LITT_training_dataset_01/LITT_training_dataset_01_Table_of_risk_factor_weights_13Nov20.xlsx": {
+      "checksum": "1b7858836a9d8ae00f8aefcb0fc5958d"
+    },
+    "LITT_Documentation/LITT_training_datasets/LITT_training_dataset_02/LITT_training_dataset_02_Case_data_table_13Nov20.xlsx": {
+      "checksum": "95bec6a91f8ea63c343087da89ff481b"
+    },
+    "LITT_Documentation/LITT_training_datasets/LITT_training_dataset_02/LITT_training_dataset_02_Epi_link_table_13Nov20.xlsx": {
+      "checksum": "4bc616e85d89be1bef4c1944b17b017a"
+    },
+    "LITT_Documentation/LITT_training_datasets/LITT_training_dataset_02/LITT_training_dataset_02_schematic_13Nov20.pptx": {
+      "checksum": "237ee7deb47672534b2d663a0d0bf1b2"
+    },
+    "LITT_Documentation/LITT_training_datasets/LITT_training_dataset_02/LITT_training_dataset_02_SNP_distance_matrix_13Nov20.xlsx": {
+      "checksum": "f276775b60ab9fbae7aa47ee1a4e1a41"
+    },
+    "LITT_Documentation/LITT_training_datasets/LITT_training_dataset_02/LITT_training_dataset_02_Table_of_risk_factor_weights_13Nov20.xlsx": {
+      "checksum": "cf75b9c2fc5f3caa6b311ed5053cf98f"
+    },
+    "LITT_Documentation/LITT_users_manual_and_training_presentation/LITT_training_presentation_4Dec20_508.pptx": {
+      "checksum": "9547168df5ef25bb1efe411daad1e1d5"
+    },
+    "LITT_Documentation/LITT_users_manual_and_training_presentation/LITT_users_manual_v1.1_4Dec20-508.pdf": {
+      "checksum": "c6bdc8e383fe74f4c3bbd178405e5f15"
+    },
+    "LITT/app.R": {
+      "checksum": "88a3e8b049ed240a46e47b43d14b85c3"
+    },
+    "LITT/litt.R": {
+      "checksum": "d0cefe7a40dff76273739bbf680a9601"
+    },
+    "LITT/littGims.R": {
+      "checksum": "0e431a54739e7a821338eb2c0844c955"
+    },
+    "LITT/littGimsShiny.R": {
+      "checksum": "5e704cc7834cc7518d4d263d21c3825b"
+    },
+    "LITT/littNoGims.R": {
+      "checksum": "091cfe3426612394001c5a8fd9c767a7"
+    },
+    "LITT/littRankHeatmap.R": {
+      "checksum": "7fd294f782b0319d55997ae9f1a20f54"
+    },
+    "LITT/littScoreHeatmap.R": {
+      "checksum": "711f5fd9f3569ed8dd60f2bb7b71c311"
+    },
+    "LITT/rsconnect_old/rconnect.biotech.cdc.gov/nrf1/litt.dcf": {
+      "checksum": "55bc9665f242c19638f108aff8d372a8"
+    },
+    "LITT/rsconnect/rconnect.biotech.cdc.gov/nrf1/litt.dcf": {
+      "checksum": "3f82dcb60bfeb616acdcf69bef9d95dc"
+    },
+    "LITT/sharedFunctions.R": {
+      "checksum": "ca9e6798f35936d7a01a9e5bdb7af601"
+    },
+    "README.md": {
+      "checksum": "5a5a4aaf5438ef1514523e76b3a3f7e5"
+    }
+  },
+  "users": null
+}
